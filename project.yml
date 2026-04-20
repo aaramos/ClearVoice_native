@@ -11,7 +11,7 @@ targets:
   ClearVoice:
     type: application
     platform: macOS
-    deploymentTarget: "14.0"
+    deploymentTarget: "26.0"
     sources:
       - path: ClearVoice
     settings:
@@ -19,7 +19,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.clearvoice.ClearVoice
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: ClearVoice
-        INFOPLIST_KEY_LSMinimumSystemVersion: "14.0"
+        INFOPLIST_KEY_LSMinimumSystemVersion: "26.0"
         INFOPLIST_KEY_NSPrincipalClass: NSApplication
         CODE_SIGNING_ALLOWED: NO
         CODE_SIGNING_REQUIRED: NO
@@ -30,7 +30,7 @@ targets:
   ClearVoiceTests:
     type: bundle.unit-test
     platform: macOS
-    deploymentTarget: "14.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Tests/ClearVoiceTests
     dependencies:

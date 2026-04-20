@@ -3,7 +3,10 @@ import Foundation
 enum ProcessingStage: Equatable, Sendable {
     case pending
     case analyzing
+    case analyzingFormat
+    case normalizingFormat
     case cleaning(progress: Double)
+    case optimizingForUpload
     case transcribing(progress: Double)
     case translating
     case summarizing

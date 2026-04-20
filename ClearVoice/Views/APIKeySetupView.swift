@@ -56,6 +56,7 @@ struct APIKeySetupView: View {
         HStack {
             Button("Quit ClearVoice", action: onQuit)
             Spacer()
+            Button("Use local processing only →", action: viewModel.skipToLocalMode)
             Button("Save and Continue", action: viewModel.saveAPIKey)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!viewModel.canSubmitAPIKey)

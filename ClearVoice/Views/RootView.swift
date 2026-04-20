@@ -19,7 +19,7 @@ struct RootView: View {
             Text("ClearVoice")
                 .font(.system(size: 28, weight: .semibold))
             HStack(alignment: .center) {
-                Text("Phase 1 shell")
+                Text("Batch Audio Utility")
                     .font(.headline)
                 Spacer()
                 stepBadge

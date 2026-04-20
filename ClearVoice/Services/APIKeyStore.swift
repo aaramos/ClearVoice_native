@@ -4,6 +4,14 @@ import Security
 protocol APIKeyStore {
     func readGeminiAPIKey() throws -> String?
     func saveGeminiAPIKey(_ apiKey: String) throws
+    func clearGeminiAPIKey() throws
+    var hasKey: Bool { get }
+}
+
+extension APIKeyStore {
+    var hasKey: Bool {
+        (try? readGeminiAPIKey())?.trimmedNonEmpty != nil
+    }
 }
 
 enum APIKeyStoreError: Error, LocalizedError, Equatable {
@@ -80,6 +88,17 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
         }
     }
 
+    func clearGeminiAPIKey() throws {
+        do {
+            try clearGeminiAPIKey(using: .dataProtection)
+        } catch APIKeyStoreError.saveFailed(let status) where status == errSecMissingEntitlement {
+            try clearGeminiAPIKey(using: .legacyLoginKeychain)
+            return
+        }
+
+        try? clearGeminiAPIKey(using: .legacyLoginKeychain)
+    }
+
     private func readGeminiAPIKey(using backend: Backend) throws -> String? {
         if case .legacyLoginKeychain = backend {
             return try readLegacyGeminiAPIKey()
@@ -147,6 +166,22 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
             guard updateStatus == errSecSuccess else {
                 throw APIKeyStoreError.saveFailed(status: updateStatus)
             }
+        default:
+            throw APIKeyStoreError.saveFailed(status: status)
+        }
+    }
+
+    private func clearGeminiAPIKey(using backend: Backend) throws {
+        if case .legacyLoginKeychain = backend {
+            try clearLegacyGeminiAPIKey()
+            return
+        }
+
+        let status = SecItemDelete(baseQuery(for: backend) as CFDictionary)
+
+        switch status {
+        case errSecSuccess, errSecItemNotFound:
+            return
         default:
             throw APIKeyStoreError.saveFailed(status: status)
         }
@@ -269,6 +304,41 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
 
         guard updateStatus == errSecSuccess else {
             throw APIKeyStoreError.saveFailed(status: updateStatus)
+        }
+    }
+
+    private func clearLegacyGeminiAPIKey() throws {
+        var itemRef: SecKeychainItem?
+
+        let findStatus = service.withCString { serviceCString in
+            account.withCString { accountCString in
+                SecKeychainFindGenericPassword(
+                    nil,
+                    UInt32(service.utf8.count),
+                    serviceCString,
+                    UInt32(account.utf8.count),
+                    accountCString,
+                    nil,
+                    nil,
+                    &itemRef
+                )
+            }
+        }
+
+        switch findStatus {
+        case errSecSuccess:
+            guard let itemRef else {
+                return
+            }
+
+            let deleteStatus = SecKeychainItemDelete(itemRef)
+            guard deleteStatus == errSecSuccess || deleteStatus == errSecItemNotFound else {
+                throw APIKeyStoreError.saveFailed(status: deleteStatus)
+            }
+        case errSecItemNotFound:
+            return
+        default:
+            throw APIKeyStoreError.saveFailed(status: findStatus)
         }
     }
 

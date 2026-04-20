@@ -29,4 +29,13 @@ struct AppServicesFactoryTests {
         #expect(error.title == "Couldn’t Access Your Saved API Key")
         #expect(error.message.contains("Keychain"))
     }
+
+    @Test
+    func apiKeyStoreHasKeyReflectsStoredValue() {
+        let withKey = MockAPIKeyStore(storedKey: "saved-key")
+        let withoutKey = MockAPIKeyStore()
+
+        #expect(withKey.hasKey)
+        #expect(!withoutKey.hasKey)
+    }
 }

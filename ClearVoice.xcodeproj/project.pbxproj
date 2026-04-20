@@ -21,11 +21,15 @@
 		1D5B8CE52218523A316AFFC2 /* FolderPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECB7619B2718CCB2AC24DE36 /* FolderPicker.swift */; };
 		1FCD855EE586ED49F481D113 /* MockAPIKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C915929F0712D445604B87 /* MockAPIKeyStore.swift */; };
 		205175B412A0BB0F759123C8 /* StepCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9817F36BA3807A6D127833C2 /* StepCard.swift */; };
+		26C570D0849CF6C62B4B2497 /* ProcessingModeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B673AE012DCC37DF7828412E /* ProcessingModeStore.swift */; };
 		280F6C517E89247653DB90EA /* TranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AF3F0F3698806630049279B /* TranscriptionService.swift */; };
 		2C7B030B6A00F1DF713F1FFD /* LaunchFailureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26652822EE948564B94803B1 /* LaunchFailureView.swift */; };
+		2F17F6769E9FB3B62946C372 /* ProcessingModeToggleRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90ED8D1273A08444E7D0140B /* ProcessingModeToggleRow.swift */; };
+		332E44446599FC8226BC0D22 /* LocalSpeechTranscriptionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C54CBA8E97577272AF29BE6E /* LocalSpeechTranscriptionServiceTests.swift */; };
 		375C987AF5BA15E36E87BC80 /* MultipartFormData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85CC307672CEE6D064AF50F7 /* MultipartFormData.swift */; };
 		458BACDC6D0713A3B05D503B /* GeminiSummarizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05DA28966C272C168CECDDF7 /* GeminiSummarizationService.swift */; };
 		4947D97A1D5E432CC6382EF8 /* ConfigureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D7B230E0827D1E2D0501223 /* ConfigureView.swift */; };
+		4968128705DC916BE6725794 /* CloudAudioPreparationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F77D009697AE0EA38BD9E2C /* CloudAudioPreparationService.swift */; };
 		49BC8506D176FC9551B9710D /* Intensity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9E06D40AE18B2F40D49F84 /* Intensity.swift */; };
 		4ACD2B1B5B70D3D257045D8F /* BatchProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB3CD5822A810F0828426BCA /* BatchProcessor.swift */; };
 		4CF5F64902E327B108AD0043 /* OllamaCloudChatClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 862D40FBD96CBCB604A32069 /* OllamaCloudChatClient.swift */; };
@@ -43,13 +47,18 @@
 		74A6E5F49242FB9383F71EBE /* OpenAIWhisperTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 440946C4DE068ECD7CF851BD /* OpenAIWhisperTranscriptionService.swift */; };
 		78AF15BDBBFCD3720FBDA387 /* GeminiTranscriptionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 938DCEBF4E2D2F6487CBE2A6 /* GeminiTranscriptionServiceTests.swift */; };
 		795F1DBAAB4F1CFBB4625D37 /* DurationFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5162558A53088EBB62A27A3 /* DurationFormatter.swift */; };
+		7E1D7616F8ACD548301A7494 /* AVFoundationFormatNormalizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C86657F863B93442AE9EC18 /* AVFoundationFormatNormalizationService.swift */; };
 		7F6B31C14786B09E25927CFC /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB9C5765A8625716036679A9 /* RootView.swift */; };
 		844EE1810C20F6154BA50919 /* OllamaTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7BC56C8495EAF677F3BFA9 /* OllamaTranslationService.swift */; };
 		8C58D33036148007FB5BA44C /* GeminiTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FEC578ED93B5F0868AD7A0 /* GeminiTranscriptionService.swift */; };
+		90380E4A5BCEAFA2329D928F /* LocalTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F51B90B5A86476DEC7FFF36 /* LocalTranslationService.swift */; };
+		926CC5C150B255DA21B226C0 /* FormatNormalizationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC3DF1C37A84D03FB669E323 /* FormatNormalizationServiceTests.swift */; };
 		92C68BF4BD8094932A4FFBF2 /* MockHTTPTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFFA57147CA12A89BF80AE6B /* MockHTTPTransport.swift */; };
 		94CE80DA9ED99050A2B40508 /* ImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99AD87617DF52A527033A909 /* ImportViewModel.swift */; };
 		99FC574BA906E1349DD0BDA5 /* APIKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C9B0FD3659F076841CACB7 /* APIKeyStore.swift */; };
+		9C45ACCCB6DA6D4AC2D18DC5 /* ProcessingModeConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E890D9278926E1A17723EF /* ProcessingModeConfiguration.swift */; };
 		A160357627795E7BECFB89A4 /* BatchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24EF938074D6A941D7991843 /* BatchViewModel.swift */; };
+		A3C7A98D98323B4E415099FF /* LocalSpeechTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A3E12D92C399BC28C348C79 /* LocalSpeechTranscriptionService.swift */; };
 		AA4BB07CCE8B4B8E55876609 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0750D7C985ACAD2C103ABEC /* ReviewView.swift */; };
 		AB777D5C380E4EEC7BF65159 /* ServiceBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED9FF655AB524CE8ABBA4523 /* ServiceBundle.swift */; };
 		B5233D117F6E492CFE6A01C0 /* Language.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47EC80885BB7EFB443B5BD7E /* Language.swift */; };
@@ -58,11 +67,15 @@
 		BC35A9262B7BD8984AFBBF7A /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4914971065BFD2A2065106C /* AppViewModel.swift */; };
 		C1725BE752D1CB14FDE8F619 /* ProcessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E63BC6AA9746C9D41E4D736 /* ProcessView.swift */; };
 		C178D1F30A38D5FFD4C59873 /* OpenAIWhisperTranscriptionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77DB12F4BEDBC998314BE481 /* OpenAIWhisperTranscriptionServiceTests.swift */; };
+		C254294C53DED7CA00F0D603 /* AVFoundationCloudPreparationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FC97A560C8A4E9AE3E5ADD /* AVFoundationCloudPreparationService.swift */; };
+		C306BBD607906B91EB01971F /* CloudAudioPreparationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC0C94828383B4851320DB88 /* CloudAudioPreparationServiceTests.swift */; };
+		CBA28ACF204F51547F744C6B /* ProcessingModeConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5384A0B1E598FA4740CB944E /* ProcessingModeConfigurationTests.swift */; };
 		CC950BE12D5BF93878805B49 /* ExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2993C11FAAE4D5980D7B79 /* ExportServiceTests.swift */; };
 		CCB04EADA2E0BBC3F513D372 /* OllamaSummarizationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 954587F6F34F64D9BB314C33 /* OllamaSummarizationServiceTests.swift */; };
 		CFB75C3C651A79AF4C60A16B /* AppServicesFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED48A3E190E36337DC085D4C /* AppServicesFactory.swift */; };
 		D092E9DE4AF0C9DE25817FA6 /* OllamaTranslationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 032C700F9E4D341DD7A42297 /* OllamaTranslationServiceTests.swift */; };
 		D2B288C380ECED72B6B9F239 /* TranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE60BB0CABCB686CDAEA8B77 /* TranslationService.swift */; };
+		D428DB3A412B6F5CCF0AC485 /* FormatNormalizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A40F91D1DB9DDDB2EBACCBD /* FormatNormalizationService.swift */; };
 		D8031901C274A4D98386C5D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5AE43363D4BCDF9066B0ECC8 /* Assets.xcassets */; };
 		D962EC8BB18543A4DFF8D817 /* expected_transcript.txt in Resources */ = {isa = PBXBuildFile; fileRef = BE5058BF2F804FA25969F68A /* expected_transcript.txt */; };
 		E11AE4167C22584B2594F9D0 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1064A3805D4AA3F066FED3AC /* ImportView.swift */; };
@@ -87,10 +100,12 @@
 		032C700F9E4D341DD7A42297 /* OllamaTranslationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaTranslationServiceTests.swift; sourceTree = "<group>"; };
 		050E389B0D32CC15410E92D3 /* ClearVoiceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearVoiceApp.swift; sourceTree = "<group>"; };
 		05DA28966C272C168CECDDF7 /* GeminiSummarizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiSummarizationService.swift; sourceTree = "<group>"; };
+		08FC97A560C8A4E9AE3E5ADD /* AVFoundationCloudPreparationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AVFoundationCloudPreparationService.swift; sourceTree = "<group>"; };
 		1064A3805D4AA3F066FED3AC /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
 		11FEC578ED93B5F0868AD7A0 /* GeminiTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiTranscriptionService.swift; sourceTree = "<group>"; };
 		12ACB3CB20B537F3E00AC2D8 /* FileScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileScanner.swift; sourceTree = "<group>"; };
 		12B03C482C841A67900D536A /* Transcript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcript.swift; sourceTree = "<group>"; };
+		1A3E12D92C399BC28C348C79 /* LocalSpeechTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSpeechTranscriptionService.swift; sourceTree = "<group>"; };
 		1D7B230E0827D1E2D0501223 /* ConfigureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureView.swift; sourceTree = "<group>"; };
 		1FA5985DF411F60FD9E6492A /* AppLaunchViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLaunchViewModelTests.swift; sourceTree = "<group>"; };
 		200419689ADD25B8D3A322B6 /* GeminiDeveloperClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiDeveloperClient.swift; sourceTree = "<group>"; };
@@ -111,12 +126,16 @@
 		440946C4DE068ECD7CF851BD /* OpenAIWhisperTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIWhisperTranscriptionService.swift; sourceTree = "<group>"; };
 		45C9B0FD3659F076841CACB7 /* APIKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyStore.swift; sourceTree = "<group>"; };
 		47EC80885BB7EFB443B5BD7E /* Language.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Language.swift; sourceTree = "<group>"; };
+		4C86657F863B93442AE9EC18 /* AVFoundationFormatNormalizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AVFoundationFormatNormalizationService.swift; sourceTree = "<group>"; };
+		4F51B90B5A86476DEC7FFF36 /* LocalTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranslationService.swift; sourceTree = "<group>"; };
 		5326DB1620C0174732751D39 /* AudioEnhancementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnhancementService.swift; sourceTree = "<group>"; };
+		5384A0B1E598FA4740CB944E /* ProcessingModeConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingModeConfigurationTests.swift; sourceTree = "<group>"; };
 		587B7C6CCF3EEC897DCDE2C6 /* ProcessingStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingStage.swift; sourceTree = "<group>"; };
 		5AE43363D4BCDF9066B0ECC8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		60972E7BE4D5CD8C99228DEF /* BatchConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchConfiguration.swift; sourceTree = "<group>"; };
 		619BBA53EFC08A8305138189 /* GeminiSummarizationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiSummarizationServiceTests.swift; sourceTree = "<group>"; };
 		65FA847239BB3C283C08CB04 /* OllamaSummarizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaSummarizationService.swift; sourceTree = "<group>"; };
+		6A40F91D1DB9DDDB2EBACCBD /* FormatNormalizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatNormalizationService.swift; sourceTree = "<group>"; };
 		6E63BC6AA9746C9D41E4D736 /* ProcessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessView.swift; sourceTree = "<group>"; };
 		6FF57A3BC9624FF1E9D95137 /* OutputPathResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputPathResolverTests.swift; sourceTree = "<group>"; };
 		7110EB9FA39A952803BB4F33 /* AppLaunchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLaunchViewModel.swift; sourceTree = "<group>"; };
@@ -127,19 +146,25 @@
 		85CC307672CEE6D064AF50F7 /* MultipartFormData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipartFormData.swift; sourceTree = "<group>"; };
 		862D40FBD96CBCB604A32069 /* OllamaCloudChatClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaCloudChatClient.swift; sourceTree = "<group>"; };
 		889BBB94D1CEC621448E417D /* SummarizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummarizationService.swift; sourceTree = "<group>"; };
+		90ED8D1273A08444E7D0140B /* ProcessingModeToggleRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingModeToggleRow.swift; sourceTree = "<group>"; };
 		938DCEBF4E2D2F6487CBE2A6 /* GeminiTranscriptionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiTranscriptionServiceTests.swift; sourceTree = "<group>"; };
 		954587F6F34F64D9BB314C33 /* OllamaSummarizationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaSummarizationServiceTests.swift; sourceTree = "<group>"; };
 		95D5A93914FB82C1FB6C6376 /* ConfigureViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureViewModel.swift; sourceTree = "<group>"; };
 		96C915929F0712D445604B87 /* MockAPIKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockAPIKeyStore.swift; sourceTree = "<group>"; };
 		9817F36BA3807A6D127833C2 /* StepCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepCard.swift; sourceTree = "<group>"; };
 		99AD87617DF52A527033A909 /* ImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModel.swift; sourceTree = "<group>"; };
+		9F77D009697AE0EA38BD9E2C /* CloudAudioPreparationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAudioPreparationService.swift; sourceTree = "<group>"; };
 		A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModelTests.swift; sourceTree = "<group>"; };
 		B30A1BBCCE880E29B1400AEF /* ConfigureViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureViewModelTests.swift; sourceTree = "<group>"; };
+		B673AE012DCC37DF7828412E /* ProcessingModeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingModeStore.swift; sourceTree = "<group>"; };
 		BE5058BF2F804FA25969F68A /* expected_transcript.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = expected_transcript.txt; sourceTree = "<group>"; };
 		C0750D7C985ACAD2C103ABEC /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
+		C54CBA8E97577272AF29BE6E /* LocalSpeechTranscriptionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSpeechTranscriptionServiceTests.swift; sourceTree = "<group>"; };
 		C8CFE32689A6CE760FE66769 /* AppServicesFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppServicesFactoryTests.swift; sourceTree = "<group>"; };
 		D3CB4CD0FF165ECDAEB70963 /* AsyncSemaphore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncSemaphore.swift; sourceTree = "<group>"; };
 		DB3CD5822A810F0828426BCA /* BatchProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchProcessor.swift; sourceTree = "<group>"; };
+		DC0C94828383B4851320DB88 /* CloudAudioPreparationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAudioPreparationServiceTests.swift; sourceTree = "<group>"; };
+		DC3DF1C37A84D03FB669E323 /* FormatNormalizationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatNormalizationServiceTests.swift; sourceTree = "<group>"; };
 		DE60BB0CABCB686CDAEA8B77 /* TranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationService.swift; sourceTree = "<group>"; };
 		E5162558A53088EBB62A27A3 /* DurationFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DurationFormatter.swift; sourceTree = "<group>"; };
 		EB9C5765A8625716036679A9 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -150,6 +175,7 @@
 		F0494ED6BAB9FF633DC51756 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		F23E59CB5CB06D09EF2FB961 /* APIKeySetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeySetupView.swift; sourceTree = "<group>"; };
 		F4914971065BFD2A2065106C /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
+		F5E890D9278926E1A17723EF /* ProcessingModeConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingModeConfiguration.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -189,6 +215,7 @@
 			isa = PBXGroup;
 			children = (
 				ECB7619B2718CCB2AC24DE36 /* FolderPicker.swift */,
+				90ED8D1273A08444E7D0140B /* ProcessingModeToggleRow.swift */,
 				9817F36BA3807A6D127833C2 /* StepCard.swift */,
 			);
 			path = Components;
@@ -235,12 +262,18 @@
 			children = (
 				45C9B0FD3659F076841CACB7 /* APIKeyStore.swift */,
 				5326DB1620C0174732751D39 /* AudioEnhancementService.swift */,
+				08FC97A560C8A4E9AE3E5ADD /* AVFoundationCloudPreparationService.swift */,
+				4C86657F863B93442AE9EC18 /* AVFoundationFormatNormalizationService.swift */,
+				9F77D009697AE0EA38BD9E2C /* CloudAudioPreparationService.swift */,
 				F0494ED6BAB9FF633DC51756 /* ExportService.swift */,
 				12ACB3CB20B537F3E00AC2D8 /* FileScanner.swift */,
+				6A40F91D1DB9DDDB2EBACCBD /* FormatNormalizationService.swift */,
 				200419689ADD25B8D3A322B6 /* GeminiDeveloperClient.swift */,
 				05DA28966C272C168CECDDF7 /* GeminiSummarizationService.swift */,
 				11FEC578ED93B5F0868AD7A0 /* GeminiTranscriptionService.swift */,
 				31693940DE68799C042FCFEF /* GeminiTranslationService.swift */,
+				1A3E12D92C399BC28C348C79 /* LocalSpeechTranscriptionService.swift */,
+				4F51B90B5A86476DEC7FFF36 /* LocalTranslationService.swift */,
 				862D40FBD96CBCB604A32069 /* OllamaCloudChatClient.swift */,
 				65FA847239BB3C283C08CB04 /* OllamaSummarizationService.swift */,
 				7E7BC56C8495EAF677F3BFA9 /* OllamaTranslationService.swift */,
@@ -260,6 +293,7 @@
 				60972E7BE4D5CD8C99228DEF /* BatchConfiguration.swift */,
 				2F9E06D40AE18B2F40D49F84 /* Intensity.swift */,
 				47EC80885BB7EFB443B5BD7E /* Language.swift */,
+				F5E890D9278926E1A17723EF /* ProcessingModeConfiguration.swift */,
 				587B7C6CCF3EEC897DCDE2C6 /* ProcessingStage.swift */,
 				12B03C482C841A67900D536A /* Transcript.swift */,
 			);
@@ -273,16 +307,20 @@
 				C8CFE32689A6CE760FE66769 /* AppServicesFactoryTests.swift */,
 				2D03412F66C01539EEC03FE7 /* AppViewModelTests.swift */,
 				4320471F12A0B0165CC84591 /* BatchProcessorTests.swift */,
+				DC0C94828383B4851320DB88 /* CloudAudioPreparationServiceTests.swift */,
 				B30A1BBCCE880E29B1400AEF /* ConfigureViewModelTests.swift */,
 				2B2993C11FAAE4D5980D7B79 /* ExportServiceTests.swift */,
+				DC3DF1C37A84D03FB669E323 /* FormatNormalizationServiceTests.swift */,
 				619BBA53EFC08A8305138189 /* GeminiSummarizationServiceTests.swift */,
 				938DCEBF4E2D2F6487CBE2A6 /* GeminiTranscriptionServiceTests.swift */,
 				2A6EC8F7D8DFE366C4C88EAB /* GeminiTranslationServiceTests.swift */,
 				A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */,
+				C54CBA8E97577272AF29BE6E /* LocalSpeechTranscriptionServiceTests.swift */,
 				954587F6F34F64D9BB314C33 /* OllamaSummarizationServiceTests.swift */,
 				032C700F9E4D341DD7A42297 /* OllamaTranslationServiceTests.swift */,
 				77DB12F4BEDBC998314BE481 /* OpenAIWhisperTranscriptionServiceTests.swift */,
 				6FF57A3BC9624FF1E9D95137 /* OutputPathResolverTests.swift */,
+				5384A0B1E598FA4740CB944E /* ProcessingModeConfigurationTests.swift */,
 				3F9DED54E0BE8C2904846CC0 /* Fixtures */,
 				682A8A4588633BD77B2CCC64 /* Support */,
 			);
@@ -315,6 +353,7 @@
 				7CF56AFAA8C2A27C605CCC59 /* CloudHTTPClient.swift */,
 				E5162558A53088EBB62A27A3 /* DurationFormatter.swift */,
 				85CC307672CEE6D064AF50F7 /* MultipartFormData.swift */,
+				B673AE012DCC37DF7828412E /* ProcessingModeStore.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -436,18 +475,22 @@
 				7361E3F3F26DC3FF2B7F3B80 /* AppServicesFactoryTests.swift in Sources */,
 				5B322C3099C687EEAA98BD0C /* AppViewModelTests.swift in Sources */,
 				0B38E5F0D85F396F0EB95C48 /* BatchProcessorTests.swift in Sources */,
+				C306BBD607906B91EB01971F /* CloudAudioPreparationServiceTests.swift in Sources */,
 				E44E2D8A9B3DF75402F34A32 /* ConfigureViewModelTests.swift in Sources */,
 				CC950BE12D5BF93878805B49 /* ExportServiceTests.swift in Sources */,
+				926CC5C150B255DA21B226C0 /* FormatNormalizationServiceTests.swift in Sources */,
 				EC3E82ECB5B22EBFF7CFE0B0 /* GeminiSummarizationServiceTests.swift in Sources */,
 				78AF15BDBBFCD3720FBDA387 /* GeminiTranscriptionServiceTests.swift in Sources */,
 				004D6185722608AF89615B15 /* GeminiTranslationServiceTests.swift in Sources */,
 				06DAB6EF3579DB0EE3864740 /* ImportViewModelTests.swift in Sources */,
+				332E44446599FC8226BC0D22 /* LocalSpeechTranscriptionServiceTests.swift in Sources */,
 				1FCD855EE586ED49F481D113 /* MockAPIKeyStore.swift in Sources */,
 				92C68BF4BD8094932A4FFBF2 /* MockHTTPTransport.swift in Sources */,
 				CCB04EADA2E0BBC3F513D372 /* OllamaSummarizationServiceTests.swift in Sources */,
 				D092E9DE4AF0C9DE25817FA6 /* OllamaTranslationServiceTests.swift in Sources */,
 				C178D1F30A38D5FFD4C59873 /* OpenAIWhisperTranscriptionServiceTests.swift in Sources */,
 				B920F21E58178A83332722D3 /* OutputPathResolverTests.swift in Sources */,
+				CBA28ACF204F51547F744C6B /* ProcessingModeConfigurationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -457,6 +500,8 @@
 			files = (
 				190CE2F1FB61585B40D46C4A /* APIKeySetupView.swift in Sources */,
 				99FC574BA906E1349DD0BDA5 /* APIKeyStore.swift in Sources */,
+				C254294C53DED7CA00F0D603 /* AVFoundationCloudPreparationService.swift in Sources */,
+				7E1D7616F8ACD548301A7494 /* AVFoundationFormatNormalizationService.swift in Sources */,
 				733F39CF94E2669F807BE4C6 /* AppLaunchViewModel.swift in Sources */,
 				CFB75C3C651A79AF4C60A16B /* AppServicesFactory.swift in Sources */,
 				E7330F86647F4CD65848A546 /* AppState.swift in Sources */,
@@ -468,6 +513,7 @@
 				4ACD2B1B5B70D3D257045D8F /* BatchProcessor.swift in Sources */,
 				A160357627795E7BECFB89A4 /* BatchViewModel.swift in Sources */,
 				0F7BA6B5C1E1C5A12F9C0DEC /* ClearVoiceApp.swift in Sources */,
+				4968128705DC916BE6725794 /* CloudAudioPreparationService.swift in Sources */,
 				BC2C13D13A89CD264E7F1E86 /* CloudHTTPClient.swift in Sources */,
 				4947D97A1D5E432CC6382EF8 /* ConfigureView.swift in Sources */,
 				684E70B1DDFE8B2F862A49D9 /* ConfigureViewModel.swift in Sources */,
@@ -476,6 +522,7 @@
 				6EC60D605F59B02448541D7F /* FileJob.swift in Sources */,
 				6AA113EA69772CADC5AB3C4B /* FileScanner.swift in Sources */,
 				1D5B8CE52218523A316AFFC2 /* FolderPicker.swift in Sources */,
+				D428DB3A412B6F5CCF0AC485 /* FormatNormalizationService.swift in Sources */,
 				09FD40E09511ADDEA6482D71 /* GeminiDeveloperClient.swift in Sources */,
 				458BACDC6D0713A3B05D503B /* GeminiSummarizationService.swift in Sources */,
 				8C58D33036148007FB5BA44C /* GeminiTranscriptionService.swift in Sources */,
@@ -485,6 +532,8 @@
 				49BC8506D176FC9551B9710D /* Intensity.swift in Sources */,
 				B5233D117F6E492CFE6A01C0 /* Language.swift in Sources */,
 				2C7B030B6A00F1DF713F1FFD /* LaunchFailureView.swift in Sources */,
+				A3C7A98D98323B4E415099FF /* LocalSpeechTranscriptionService.swift in Sources */,
+				90380E4A5BCEAFA2329D928F /* LocalTranslationService.swift in Sources */,
 				375C987AF5BA15E36E87BC80 /* MultipartFormData.swift in Sources */,
 				4CF5F64902E327B108AD0043 /* OllamaCloudChatClient.swift in Sources */,
 				1C096ACFAEC3EF67A2F86BB6 /* OllamaSummarizationService.swift in Sources */,
@@ -492,6 +541,9 @@
 				74A6E5F49242FB9383F71EBE /* OpenAIWhisperTranscriptionService.swift in Sources */,
 				F23DD0E19389C6B712F55FDB /* OutputPathResolver.swift in Sources */,
 				C1725BE752D1CB14FDE8F619 /* ProcessView.swift in Sources */,
+				9C45ACCCB6DA6D4AC2D18DC5 /* ProcessingModeConfiguration.swift in Sources */,
+				26C570D0849CF6C62B4B2497 /* ProcessingModeStore.swift in Sources */,
+				2F17F6769E9FB3B62946C372 /* ProcessingModeToggleRow.swift in Sources */,
 				516EF1A69216CCC943AE4A2C /* ProcessingStage.swift in Sources */,
 				AA4BB07CCE8B4B8E55876609 /* ReviewView.swift in Sources */,
 				7F6B31C14786B09E25927CFC /* RootView.swift in Sources */,
@@ -524,13 +576,13 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ClearVoice;
-				INFOPLIST_KEY_LSMinimumSystemVersion = 14.0;
+				INFOPLIST_KEY_LSMinimumSystemVersion = 26.0;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.clearvoice.ClearVoice;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -548,7 +600,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.clearvoice.ClearVoiceTests;
 				SDKROOT = macosx;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ClearVoice.app/Contents/MacOS/ClearVoice";
@@ -566,7 +618,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.clearvoice.ClearVoiceTests;
 				SDKROOT = macosx;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ClearVoice.app/Contents/MacOS/ClearVoice";
@@ -582,13 +634,13 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ClearVoice;
-				INFOPLIST_KEY_LSMinimumSystemVersion = 14.0;
+				INFOPLIST_KEY_LSMinimumSystemVersion = 26.0;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.clearvoice.ClearVoice;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;

@@ -1,5 +1,14 @@
 import Foundation
 
+enum ServiceError: Error, Equatable, Sendable {
+    case cloudUnavailable
+}
+
+enum TranscriptionError: Error, Equatable, Sendable {
+    case languageNotSupported
+    case modelDownloading
+}
+
 protocol TranscriptionService: Sendable {
     /// Transcribes the supplied audio file and returns the detected-language metadata used by the rest of the pipeline.
     func transcribe(
@@ -29,5 +38,14 @@ actor StubTranscriptionService: TranscriptionService {
             detectedLanguage: detectedLanguage,
             confidence: 0.99
         )
+    }
+}
+
+actor UnavailableTranscriptionService: TranscriptionService {
+    func transcribe(
+        audio: URL,
+        language: LanguageSelection
+    ) async throws -> Transcript {
+        throw ServiceError.cloudUnavailable
     }
 }

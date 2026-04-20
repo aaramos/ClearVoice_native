@@ -23,7 +23,7 @@ final class BatchViewModel: ObservableObject {
     var processingCount: Int {
         files.filter {
             switch $0.stage {
-            case .analyzing, .cleaning, .transcribing, .translating, .summarizing, .exporting:
+            case .analyzing, .analyzingFormat, .normalizingFormat, .cleaning, .optimizingForUpload, .transcribing, .translating, .summarizing, .exporting:
                 return true
             default:
                 return false

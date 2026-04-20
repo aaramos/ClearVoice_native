@@ -40,6 +40,26 @@ struct ExportServiceTests {
 
         #expect(try Data(contentsOf: finalAudioURL) == audioBytes)
     }
+
+    @Test
+    func transcriptExportOmitsSummarySectionWhenSummaryIsNil() async throws {
+        let harness = try ExportHarness()
+        let service = DefaultExportService()
+
+        try await service.exportTranscript(
+            to: harness.outputFolder,
+            basename: "meeting02",
+            summary: nil,
+            translated: "Translated text only.",
+            original: "Original text only."
+        )
+
+        let exportedURL = harness.outputFolder.appendingPathComponent("meeting02_transcript.txt")
+        let transcript = try String(contentsOf: exportedURL, encoding: .utf8)
+
+        #expect(!transcript.contains("SUMMARY"))
+        #expect(transcript.hasPrefix("TRANSLATED TRANSCRIPT\nTranslated text only.\n\nORIGINAL TRANSCRIPT\nOriginal text only.\n"))
+    }
 }
 
 private struct ExportHarness {

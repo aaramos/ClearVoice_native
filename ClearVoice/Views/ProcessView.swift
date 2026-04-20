@@ -8,7 +8,7 @@ struct ProcessView: View {
     var body: some View {
         StepCard(
             title: "Process",
-            detail: "This phase runs a sequential stub pipeline so the UI can show real stage changes before concurrency lands."
+            detail: "ClearVoice processes each file end to end, including normalization, upload prep when needed, and transcript export."
         ) {
             VStack(alignment: .leading, spacing: 18) {
                 Text(viewModel.statusText)
@@ -77,8 +77,14 @@ struct ProcessView: View {
             "Pending"
         case .analyzing:
             "Analyzing"
+        case .analyzingFormat:
+            "Analyzing format"
+        case .normalizingFormat:
+            "Normalizing format"
         case .cleaning(let progress):
             "Cleaning \(Int(progress * 100))%"
+        case .optimizingForUpload:
+            "Optimizing for upload"
         case .transcribing(let progress):
             "Transcribing \(Int(progress * 100))%"
         case .translating:

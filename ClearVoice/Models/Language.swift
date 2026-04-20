@@ -47,4 +47,39 @@ struct Language: Identifiable, Equatable {
 
         return languageCode
     }
+
+    var bcp47Locale: Locale? {
+        guard id != Self.autoDetect.id else {
+            return nil
+        }
+
+        return Locale(identifier: id)
+    }
+
+    @MainActor
+    var isSupportedLocally: Bool {
+        guard let bcp47Locale else {
+            return true
+        }
+
+        return Self.localSpeechSupportKeys.isDisjoint(with: Self.supportKeys(for: bcp47Locale)) == false
+    }
+
+    @MainActor
+    static func updateLocalSpeechSupport(with locales: [Locale]) {
+        localSpeechSupportKeys = Set(locales.flatMap(Self.supportKeys(for:)))
+    }
+
+    @MainActor
+    private static var localSpeechSupportKeys: Set<String> = []
+
+    private static func supportKeys(for locale: Locale) -> [String] {
+        var keys = [locale.identifier.lowercased()]
+
+        if let languageCode = locale.language.languageCode?.identifier.lowercased() {
+            keys.append(languageCode)
+        }
+
+        return Array(Set(keys))
+    }
 }

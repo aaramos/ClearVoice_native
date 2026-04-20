@@ -21,6 +21,7 @@ actor LocalFileScanner: FileScanner {
         "m4a",
         "aac",
         "flac",
+        "wma",
     ]
 
     private let fileManager: FileManager

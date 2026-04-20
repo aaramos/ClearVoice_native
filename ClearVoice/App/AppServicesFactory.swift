@@ -2,19 +2,40 @@ import Foundation
 
 enum AppServicesFactory {
     @MainActor
-    static func makeLiveAppViewModel(
-        geminiAPIKey: String
+    static func makeAppViewModel(
+        geminiAPIKey: String?,
+        onRequestAPIKeySetup: @escaping @MainActor () -> Void = {}
     ) -> AppViewModel {
-        let serviceBundle = makeLiveServiceBundle(geminiAPIKey: geminiAPIKey)
-        return AppViewModel(batchViewModel: BatchViewModel(services: serviceBundle))
+        let serviceBundle = makeServiceBundle(geminiAPIKey: geminiAPIKey)
+
+        return AppViewModel(
+            configureViewModel: ConfigureViewModel(
+                apiKeyPresent: geminiAPIKey != nil,
+                onRequestAPIKeySetup: onRequestAPIKeySetup
+            ),
+            batchViewModel: BatchViewModel(services: serviceBundle)
+        )
     }
 
-    static func makeLiveServiceBundle(
-        geminiAPIKey: String
+    static func makeServiceBundle(
+        geminiAPIKey: String?
     ) -> ServiceBundle {
-        return .live(
-            geminiAPIKey: geminiAPIKey
-        )
+        guard let geminiAPIKey else {
+            return ServiceBundle(
+                audioEnhancement: StubAudioEnhancementService(),
+                formatNormalizationService: AVFoundationFormatNormalizationService(),
+                cloudPreparationService: NoOpCloudAudioPreparationService(),
+                localTranscription: LocalSpeechTranscriptionService(),
+                cloudTranscription: UnavailableTranscriptionService(),
+                localTranslation: LocalTranslationService(),
+                cloudTranslation: UnavailableTranslationService(),
+                localSummarization: UnavailableSummarizationService(),
+                cloudSummarization: UnavailableSummarizationService(),
+                export: DefaultExportService()
+            )
+        }
+
+        return .live(geminiAPIKey: geminiAPIKey)
     }
 
     static func resolvedGeminiAPIKey(

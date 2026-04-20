@@ -1,35 +1,86 @@
+import Foundation
 import Testing
 @testable import ClearVoice
 
 @MainActor
 struct ConfigureViewModelTests {
     @Test
-    func outputLanguageOptionsExcludeAutoDetect() {
-        let viewModel = ConfigureViewModel()
+    func unsupportedLanguageWithoutKeyDisablesStartAndLocksCloudTranscription() async {
+        let store = makeStore()
+        let viewModel = ConfigureViewModel(
+            apiKeyPresent: false,
+            processingModeStore: store,
+            localSpeechSupportProvider: { [Locale(identifier: "hi")] }
+        )
 
-        #expect(viewModel.outputLanguageOptions.contains(.english))
-        #expect(!viewModel.outputLanguageOptions.contains(.autoDetect))
+        viewModel.selectInputLanguage(id: Language.gujarati.id)
+        await viewModel.updateRoutingForLanguage(viewModel.inputLanguage)
+
+        #expect(viewModel.transcriptionMode == .cloud)
+        #expect(viewModel.canToggleTranscription == false)
+        #expect(viewModel.canStart == false)
     }
 
     @Test
-    func selectingIntensityBandUpdatesIntensityValue() {
-        let viewModel = ConfigureViewModel()
+    func unsupportedLanguageWithKeyKeepsStartEnabledAndLocksCloudTranscription() async {
+        let store = makeStore()
+        let viewModel = ConfigureViewModel(
+            apiKeyPresent: true,
+            processingModeStore: store,
+            localSpeechSupportProvider: { [Locale(identifier: "hi")] }
+        )
 
-        viewModel.intensityBand = .maximum
+        viewModel.selectInputLanguage(id: Language.gujarati.id)
+        await viewModel.updateRoutingForLanguage(viewModel.inputLanguage)
 
-        #expect(viewModel.intensity.band == .maximum)
-        #expect(viewModel.intensity == .maximum)
+        #expect(viewModel.transcriptionMode == .cloud)
+        #expect(viewModel.canToggleTranscription == false)
+        #expect(viewModel.canStart)
     }
 
     @Test
-    func helperTextReflectsSelectedLanguagesAndConcurrency() {
-        let viewModel = ConfigureViewModel()
+    func supportedLanguageLeavesTranscriptionToggleAvailable() async {
+        let store = makeStore()
+        let viewModel = ConfigureViewModel(
+            apiKeyPresent: true,
+            processingModeStore: store,
+            localSpeechSupportProvider: { [Locale(identifier: "hi"), Locale(identifier: "gu")] }
+        )
+
         viewModel.selectInputLanguage(id: Language.hindi.id)
-        viewModel.selectOutputLanguage(id: Language.english.id)
-        viewModel.maxConcurrency = 5
+        await viewModel.updateRoutingForLanguage(viewModel.inputLanguage)
 
-        #expect(viewModel.helperText.contains("Hindi"))
-        #expect(viewModel.helperText.contains("English"))
-        #expect(viewModel.helperText.contains("5"))
+        #expect(viewModel.canToggleTranscription)
+        #expect(viewModel.canStart)
+    }
+
+    @Test
+    func toggleStatePersistsAcrossViewModelReinitialization() async {
+        let store = makeStore()
+        let first = ConfigureViewModel(
+            apiKeyPresent: true,
+            processingModeStore: store,
+            localSpeechSupportProvider: { [Locale(identifier: "hi")] }
+        )
+
+        first.transcriptionMode = .cloud
+        first.translationMode = .cloud
+
+        let second = ConfigureViewModel(
+            apiKeyPresent: true,
+            processingModeStore: store,
+            localSpeechSupportProvider: { [Locale(identifier: "hi")] }
+        )
+        await second.updateRoutingForLanguage(second.inputLanguage)
+
+        #expect(second.transcriptionMode == .cloud)
+        #expect(second.translationMode == .cloud)
+    }
+
+    private func makeStore() -> ProcessingModeStore {
+        let suiteName = "ClearVoice.ConfigureViewModelTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return ProcessingModeStore(userDefaults: defaults)
     }
 }

@@ -17,3 +17,12 @@ actor StubSummarizationService: SummarizationService {
         return "Stub summary (\(targetLanguage)): \(prefix)"
     }
 }
+
+actor UnavailableSummarizationService: SummarizationService {
+    func summarize(
+        text: String,
+        inLanguage targetLanguage: String
+    ) async throws -> String {
+        throw ServiceError.cloudUnavailable
+    }
+}

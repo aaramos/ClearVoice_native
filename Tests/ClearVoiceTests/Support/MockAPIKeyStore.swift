@@ -4,7 +4,9 @@ final class MockAPIKeyStore: APIKeyStore {
     var storedKey: String?
     var readError: APIKeyStoreError?
     var saveError: APIKeyStoreError?
+    var clearError: APIKeyStoreError?
     var savedKeys: [String] = []
+    var clearCount = 0
     var readCount = 0
 
     init(storedKey: String? = nil) {
@@ -28,5 +30,15 @@ final class MockAPIKeyStore: APIKeyStore {
 
         savedKeys.append(apiKey)
         storedKey = apiKey
+    }
+
+    func clearGeminiAPIKey() throws {
+        clearCount += 1
+
+        if let clearError {
+            throw clearError
+        }
+
+        storedKey = nil
     }
 }

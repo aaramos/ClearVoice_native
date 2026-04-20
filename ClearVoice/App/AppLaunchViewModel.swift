@@ -17,13 +17,13 @@ final class AppLaunchViewModel: ObservableObject {
 
     private let environment: [String: String]
     private let apiKeyStore: any APIKeyStore
-    private let makeAppViewModel: (String) -> AppViewModel
+    private let makeAppViewModel: @MainActor (String?, @escaping @MainActor () -> Void) -> AppViewModel
 
     init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         apiKeyStore: any APIKeyStore = KeychainGeminiAPIKeyStore(),
-        makeAppViewModel: @escaping (String) -> AppViewModel = {
-            AppServicesFactory.makeLiveAppViewModel(geminiAPIKey: $0)
+        makeAppViewModel: @escaping @MainActor (String?, @escaping @MainActor () -> Void) -> AppViewModel = {
+            AppServicesFactory.makeAppViewModel(geminiAPIKey: $0, onRequestAPIKeySetup: $1)
         }
     ) {
         self.environment = environment
@@ -51,6 +51,19 @@ final class AppLaunchViewModel: ObservableObject {
             submissionErrorMessage = error.localizedDescription
         } catch {
             submissionErrorMessage = "ClearVoice couldn’t save your Gemini API key: \(error.localizedDescription)"
+        }
+    }
+
+    func skipToLocalMode() {
+        do {
+            try apiKeyStore.clearGeminiAPIKey()
+            submissionErrorMessage = nil
+            apiKeyInput = ""
+            launch(with: nil)
+        } catch let error as APIKeyStoreError {
+            submissionErrorMessage = error.localizedDescription
+        } catch {
+            submissionErrorMessage = "ClearVoice couldn’t clear the saved Gemini API key: \(error.localizedDescription)"
         }
     }
 
@@ -82,9 +95,17 @@ final class AppLaunchViewModel: ObservableObject {
         }
     }
 
-    private func launch(with apiKey: String) {
-        appViewModel = makeAppViewModel(apiKey)
+    private func launch(with apiKey: String?) {
+        appViewModel = makeAppViewModel(apiKey) { [weak self] in
+            self?.presentAPIKeyEntry()
+        }
         launchError = nil
         phase = .ready
+    }
+
+    private func presentAPIKeyEntry() {
+        submissionErrorMessage = nil
+        apiKeyInput = ""
+        phase = .needsAPIKey
     }
 }

@@ -5,7 +5,7 @@ protocol ExportService: Sendable {
     func exportTranscript(
         to folderURL: URL,
         basename: String,
-        summary: String,
+        summary: String?,
         translated: String,
         original: String
     ) async throws
@@ -31,7 +31,7 @@ actor DefaultExportService: ExportService {
     func exportTranscript(
         to folderURL: URL,
         basename: String,
-        summary: String,
+        summary: String?,
         translated: String,
         original: String
     ) async throws {
@@ -83,19 +83,28 @@ actor DefaultExportService: ExportService {
     }
 
     private func transcriptContents(
-        summary: String,
+        summary: String?,
         translated: String,
         original: String
     ) -> String {
-        [
-            "SUMMARY",
-            summary,
-            "",
+        var sections: [String] = []
+
+        if let summary {
+            sections.append(contentsOf: [
+                "SUMMARY",
+                summary,
+                "",
+            ])
+        }
+
+        sections.append(contentsOf: [
             "TRANSLATED TRANSCRIPT",
             translated,
             "",
             "ORIGINAL TRANSCRIPT",
             original,
-        ].joined(separator: "\n") + "\n"
+        ])
+
+        return sections.joined(separator: "\n") + "\n"
     }
 }

@@ -1,9 +1,12 @@
 import Foundation
+import OSLog
 
 struct FileJob: Sendable {
     let config: BatchConfiguration
     let resolver: OutputPathResolver
     let services: ServiceBundle
+
+    private let logger = Logger(subsystem: "com.clearvoice.app", category: "file-job")
 
     func run(
         item: AudioFileItem,
@@ -25,8 +28,25 @@ struct FileJob: Sendable {
             await update(item)
             try await simulatedStepDelay()
 
+            item.stage = .analyzingFormat
+            await update(item)
+
+            let normalized = try await services.formatNormalizationService.normalize(item.sourceURL)
+            let normalizedURL = normalized.url
+
+            if normalized.requiresCleanup {
+                item.stage = .normalizingFormat
+                await update(item)
+            }
+
+            defer {
+                if normalized.requiresCleanup {
+                    try? FileManager.default.removeItem(at: normalizedURL)
+                }
+            }
+
             let cleanURL = item.outputFolderURL!.appendingPathComponent(
-                "\(item.basename)_clean.\(item.sourceURL.pathExtension)"
+                "\(item.basename)_clean.\(normalizedURL.pathExtension)"
             )
 
             item.stage = .cleaning(progress: 0.1)
@@ -34,7 +54,7 @@ struct FileJob: Sendable {
             try await simulatedStepDelay()
 
             try await services.audioEnhancement.enhance(
-                input: item.sourceURL,
+                input: normalizedURL,
                 output: cleanURL,
                 intensity: config.intensity
             )
@@ -42,12 +62,29 @@ struct FileJob: Sendable {
             item.stage = .cleaning(progress: 1.0)
             await update(item)
 
+            let transcribeURL: URL
+
+            if config.processingMode.transcription == .cloud {
+                item.stage = .optimizingForUpload
+                await update(item)
+
+                let preparedURL = try await services.cloudPreparationService.prepare(cleanURL)
+                defer {
+                    if preparedURL != cleanURL {
+                        try? FileManager.default.removeItem(at: preparedURL)
+                    }
+                }
+                transcribeURL = preparedURL
+            } else {
+                transcribeURL = cleanURL
+            }
+
             item.stage = .transcribing(progress: 0.3)
             await update(item)
             try await simulatedStepDelay()
 
-            let transcript = try await services.transcription.transcribe(
-                audio: cleanURL,
+            let transcript = try await services.transcriptionService(for: config).transcribe(
+                audio: transcribeURL,
                 language: config.inputLanguage
             )
             item.detectedLanguage = transcript.detectedLanguage
@@ -59,20 +96,38 @@ struct FileJob: Sendable {
             await update(item)
             try await simulatedStepDelay()
 
-            item.translatedTranscript = try await services.translation.translate(
-                text: transcript.text,
-                from: transcript.detectedLanguage,
-                to: config.outputLanguage
-            )
+            do {
+                item.translatedTranscript = try await services.translationService(for: config).translate(
+                    text: transcript.text,
+                    from: transcript.detectedLanguage,
+                    to: config.outputLanguage
+                )
+            } catch TranslationServiceError.pairUnavailable {
+                logger.warning("Local translation unavailable for \(transcript.detectedLanguage, privacy: .public) -> \(config.outputLanguage, privacy: .public); passing transcript through untranslated")
+                item.translatedTranscript = transcript.text
+            }
 
-            item.stage = .summarizing
-            await update(item)
-            try await simulatedStepDelay()
+            let summary: String?
 
-            item.summaryText = try await services.summarization.summarize(
-                text: item.translatedTranscript ?? "",
-                inLanguage: config.outputLanguage
-            )
+            if config.processingMode.summarization == .cloud && services.apiKeyPresent {
+                item.stage = .summarizing
+                await update(item)
+                try await simulatedStepDelay()
+
+                // FUTURE: Local summarization via FoundationModels (Apple Intelligence on-device LLM).
+                // Requires entitlement approval from Apple developer program.
+                // When available, replace UnavailableSummarizationService with a FoundationModelsSummarizationService
+                // that uses FoundationModels.LanguageModel to generate summaries without cloud dependency.
+                // A small CoreML model is a secondary fallback option if FoundationModels entitlement is unavailable.
+                summary = try await services.summarizationService(for: config).summarize(
+                    text: item.translatedTranscript ?? transcript.text,
+                    inLanguage: config.outputLanguage
+                )
+            } else {
+                summary = nil
+            }
+
+            item.summaryText = summary
 
             item.stage = .exporting
             await update(item)
@@ -80,8 +135,8 @@ struct FileJob: Sendable {
             try await services.export.exportTranscript(
                 to: item.outputFolderURL!,
                 basename: item.basename,
-                summary: item.summaryText ?? "",
-                translated: item.translatedTranscript ?? "",
+                summary: summary,
+                translated: item.translatedTranscript ?? transcript.text,
                 original: item.originalTranscript ?? ""
             )
 
@@ -96,7 +151,7 @@ struct FileJob: Sendable {
             item.stage = .failed(error: error)
             await update(item)
         } catch {
-            let wrappedError = ProcessingError.exportFailed(error.localizedDescription)
+            let wrappedError = wrappedProcessingError(for: error)
             try? await services.export.writeErrorLog(
                 to: item.outputFolderURL ?? config.outputFolder,
                 error: wrappedError,
@@ -109,5 +164,22 @@ struct FileJob: Sendable {
 
     private func simulatedStepDelay() async throws {
         try await Task.sleep(for: .milliseconds(220))
+    }
+
+    private func wrappedProcessingError(for error: Error) -> ProcessingError {
+        if let transcriptionError = error as? TranscriptionError {
+            switch transcriptionError {
+            case .languageNotSupported:
+                return .transcriptionFailed("ClearVoice couldn’t transcribe this language on-device.")
+            case .modelDownloading:
+                return .transcriptionFailed("Speech support for this language is still downloading on this Mac.")
+            }
+        }
+
+        if let serviceError = error as? ServiceError, serviceError == .cloudUnavailable {
+            return .transcriptionFailed("Gemini is unavailable because no API key is configured.")
+        }
+
+        return .exportFailed(error.localizedDescription)
     }
 }

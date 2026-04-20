@@ -15,11 +15,17 @@ struct ConfigureView: View {
                 summaryCard
                 audioSettingsCard
                 languageSettingsCard
+                processingSettingsCard
                 advancedSettingsCard
 
                 Text(viewModel.helperText)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if !viewModel.canStart {
+                    Label("This language requires Gemini transcription. Add a Gemini key to continue.", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
 
                 Spacer()
 
@@ -28,6 +34,7 @@ struct ConfigureView: View {
                     Spacer()
                     Button("Start Processing", action: onStart)
                         .keyboardShortcut(.defaultAction)
+                        .disabled(!viewModel.canStart)
                 }
             }
         }
@@ -100,6 +107,56 @@ struct ConfigureView: View {
         .cardStyle()
     }
 
+    private var processingSettingsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Divider()
+
+            Text("Processing")
+                .font(.headline)
+
+            if viewModel.apiKeyPresent {
+                Text(viewModel.processingSummaryText)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ProcessingModeToggleRow(
+                    label: "Transcription",
+                    mode: $viewModel.transcriptionMode,
+                    isEnabled: viewModel.canToggleTranscription,
+                    apiKeyPresent: true,
+                    badgeSuffix: transcriptionBadgeSuffix
+                )
+
+                ProcessingModeToggleRow(
+                    label: "Translation",
+                    mode: $viewModel.translationMode,
+                    isEnabled: viewModel.canToggleTranslation,
+                    apiKeyPresent: true
+                )
+
+                ProcessingModeToggleRow(
+                    label: "Summarization",
+                    mode: .constant(viewModel.summarizationMode),
+                    isEnabled: false,
+                    apiKeyPresent: true
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("All steps run on this Mac")
+                        .font(.subheadline.weight(.medium))
+                    Button("Add Gemini key →", action: viewModel.requestAPIKeySetup)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.blue)
+                }
+
+                staticProcessingRow(label: "Transcription", badgeText: "On-device", tint: .green)
+                staticProcessingRow(label: "Translation", badgeText: "On-device", tint: .green)
+                staticProcessingRow(label: "Summarization", badgeText: "Requires Gemini key", tint: .orange)
+            }
+        }
+        .cardStyle()
+    }
+
     private var advancedSettingsCard: some View {
         DisclosureGroup("Advanced", isExpanded: $showsAdvanced) {
             VStack(alignment: .leading, spacing: 14) {
@@ -119,6 +176,36 @@ struct ConfigureView: View {
             .padding(.top, 12)
         }
         .cardStyle()
+    }
+
+    private var transcriptionBadgeSuffix: String? {
+        var suffixes: [String] = []
+
+        if !viewModel.canToggleTranscription {
+            suffixes.append("auto")
+        }
+
+        if viewModel.shouldOptimizeUpload && viewModel.transcriptionMode == .cloud {
+            suffixes.append("audio optimized for upload")
+        }
+
+        return suffixes.isEmpty ? nil : suffixes.joined(separator: " · ")
+    }
+
+    private func staticProcessingRow(label: String, badgeText: String, tint: Color) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(badgeText)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(tint)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(tint.opacity(0.12))
+                )
+        }
     }
 
     private func summaryMetric(label: String, value: String) -> some View {

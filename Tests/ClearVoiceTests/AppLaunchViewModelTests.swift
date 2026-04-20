@@ -10,7 +10,7 @@ struct AppLaunchViewModelTests {
         let viewModel = AppLaunchViewModel(
             environment: [:],
             apiKeyStore: store,
-            makeAppViewModel: { _ in AppViewModel() }
+            makeAppViewModel: { _, _ in AppViewModel() }
         )
 
         #expect(viewModel.phase == .needsAPIKey)
@@ -24,7 +24,7 @@ struct AppLaunchViewModelTests {
         let viewModel = AppLaunchViewModel(
             environment: [:],
             apiKeyStore: store,
-            makeAppViewModel: { _ in AppViewModel() }
+            makeAppViewModel: { _, _ in AppViewModel() }
         )
 
         #expect(viewModel.phase == .ready)
@@ -38,7 +38,7 @@ struct AppLaunchViewModelTests {
         let viewModel = AppLaunchViewModel(
             environment: ["GEMINI_API_KEY": "env-key"],
             apiKeyStore: store,
-            makeAppViewModel: { _ in AppViewModel() }
+            makeAppViewModel: { _, _ in AppViewModel() }
         )
 
         #expect(viewModel.phase == .ready)
@@ -53,7 +53,7 @@ struct AppLaunchViewModelTests {
         let viewModel = AppLaunchViewModel(
             environment: [:],
             apiKeyStore: store,
-            makeAppViewModel: { _ in AppViewModel() }
+            makeAppViewModel: { _, _ in AppViewModel() }
         )
         viewModel.apiKeyInput = "  new-key  "
 
@@ -63,5 +63,23 @@ struct AppLaunchViewModelTests {
         #expect(viewModel.phase == .ready)
         #expect(viewModel.appViewModel != nil)
         #expect(viewModel.submissionErrorMessage == nil)
+    }
+
+    @Test
+    func skipToLocalModeClearsSavedKeyAndTransitionsToReady() {
+        let store = MockAPIKeyStore(storedKey: "saved-key")
+
+        let viewModel = AppLaunchViewModel(
+            environment: [:],
+            apiKeyStore: store,
+            makeAppViewModel: { _, _ in AppViewModel() }
+        )
+
+        viewModel.skipToLocalMode()
+
+        #expect(store.clearCount == 1)
+        #expect(store.storedKey == nil)
+        #expect(viewModel.phase == .ready)
+        #expect(viewModel.appViewModel != nil)
     }
 }

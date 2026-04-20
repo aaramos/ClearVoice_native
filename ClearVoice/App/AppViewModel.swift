@@ -34,7 +34,7 @@ final class AppViewModel: ObservableObject {
         case .importing:
             importViewModel.canProceed
         case .configuring:
-            true
+            configureViewModel.canStart
         case .processing, .review:
             false
         }
@@ -95,7 +95,8 @@ final class AppViewModel: ObservableObject {
             outputLanguage: configureViewModel.outputLanguage.id,
             maxConcurrency: configureViewModel.maxConcurrency,
             recursiveScan: true,
-            preserveChannels: configureViewModel.preserveChannels
+            preserveChannels: configureViewModel.preserveChannels,
+            processingMode: configureViewModel.batchProcessingModeConfiguration
         )
     }
 }
