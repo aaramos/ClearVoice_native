@@ -6,7 +6,7 @@ actor GeminiTranslationService: TranslationService {
 
     init(
         client: GeminiDeveloperClient,
-        model: String = "gemini-3.1-flash-lite-preview"
+        model: String = "gemini-2.5-flash"
     ) {
         self.client = client
         self.model = model

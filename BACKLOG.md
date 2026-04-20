@@ -1,0 +1,11 @@
+# ClearVoice Backlog
+
+## Media Pipeline
+
+- Evaluate FFmpeg for Gemini cloud-upload preparation so ClearVoice can transcode speech inputs into a smaller supported upload format before transcription.
+- Goal: prefer the smallest reliable Gemini-supported format for speech uploads, likely low-bitrate AAC or MP3, instead of the current temporary WAV path.
+- Constraints:
+  - Keep the converted file temporary-only and clean it up after upload.
+  - Verify actual Gemini API acceptance for the chosen MIME/container combination before switching the default path.
+  - Document packaging and license/compliance implications for bundling or requiring FFmpeg on macOS.
+  - Preserve the current WAV fallback if compressed upload prep is unavailable or fails at runtime.

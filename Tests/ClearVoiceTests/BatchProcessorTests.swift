@@ -83,6 +83,37 @@ struct BatchProcessorTests {
         #expect(latestItems.count == 3)
         #expect(latestItems.allSatisfy { $0.stage == .complete })
     }
+
+    @Test
+    func summarizationFailureExportsTranscriptWithoutSummary() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1)
+        let services = ServiceBundle(
+            apiKeyPresent: true,
+            audioEnhancement: StubAudioEnhancementService(),
+            transcription: StubTranscriptionService(),
+            translation: StubTranslationService(),
+            summarization: FailingSummarizationService(),
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+        let transcriptURL = try #require(item.outputFolderURL?
+            .appendingPathComponent("sample_1_transcript.txt"))
+        let transcript = try String(contentsOf: transcriptURL, encoding: .utf8)
+
+        #expect(item.stage == .complete)
+        #expect(item.summaryText == nil)
+        #expect(!transcript.contains("SUMMARY"))
+        #expect(transcript.contains("TRANSLATED TRANSCRIPT"))
+        #expect(transcript.contains("ORIGINAL TRANSCRIPT"))
+    }
 }
 
 private struct BatchProcessorHarness {
@@ -220,5 +251,14 @@ private actor SelectiveFailureTranscriptionService: TranscriptionService {
             detectedLanguage: "en",
             confidence: 0.99
         )
+    }
+}
+
+private actor FailingSummarizationService: SummarizationService {
+    func summarize(
+        text: String,
+        inLanguage targetLanguage: String
+    ) async throws -> String {
+        throw ProcessingError.summarizationFailed("Gemini summarization failed with status 503.")
     }
 }

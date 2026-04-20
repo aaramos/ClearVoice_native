@@ -32,9 +32,9 @@ struct RetryPolicy: Sendable {
     let maxJitterMilliseconds: UInt64
 
     static let `default` = RetryPolicy(
-        maxAttempts: 3,
-        baseDelayMilliseconds: 400,
-        maxJitterMilliseconds: 250
+        maxAttempts: 5,
+        baseDelayMilliseconds: 1_000,
+        maxJitterMilliseconds: 500
     )
 }
 

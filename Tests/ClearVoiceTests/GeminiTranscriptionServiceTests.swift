@@ -77,7 +77,7 @@ struct GeminiTranscriptionServiceTests {
         #expect(startBody.contains("sample.m4a"))
         #expect(requests[1].request.url?.absoluteString == "https://upload.example.com/resumable")
         #expect(uploadedBytes == Data("test-audio".utf8))
-        #expect(requests[2].request.url?.absoluteString == "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent")
+        #expect(requests[2].request.url?.absoluteString == "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent")
         #expect(generatePayload.generationConfig?.responseMIMEType == "application/json")
         #expect(generatePayload.generationConfig?.responseSchema?.properties?.keys.contains("language_code") == true)
         #expect(fileURI == "https://generativelanguage.googleapis.com/v1beta/files/abc-123")

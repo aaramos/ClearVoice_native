@@ -114,15 +114,23 @@ struct FileJob: Sendable {
                 await update(item)
                 try await simulatedStepDelay()
 
-                // FUTURE: Local summarization via FoundationModels (Apple Intelligence on-device LLM).
-                // Requires entitlement approval from Apple developer program.
-                // When available, replace UnavailableSummarizationService with a FoundationModelsSummarizationService
-                // that uses FoundationModels.LanguageModel to generate summaries without cloud dependency.
-                // A small CoreML model is a secondary fallback option if FoundationModels entitlement is unavailable.
-                summary = try await services.summarizationService(for: config).summarize(
-                    text: item.translatedTranscript ?? transcript.text,
-                    inLanguage: config.outputLanguage
-                )
+                do {
+                    // FUTURE: Local summarization via FoundationModels (Apple Intelligence on-device LLM).
+                    // Requires entitlement approval from Apple developer program.
+                    // When available, replace UnavailableSummarizationService with a FoundationModelsSummarizationService
+                    // that uses FoundationModels.LanguageModel to generate summaries without cloud dependency.
+                    // A small CoreML model is a secondary fallback option if FoundationModels entitlement is unavailable.
+                    summary = try await services.summarizationService(for: config).summarize(
+                        text: item.translatedTranscript ?? transcript.text,
+                        inLanguage: config.outputLanguage
+                    )
+                } catch let error as ProcessingError {
+                    logger.warning("Summarization failed for \(item.sourceURL.lastPathComponent, privacy: .public); exporting transcript without summary: \(String(describing: error), privacy: .public)")
+                    summary = nil
+                } catch {
+                    logger.warning("Summarization failed for \(item.sourceURL.lastPathComponent, privacy: .public); exporting transcript without summary: \(error.localizedDescription, privacy: .public)")
+                    summary = nil
+                }
             } else {
                 summary = nil
             }

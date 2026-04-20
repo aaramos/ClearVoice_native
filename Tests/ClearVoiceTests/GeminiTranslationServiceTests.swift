@@ -45,7 +45,7 @@ struct GeminiTranslationServiceTests {
 
         #expect(translated == "Hello from ClearVoice")
         #expect(requests.count == 1)
-        #expect(requests[0].request.url?.absoluteString == "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent")
+        #expect(requests[0].request.url?.absoluteString == "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent")
         #expect(requests[0].request.value(forHTTPHeaderField: "x-goog-api-key") == "gemini-test-key")
         #expect(requestBody.contains("Translate this spoken-audio transcript from Hindi (hi) to English (en)."))
         #expect(requestBody.contains("Output only the translated transcript"))

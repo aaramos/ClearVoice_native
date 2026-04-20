@@ -21,7 +21,7 @@ struct FormatNormalizationServiceTests {
 
     @Test
     func unsupportedFormatWritesTemporaryNormalizedURL() async throws {
-        let sourceURL = makeTemporaryAudioFile(named: "sample.wma")
+        let sourceURL = makeTemporaryAudioFile(named: "sample.ogg")
         let service = AVFoundationFormatNormalizationService(
             exporter: { _, destinationURL in
                 try Data([0x01, 0x02, 0x03]).write(to: destinationURL)

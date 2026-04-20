@@ -41,4 +41,5 @@ xcodebuild test -project ClearVoice.xcodeproj -scheme ClearVoice -destination 'p
 
 - Phase 8 audio DSP work is still in progress, so the current export path uses the existing clean-audio stub behavior.
 - The live Gemini path is implemented, covered by unit tests, and verified to launch locally, but it has not yet been exercised against a real Gemini API key in this shell session.
+- Native WMA processing is currently disabled. This build can scan and process `wav`, `mp3`, `m4a`, `aac`, and `flac`, but WMA will stay unsupported until ClearVoice gains an external transcoding path such as FFmpeg.
 - `.dmg` packaging is planned for a later phase; use the local run script for now.
