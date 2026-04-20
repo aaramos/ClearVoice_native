@@ -59,8 +59,10 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
             if let key = try readGeminiAPIKey(using: .dataProtection) {
                 return key
             }
-        } catch APIKeyStoreError.readFailed(let status) where status != errSecMissingEntitlement {
-            throw APIKeyStoreError.readFailed(status: status)
+        } catch APIKeyStoreError.readFailed(let status) {
+            guard status == errSecMissingEntitlement else {
+                throw APIKeyStoreError.readFailed(status: status)
+            }
         }
 
         return try readGeminiAPIKey(using: .legacyLoginKeychain)
@@ -79,6 +81,10 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
     }
 
     private func readGeminiAPIKey(using backend: Backend) throws -> String? {
+        if case .legacyLoginKeychain = backend {
+            return try readLegacyGeminiAPIKey()
+        }
+
         var query = baseQuery(for: backend)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -104,6 +110,11 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
     }
 
     private func saveGeminiAPIKey(_ apiKey: String, using backend: Backend) throws {
+        if case .legacyLoginKeychain = backend {
+            try saveLegacyGeminiAPIKey(apiKey)
+            return
+        }
+
         let keyData = Data(apiKey.utf8)
         var addQuery = baseQuery(for: backend)
         addQuery[kSecAttrLabel as String] = label
@@ -138,6 +149,126 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
             }
         default:
             throw APIKeyStoreError.saveFailed(status: status)
+        }
+    }
+
+    private func readLegacyGeminiAPIKey() throws -> String? {
+        var passwordLength: UInt32 = 0
+        var passwordData: UnsafeMutableRawPointer?
+        var itemRef: SecKeychainItem?
+
+        let status = service.withCString { serviceCString in
+            account.withCString { accountCString in
+                SecKeychainFindGenericPassword(
+                    nil,
+                    UInt32(service.utf8.count),
+                    serviceCString,
+                    UInt32(account.utf8.count),
+                    accountCString,
+                    &passwordLength,
+                    &passwordData,
+                    &itemRef
+                )
+            }
+        }
+
+        defer {
+            if let passwordData {
+                SecKeychainItemFreeContent(nil, passwordData)
+            }
+        }
+
+        switch status {
+        case errSecSuccess:
+            guard let passwordData else {
+                throw APIKeyStoreError.unexpectedData
+            }
+
+            let data = Data(bytes: passwordData, count: Int(passwordLength))
+            guard let apiKey = String(data: data, encoding: .utf8)?.trimmedNonEmpty else {
+                throw APIKeyStoreError.unexpectedData
+            }
+
+            return apiKey
+        case errSecItemNotFound:
+            return nil
+        default:
+            throw APIKeyStoreError.readFailed(status: status)
+        }
+    }
+
+    private func saveLegacyGeminiAPIKey(_ apiKey: String) throws {
+        let keyData = Data(apiKey.utf8)
+        var itemRef: SecKeychainItem?
+
+        let addStatus = service.withCString { serviceCString in
+            account.withCString { accountCString in
+                keyData.withUnsafeBytes { bytes in
+                    guard let baseAddress = bytes.baseAddress else {
+                        return errSecParam
+                    }
+
+                    return SecKeychainAddGenericPassword(
+                        nil,
+                        UInt32(service.utf8.count),
+                        serviceCString,
+                        UInt32(account.utf8.count),
+                        accountCString,
+                        UInt32(keyData.count),
+                        baseAddress,
+                        &itemRef
+                    )
+                }
+            }
+        }
+
+        switch addStatus {
+        case errSecSuccess:
+            return
+        case errSecDuplicateItem:
+            try updateLegacyGeminiAPIKey(keyData)
+        default:
+            throw APIKeyStoreError.saveFailed(status: addStatus)
+        }
+    }
+
+    private func updateLegacyGeminiAPIKey(_ keyData: Data) throws {
+        var itemRef: SecKeychainItem?
+
+        let findStatus = service.withCString { serviceCString in
+            account.withCString { accountCString in
+                SecKeychainFindGenericPassword(
+                    nil,
+                    UInt32(service.utf8.count),
+                    serviceCString,
+                    UInt32(account.utf8.count),
+                    accountCString,
+                    nil,
+                    nil,
+                    &itemRef
+                )
+            }
+        }
+
+        guard findStatus == errSecSuccess, let itemRef else {
+            throw APIKeyStoreError.saveFailed(status: findStatus)
+        }
+
+        let updateStatus = keyData.withUnsafeBytes { bytes in
+            guard let baseAddress = bytes.baseAddress else {
+                return errSecParam
+            }
+
+            return SecKeychainItemModifyAttributesAndData(
+                itemRef,
+                nil,
+                UInt32(keyData.count),
+                baseAddress
+            )
+        }
+
+        guard updateStatus == errSecSuccess else {
+            throw APIKeyStoreError.saveFailed(status: updateStatus)
         }
     }
 
