@@ -2,6 +2,7 @@ import Foundation
 
 struct ServiceBundle: Sendable {
     let audioEnhancement: any AudioEnhancementService
+    let comparisonEnhancement: (any ComparisonEnhancementService)?
     let formatNormalizationService: any FormatNormalizationService
     let speechPipeline: any SpeechPipelineService
     let summaryPlaceholder: String
@@ -9,12 +10,14 @@ struct ServiceBundle: Sendable {
 
     init(
         audioEnhancement: any AudioEnhancementService,
+        comparisonEnhancement: (any ComparisonEnhancementService)? = nil,
         formatNormalizationService: any FormatNormalizationService = StubFormatNormalizationService(),
         speechPipeline: any SpeechPipelineService,
         summaryPlaceholder: String = SummaryPlaceholders.pendingImplementation,
         export: any ExportService
     ) {
         self.audioEnhancement = audioEnhancement
+        self.comparisonEnhancement = comparisonEnhancement
         self.formatNormalizationService = formatNormalizationService
         self.speechPipeline = speechPipeline
         self.summaryPlaceholder = summaryPlaceholder
@@ -55,6 +58,7 @@ struct ServiceBundle: Sendable {
 
         return ServiceBundle(
             audioEnhancement: FFmpegAudioEnhancementService(),
+            comparisonEnhancement: DeepFilterNetAudioEnhancementService.available(),
             formatNormalizationService: FFmpegSpeechFormatNormalizationService(),
             speechPipeline: WhisperKitSpeechPipelineService(
                 modelDirectory: modelDirectory,

@@ -79,6 +79,30 @@ struct BatchProcessorTests {
     }
 
     @Test
+    func enhancementOnlyWritesDeepFilterVariantWhenConfigured() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1)
+        let services = ServiceBundle(
+            audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancement: StubComparisonEnhancementService(),
+            speechPipeline: FailingIfCalledSpeechPipelineService(),
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+        let outputFolder = try #require(item.outputFolderURL)
+
+        #expect(item.stage == .complete)
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
+    }
+
+    @Test
     func speechPipelineIsNotInvokedDuringEnhancementOnlyRuns() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
@@ -209,5 +233,15 @@ private actor FailingIfCalledSpeechPipelineService: SpeechPipelineService {
     func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
         Issue.record("Speech pipeline should not be called in enhancement-only mode.")
         throw ProcessingError.transcriptionFailed("Speech pipeline should not be called.")
+    }
+}
+
+private actor StubComparisonEnhancementService: ComparisonEnhancementService {
+    let outputSuffix = "DFN"
+
+    func enhance(input: URL, output: URL) async throws {
+        try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(at: output)
+        try Data("deepfilter".utf8).write(to: output)
     }
 }

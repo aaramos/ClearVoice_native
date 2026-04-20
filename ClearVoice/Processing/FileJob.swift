@@ -39,6 +39,7 @@ struct FileJob: Sendable {
 
             let normalized = try await services.formatNormalizationService.normalize(item.sourceURL)
             let normalizedURL = normalized.url
+            let totalOutputs = Self.enhancementBands.count + (services.comparisonEnhancement != nil ? 1 : 0)
 
             defer {
                 if normalized.requiresCleanup {
@@ -51,7 +52,7 @@ struct FileJob: Sendable {
                     "\(item.basename)_\(Self.outputSuffix(for: band)).\(AudioFormatSupport.cleanExportExtension)"
                 )
 
-                let progress = Double(index) / Double(Self.enhancementBands.count)
+                let progress = Double(index) / Double(totalOutputs)
                 item.stage = .cleaning(progress: progress)
                 await update(item)
 
@@ -59,6 +60,21 @@ struct FileJob: Sendable {
                     input: normalizedURL,
                     output: outputURL,
                     intensity: Intensity(band: band)
+                )
+            }
+
+            if let comparisonEnhancement = services.comparisonEnhancement {
+                let outputURL = item.outputFolderURL!.appendingPathComponent(
+                    "\(item.basename)_\(comparisonEnhancement.outputSuffix).\(AudioFormatSupport.cleanExportExtension)"
+                )
+
+                let progress = Double(Self.enhancementBands.count) / Double(totalOutputs)
+                item.stage = .cleaning(progress: progress)
+                await update(item)
+
+                try await comparisonEnhancement.enhance(
+                    input: normalizedURL,
+                    output: outputURL
                 )
             }
 

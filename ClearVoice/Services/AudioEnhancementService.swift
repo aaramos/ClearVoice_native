@@ -8,6 +8,15 @@ protocol AudioEnhancementService: Sendable {
     ) async throws
 }
 
+protocol ComparisonEnhancementService: Sendable {
+    var outputSuffix: String { get }
+
+    func enhance(
+        input: URL,
+        output: URL
+    ) async throws
+}
+
 actor StubAudioEnhancementService: AudioEnhancementService {
     private let fileManager: FileManager
 
@@ -22,6 +31,228 @@ actor StubAudioEnhancementService: AudioEnhancementService {
     ) async throws {
         try fileManager.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
         try fileManager.copyItem(at: input, to: output)
+    }
+}
+
+actor DeepFilterNetAudioEnhancementService: ComparisonEnhancementService {
+    typealias CommandRunner = @Sendable (URL, [String]) async throws -> Void
+
+    let outputSuffix = "DFN"
+
+    private let fileManager: FileManager
+    private let ffmpegURL: URL?
+    private let deepFilterURL: URL?
+    private let ffmpegRunner: CommandRunner
+    private let deepFilterRunner: CommandRunner
+
+    init(
+        fileManager: FileManager = .default,
+        ffmpegURL: URL? = FFmpegSpeechFormatNormalizationService.resolveFFmpegURL(),
+        deepFilterURL: URL? = DeepFilterNetAudioEnhancementService.resolveDeepFilterURL(),
+        ffmpegRunner: @escaping CommandRunner = DeepFilterNetAudioEnhancementService.defaultRunner,
+        deepFilterRunner: @escaping CommandRunner = DeepFilterNetAudioEnhancementService.defaultRunner
+    ) {
+        self.fileManager = fileManager
+        self.ffmpegURL = ffmpegURL
+        self.deepFilterURL = deepFilterURL
+        self.ffmpegRunner = ffmpegRunner
+        self.deepFilterRunner = deepFilterRunner
+    }
+
+    static func available(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        fileManager: FileManager = .default
+    ) -> DeepFilterNetAudioEnhancementService? {
+        guard let ffmpegURL = FFmpegSpeechFormatNormalizationService.resolveFFmpegURL(environment: environment, fileManager: fileManager),
+              let deepFilterURL = resolveDeepFilterURL(environment: environment, fileManager: fileManager) else {
+            return nil
+        }
+
+        return DeepFilterNetAudioEnhancementService(
+            ffmpegURL: ffmpegURL,
+            deepFilterURL: deepFilterURL
+        )
+    }
+
+    func enhance(
+        input: URL,
+        output: URL
+    ) async throws {
+        guard let ffmpegURL else {
+            throw ProcessingError.enhancementFailed(
+                "ClearVoice couldn’t create the DeepFilterNet comparison because FFmpeg is unavailable on this Mac."
+            )
+        }
+
+        guard let deepFilterURL else {
+            throw ProcessingError.enhancementFailed(
+                "ClearVoice couldn’t create the DeepFilterNet comparison because the deep-filter binary is unavailable on this Mac."
+            )
+        }
+
+        try fileManager.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        if fileManager.fileExists(atPath: output.path) {
+            try fileManager.removeItem(at: output)
+        }
+
+        let workingDirectory = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let repairedInputURL = workingDirectory.appendingPathComponent("deepfilter_input.wav")
+        let deepFilterOutputDirectory = workingDirectory.appendingPathComponent("deepfilter_out", isDirectory: true)
+
+        try fileManager.createDirectory(at: workingDirectory, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: deepFilterOutputDirectory, withIntermediateDirectories: true)
+
+        defer {
+            try? fileManager.removeItem(at: workingDirectory)
+        }
+
+        try await ffmpegRunner(ffmpegURL, Self.preprocessArguments(input: input, output: repairedInputURL))
+        try await deepFilterRunner(deepFilterURL, Self.deepFilterArguments(input: repairedInputURL, outputDirectory: deepFilterOutputDirectory))
+
+        guard let enhancedWAV = Self.locateDeepFilterOutput(
+            expectedFilename: repairedInputURL.lastPathComponent,
+            outputDirectory: deepFilterOutputDirectory,
+            fileManager: fileManager
+        ) else {
+            throw ProcessingError.enhancementFailed(
+                "ClearVoice ran DeepFilterNet but couldn’t find the enhanced WAV output."
+            )
+        }
+
+        try await ffmpegRunner(ffmpegURL, Self.postprocessArguments(input: enhancedWAV, output: output))
+    }
+
+    static func resolveDeepFilterURL(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        fileManager: FileManager = .default
+    ) -> URL? {
+        var candidates: [String] = []
+
+        if let explicitPath = environment["DEEP_FILTER_PATH"], !explicitPath.isEmpty {
+            candidates.append(explicitPath)
+        }
+
+        if let path = environment["PATH"] {
+            candidates.append(contentsOf: path.split(separator: ":").map { String($0) + "/deep-filter" })
+        }
+
+        candidates.append(contentsOf: [
+            "/opt/homebrew/bin/deep-filter",
+            "/usr/local/bin/deep-filter",
+            "/tmp/deep-filter",
+        ])
+
+        for candidate in candidates {
+            guard !candidate.isEmpty else { continue }
+            let expandedPath = NSString(string: candidate).expandingTildeInPath
+            if fileManager.isExecutableFile(atPath: expandedPath) {
+                return URL(fileURLWithPath: expandedPath)
+            }
+        }
+
+        return nil
+    }
+
+    private static func preprocessArguments(input: URL, output: URL) -> [String] {
+        let filterGraph = [
+            "adeclick=window=20:overlap=75:arorder=2:threshold=3:burst=4:method=save",
+            "adeclip=window=55:overlap=75:arorder=8:threshold=8:hsize=1200:method=save",
+        ].joined(separator: ",")
+
+        return [
+            "-hide_banner",
+            "-loglevel", "error",
+            "-y",
+            "-i", input.path,
+            "-vn",
+            "-af", filterGraph,
+            "-ac", "1",
+            "-ar", "48000",
+            "-c:a", "pcm_s16le",
+            output.path,
+        ]
+    }
+
+    private static func deepFilterArguments(input: URL, outputDirectory: URL) -> [String] {
+        [
+            "--compensate-delay",
+            "-o", outputDirectory.path,
+            input.path,
+        ]
+    }
+
+    private static func postprocessArguments(input: URL, output: URL) -> [String] {
+        let filterGraph = [
+            "highpass=f=80",
+            "lowpass=f=7800",
+            "speechnorm=e=4.0:r=0.0001:l=1",
+        ].joined(separator: ",")
+
+        return [
+            "-hide_banner",
+            "-loglevel", "error",
+            "-y",
+            "-i", input.path,
+            "-vn",
+            "-af", filterGraph,
+            "-ac", "1",
+            "-ar", "16000",
+            "-c:a", "aac",
+            "-b:a", "96k",
+            output.path,
+        ]
+    }
+
+    private static func locateDeepFilterOutput(
+        expectedFilename: String,
+        outputDirectory: URL,
+        fileManager: FileManager
+    ) -> URL? {
+        let expected = outputDirectory.appendingPathComponent(expectedFilename)
+        if fileManager.fileExists(atPath: expected.path) {
+            return expected
+        }
+
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: outputDirectory,
+            includingPropertiesForKeys: nil
+        ) else {
+            return nil
+        }
+
+        return contents
+            .filter { $0.pathExtension.lowercased() == "wav" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .first
+    }
+
+    private static let defaultRunner: CommandRunner = { executableURL, arguments in
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = arguments
+
+        let errorPipe = Pipe()
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            throw ProcessingError.enhancementFailed("ClearVoice couldn’t start \(executableURL.lastPathComponent): \(error.localizedDescription)")
+        }
+
+        guard process.terminationStatus == 0 else {
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let detail = String(data: errorData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if let detail, !detail.isEmpty {
+                throw ProcessingError.enhancementFailed("ClearVoice couldn’t run \(executableURL.lastPathComponent): \(detail)")
+            }
+
+            throw ProcessingError.enhancementFailed("ClearVoice couldn’t run \(executableURL.lastPathComponent).")
+        }
     }
 }
 

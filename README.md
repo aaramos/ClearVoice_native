@@ -22,6 +22,8 @@ Temporary evaluation mode on this branch:
   - `<name>_BALANCED.m4a`
   - `<name>_STRONG.m4a`
   - `<name>_MAX.m4a`
+- When the `deep-filter` binary is installed locally, each folder also gets:
+  - `<name>_DFN.m4a`
 
 ## Current Product Shape
 
@@ -37,6 +39,13 @@ Install FFmpeg:
 
 ```sh
 brew install ffmpeg
+```
+
+Optional DeepFilterNet comparison binary:
+
+```sh
+curl -fsSL https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-aarch64-apple-darwin -o /opt/homebrew/bin/deep-filter
+chmod +x /opt/homebrew/bin/deep-filter
 ```
 
 WhisperKit models are downloaded on demand into the current user's Application Support directory the first time local speech processing runs:
