@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		06DAB6EF3579DB0EE3864740 /* ImportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */; };
 		0F7BA6B5C1E1C5A12F9C0DEC /* ClearVoiceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050E389B0D32CC15410E92D3 /* ClearVoiceApp.swift */; };
+		16B374167A25635BB42C08B2 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0494ED6BAB9FF633DC51756 /* ExportService.swift */; };
 		1D5B8CE52218523A316AFFC2 /* FolderPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECB7619B2718CCB2AC24DE36 /* FolderPicker.swift */; };
 		205175B412A0BB0F759123C8 /* StepCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9817F36BA3807A6D127833C2 /* StepCard.swift */; };
 		4947D97A1D5E432CC6382EF8 /* ConfigureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D7B230E0827D1E2D0501223 /* ConfigureView.swift */; };
@@ -26,7 +27,9 @@
 		B920F21E58178A83332722D3 /* OutputPathResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FF57A3BC9624FF1E9D95137 /* OutputPathResolverTests.swift */; };
 		BC35A9262B7BD8984AFBBF7A /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4914971065BFD2A2065106C /* AppViewModel.swift */; };
 		C1725BE752D1CB14FDE8F619 /* ProcessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E63BC6AA9746C9D41E4D736 /* ProcessView.swift */; };
+		CC950BE12D5BF93878805B49 /* ExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2993C11FAAE4D5980D7B79 /* ExportServiceTests.swift */; };
 		D8031901C274A4D98386C5D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5AE43363D4BCDF9066B0ECC8 /* Assets.xcassets */; };
+		D962EC8BB18543A4DFF8D817 /* expected_transcript.txt in Resources */ = {isa = PBXBuildFile; fileRef = BE5058BF2F804FA25969F68A /* expected_transcript.txt */; };
 		E11AE4167C22584B2594F9D0 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1064A3805D4AA3F066FED3AC /* ImportView.swift */; };
 		E7330F86647F4CD65848A546 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD479F07A42B13CE1AC9CDF /* AppState.swift */; };
 		F23DD0E19389C6B712F55FDB /* OutputPathResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37DC09E9B76B136331E6713F /* OutputPathResolver.swift */; };
@@ -48,6 +51,7 @@
 		12ACB3CB20B537F3E00AC2D8 /* FileScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileScanner.swift; sourceTree = "<group>"; };
 		1D7B230E0827D1E2D0501223 /* ConfigureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureView.swift; sourceTree = "<group>"; };
 		24EF938074D6A941D7991843 /* BatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchViewModel.swift; sourceTree = "<group>"; };
+		2B2993C11FAAE4D5980D7B79 /* ExportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportServiceTests.swift; sourceTree = "<group>"; };
 		2CFFBC3B74171C2CB5AD927A /* ClearVoice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClearVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D03412F66C01539EEC03FE7 /* AppViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModelTests.swift; sourceTree = "<group>"; };
 		2F9E06D40AE18B2F40D49F84 /* Intensity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intensity.swift; sourceTree = "<group>"; };
@@ -63,10 +67,12 @@
 		9817F36BA3807A6D127833C2 /* StepCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepCard.swift; sourceTree = "<group>"; };
 		99AD87617DF52A527033A909 /* ImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModel.swift; sourceTree = "<group>"; };
 		A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModelTests.swift; sourceTree = "<group>"; };
+		BE5058BF2F804FA25969F68A /* expected_transcript.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = expected_transcript.txt; sourceTree = "<group>"; };
 		C0750D7C985ACAD2C103ABEC /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		E5162558A53088EBB62A27A3 /* DurationFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DurationFormatter.swift; sourceTree = "<group>"; };
 		EB9C5765A8625716036679A9 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		ECB7619B2718CCB2AC24DE36 /* FolderPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderPicker.swift; sourceTree = "<group>"; };
+		F0494ED6BAB9FF633DC51756 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		F4914971065BFD2A2065106C /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -82,6 +88,14 @@
 				4B4A13FBE1D56D3D0098D097 /* Components */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		3F9DED54E0BE8C2904846CC0 /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				BE5058BF2F804FA25969F68A /* expected_transcript.txt */,
+			);
+			path = Fixtures;
 			sourceTree = "<group>";
 		};
 		430E8CE196A98749AE3121C1 /* Products */ = {
@@ -130,6 +144,7 @@
 		8AA355B3BE0AF76AB095DE60 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				F0494ED6BAB9FF633DC51756 /* ExportService.swift */,
 				12ACB3CB20B537F3E00AC2D8 /* FileScanner.swift */,
 			);
 			path = Services;
@@ -149,8 +164,10 @@
 			isa = PBXGroup;
 			children = (
 				2D03412F66C01539EEC03FE7 /* AppViewModelTests.swift */,
+				2B2993C11FAAE4D5980D7B79 /* ExportServiceTests.swift */,
 				A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */,
 				6FF57A3BC9624FF1E9D95137 /* OutputPathResolverTests.swift */,
+				3F9DED54E0BE8C2904846CC0 /* Fixtures */,
 			);
 			path = ClearVoiceTests;
 			sourceTree = "<group>";
@@ -224,6 +241,7 @@
 			buildConfigurationList = 2141E765CE72B6803A399D9C /* Build configuration list for PBXNativeTarget "ClearVoiceTests" */;
 			buildPhases = (
 				185392D01DB6DEBA91D3AF63 /* Sources */,
+				ACDCA2A1E6F1B71A02D073C1 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -269,6 +287,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		ACDCA2A1E6F1B71A02D073C1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D962EC8BB18543A4DFF8D817 /* expected_transcript.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E2CFDCD98FC2BF74ACD540C4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -285,6 +311,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5B322C3099C687EEAA98BD0C /* AppViewModelTests.swift in Sources */,
+				CC950BE12D5BF93878805B49 /* ExportServiceTests.swift in Sources */,
 				06DAB6EF3579DB0EE3864740 /* ImportViewModelTests.swift in Sources */,
 				B920F21E58178A83332722D3 /* OutputPathResolverTests.swift in Sources */,
 			);
@@ -301,6 +328,7 @@
 				4947D97A1D5E432CC6382EF8 /* ConfigureView.swift in Sources */,
 				684E70B1DDFE8B2F862A49D9 /* ConfigureViewModel.swift in Sources */,
 				795F1DBAAB4F1CFBB4625D37 /* DurationFormatter.swift in Sources */,
+				16B374167A25635BB42C08B2 /* ExportService.swift in Sources */,
 				6AA113EA69772CADC5AB3C4B /* FileScanner.swift in Sources */,
 				1D5B8CE52218523A316AFFC2 /* FolderPicker.swift in Sources */,
 				E11AE4167C22584B2594F9D0 /* ImportView.swift in Sources */,
