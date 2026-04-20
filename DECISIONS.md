@@ -10,3 +10,4 @@ This file records implementation choices that were left to engineering discretio
 - Target layout: app target `ClearVoice`, test target `ClearVoiceTests`.
 - Build tooling: added `script/build_and_run.sh` plus `.codex/environments/environment.toml` as the single local run entrypoint for Codex and terminal use.
 - Signing posture for v1 local builds: code signing disabled in project settings to match the unsigned, non-notarized distribution target.
+- Output-path precedence: the handoff's `OutputPathResolver` pseudocode conflicts with its own rule-precedence text and test matrix, so the implementation follows the rule text/tests. Same-batch queue order assigns the candidate suffix first, then prior-run folder existence is checked against that assigned candidate.
