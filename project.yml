@@ -1,0 +1,41 @@
+name: ClearVoice
+options:
+  createIntermediateGroups: true
+  minimumXcodeGenVersion: 2.45.4
+settings:
+  base:
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 0.1.0
+    SWIFT_VERSION: 5.9
+targets:
+  ClearVoice:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: ClearVoice
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.clearvoice.ClearVoice
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: ClearVoice
+        INFOPLIST_KEY_LSMinimumSystemVersion: "14.0"
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        SWIFT_STRICT_CONCURRENCY: complete
+    scheme:
+      testTargets:
+        - ClearVoiceTests
+  ClearVoiceTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Tests/ClearVoiceTests
+    dependencies:
+      - target: ClearVoice
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.clearvoice.ClearVoiceTests
+        GENERATE_INFOPLIST_FILE: YES
