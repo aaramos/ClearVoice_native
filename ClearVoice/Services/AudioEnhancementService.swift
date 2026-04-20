@@ -63,15 +63,94 @@ actor FFmpegAudioEnhancementService: AudioEnhancementService {
     }
 
     private func filterGraph(for intensity: Intensity) -> String {
+        let profile = profile(for: intensity)
+
+        // Repair transient defects first so later denoise/gating stages do not smear pops or clipped peaks.
+        return [
+            "adeclick=window=20:overlap=75:arorder=2:threshold=\(profile.clickThreshold):burst=\(profile.clickBurst):method=save",
+            "adeclip=window=55:overlap=75:arorder=8:threshold=\(profile.clipThreshold):hsize=1200:method=save",
+            "highpass=f=\(profile.highpassFrequency)",
+            "lowpass=f=\(profile.lowpassFrequency)",
+            "afftdn=nr=\(profile.noiseReduction):nf=\(profile.noiseFloor):tn=1:gs=\(profile.gainSmooth)",
+            "agate=threshold=\(profile.gateThreshold):ratio=\(profile.gateRatio):range=\(profile.gateRange):attack=\(profile.gateAttack):release=\(profile.gateRelease):detection=rms",
+            "speechnorm=e=\(profile.speechExpansion):r=\(profile.speechRelease):l=1",
+        ].joined(separator: ",")
+    }
+
+    private func profile(for intensity: Intensity) -> EnhancementProfile {
         switch intensity.band {
         case .minimal:
-            return "highpass=f=90,lowpass=f=7600,afftdn=nf=-18,speechnorm=e=4.5:r=0.00008:l=1"
+            return EnhancementProfile(
+                highpassFrequency: 80,
+                lowpassFrequency: 7_800,
+                clickThreshold: 8,
+                clickBurst: 1,
+                clipThreshold: 14,
+                noiseReduction: 10,
+                noiseFloor: -48,
+                gainSmooth: 4,
+                gateThreshold: 0.018,
+                gateRatio: 1.3,
+                gateRange: 0.85,
+                gateAttack: 15,
+                gateRelease: 180,
+                speechExpansion: 4.0,
+                speechRelease: 0.00010
+            )
         case .balanced:
-            return "highpass=f=90,lowpass=f=7600,afftdn=nf=-20,speechnorm=e=6:r=0.00008:l=1"
+            return EnhancementProfile(
+                highpassFrequency: 90,
+                lowpassFrequency: 7_600,
+                clickThreshold: 6,
+                clickBurst: 2,
+                clipThreshold: 12,
+                noiseReduction: 14,
+                noiseFloor: -50,
+                gainSmooth: 6,
+                gateThreshold: 0.022,
+                gateRatio: 1.6,
+                gateRange: 0.65,
+                gateAttack: 20,
+                gateRelease: 240,
+                speechExpansion: 6.0,
+                speechRelease: 0.00008
+            )
         case .strong:
-            return "highpass=f=100,lowpass=f=7200,afftdn=nf=-24,speechnorm=e=8:r=0.00006:l=1"
+            return EnhancementProfile(
+                highpassFrequency: 100,
+                lowpassFrequency: 7_200,
+                clickThreshold: 4,
+                clickBurst: 3,
+                clipThreshold: 10,
+                noiseReduction: 18,
+                noiseFloor: -54,
+                gainSmooth: 8,
+                gateThreshold: 0.028,
+                gateRatio: 2.2,
+                gateRange: 0.45,
+                gateAttack: 25,
+                gateRelease: 320,
+                speechExpansion: 8.0,
+                speechRelease: 0.00006
+            )
         case .maximum:
-            return "highpass=f=110,lowpass=f=7000,afftdn=nf=-28,speechnorm=e=10:r=0.00005:l=1"
+            return EnhancementProfile(
+                highpassFrequency: 110,
+                lowpassFrequency: 6_800,
+                clickThreshold: 3,
+                clickBurst: 4,
+                clipThreshold: 8,
+                noiseReduction: 22,
+                noiseFloor: -58,
+                gainSmooth: 10,
+                gateThreshold: 0.035,
+                gateRatio: 3.0,
+                gateRange: 0.30,
+                gateAttack: 30,
+                gateRelease: 420,
+                speechExpansion: 10.0,
+                speechRelease: 0.00005
+            )
         }
     }
 
@@ -114,4 +193,22 @@ actor FFmpegAudioEnhancementService: AudioEnhancementService {
             throw ProcessingError.enhancementFailed("ClearVoice couldn’t enhance this audio file.")
         }
     }
+}
+
+private struct EnhancementProfile {
+    let highpassFrequency: Int
+    let lowpassFrequency: Int
+    let clickThreshold: Int
+    let clickBurst: Int
+    let clipThreshold: Int
+    let noiseReduction: Int
+    let noiseFloor: Int
+    let gainSmooth: Int
+    let gateThreshold: Double
+    let gateRatio: Double
+    let gateRange: Double
+    let gateAttack: Int
+    let gateRelease: Int
+    let speechExpansion: Double
+    let speechRelease: Double
 }

@@ -8,7 +8,7 @@ This branch, `local-offline-v2`, is the local-first refactor. The primary workfl
 
 - Accepts local audio files, including `.wma`
 - Converts source audio into a speech-processing format with FFmpeg
-- Enhances speech locally and exports a final clean audio file as `.m4a`
+- Enhances speech locally with FFmpeg click repair, declipping, broadband noise suppression, gating, and speech normalization, then exports a final clean audio file as `.m4a`
 - Runs local transcription plus English translation with WhisperKit
 - Exports one folder per source file containing:
   - `<name>_clean.m4a`
