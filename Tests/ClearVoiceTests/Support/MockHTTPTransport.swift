@@ -3,7 +3,7 @@ import Foundation
 
 actor MockHTTPTransport: HTTPTransport {
     enum Response: Sendable {
-        case success(statusCode: Int, body: Data)
+        case success(statusCode: Int, body: Data, headers: [String: String] = [:])
         case failure(URLError)
     }
 
@@ -29,12 +29,12 @@ actor MockHTTPTransport: HTTPTransport {
         let nextResponse = responses.removeFirst()
 
         switch nextResponse {
-        case .success(let statusCode, let body):
+        case .success(let statusCode, let body, let headers):
             let response = HTTPURLResponse(
                 url: request.url ?? URL(string: "https://example.com")!,
                 statusCode: statusCode,
                 httpVersion: nil,
-                headerFields: nil
+                headerFields: headers
             )!
             return (body, response)
         case .failure(let error):

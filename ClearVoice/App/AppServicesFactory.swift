@@ -12,26 +12,20 @@ enum AppServicesFactory {
     static func makeLiveServiceBundle(
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) throws -> ServiceBundle {
-        let openAIAPIKey = environment["OPENAI_API_KEY"]?.trimmedNonEmpty
-        let ollamaAPIKey = environment["OLLAMA_API_KEY"]?.trimmedNonEmpty
+        let geminiAPIKey = environment["GEMINI_API_KEY"]?.trimmedNonEmpty
 
         var missingVariables: [String] = []
 
-        if openAIAPIKey == nil {
-            missingVariables.append("OPENAI_API_KEY")
+        if geminiAPIKey == nil {
+            missingVariables.append("GEMINI_API_KEY")
         }
 
-        if ollamaAPIKey == nil {
-            missingVariables.append("OLLAMA_API_KEY")
-        }
-
-        guard let openAIAPIKey, let ollamaAPIKey, missingVariables.isEmpty else {
+        guard let geminiAPIKey, missingVariables.isEmpty else {
             throw LaunchRequirementsError.missingEnvironmentVariables(missingVariables)
         }
 
         return .live(
-            openAIAPIKey: openAIAPIKey,
-            ollamaAPIKey: ollamaAPIKey
+            geminiAPIKey: geminiAPIKey
         )
     }
 }

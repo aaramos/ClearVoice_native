@@ -78,6 +78,11 @@ actor CloudHTTPClient {
     }
 
     func send(request: URLRequest, body: Data?) async throws -> Data {
+        let (data, _) = try await sendWithResponse(request: request, body: body)
+        return data
+    }
+
+    func sendWithResponse(request: URLRequest, body: Data?) async throws -> (Data, HTTPURLResponse) {
         var lastError: Error?
 
         for attempt in 1...retryPolicy.maxAttempts {
@@ -91,7 +96,7 @@ actor CloudHTTPClient {
                     )
                 }
 
-                return data
+                return (data, response)
             } catch let error as RequestError {
                 lastError = error
 
