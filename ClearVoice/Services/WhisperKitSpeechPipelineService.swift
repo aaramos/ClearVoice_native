@@ -1,7 +1,7 @@
 import CoreML
 import Foundation
 import OSLog
-import WhisperKit
+@preconcurrency import WhisperKit
 
 actor WhisperKitSpeechPipelineService: SpeechPipelineService {
     private let modelName: String
@@ -23,15 +23,18 @@ actor WhisperKitSpeechPipelineService: SpeechPipelineService {
         audio: URL,
         language: LanguageSelection
     ) async throws -> SpeechPipelineOutput {
-        let whisperKit = try await buildWhisperKit()
+        var whisperKit: WhisperKit?
 
         do {
+            let runtime = try await buildWhisperKit()
+            whisperKit = runtime
+
             let sourceLanguage = try await resolveSourceLanguage(
-                using: whisperKit,
+                using: runtime,
                 audio: audio,
                 requestedLanguage: language
             )
-            let transcriptResults = try await whisperKit.transcribe(
+            let transcriptResults = try await runtime.transcribe(
                 audioPath: audio.path,
                 decodeOptions: transcribeOptions(sourceLanguage: sourceLanguage)
             )
@@ -41,7 +44,7 @@ actor WhisperKitSpeechPipelineService: SpeechPipelineService {
                 throw ProcessingError.transcriptionFailed("ClearVoice returned an empty source transcript from the local speech model.")
             }
 
-            let englishResults = try await whisperKit.transcribe(
+            let englishResults = try await runtime.transcribe(
                 audioPath: audio.path,
                 decodeOptions: translateOptions(sourceLanguage: sourceLanguage)
             )
@@ -57,24 +60,32 @@ actor WhisperKitSpeechPipelineService: SpeechPipelineService {
                 confidence: confidence(from: transcriptResults)
             )
 
-            await whisperKit.unloadModels()
+            await runtime.unloadModels()
 
             return SpeechPipelineOutput(
                 transcript: transcript,
                 englishTranslation: englishText
             )
         } catch {
-            await whisperKit.unloadModels()
-            throw map(error)
+            if let whisperKit {
+                await whisperKit.unloadModels()
+            }
+            throw mapError(error)
         }
     }
 
     private func buildWhisperKit() async throws -> WhisperKit {
         try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
+        let config = makeConfig()
 
-        let config = WhisperKitConfig(
+        logger.debug("Loading WhisperKit model \(self.modelName, privacy: .public)")
+        return try await WhisperKit(config)
+    }
+
+    func makeConfig() -> WhisperKitConfig {
+        WhisperKitConfig(
             model: modelName,
-            modelFolder: modelDirectory.path,
+            downloadBase: modelDirectory,
             computeOptions: ModelComputeOptions(
                 melCompute: .cpuAndGPU,
                 audioEncoderCompute: .cpuAndNeuralEngine,
@@ -88,9 +99,6 @@ actor WhisperKitSpeechPipelineService: SpeechPipelineService {
             download: true,
             useBackgroundDownloadSession: false
         )
-
-        logger.debug("Loading WhisperKit model \(self.modelName, privacy: .public)")
-        return try await WhisperKit(config)
     }
 
     private func resolveSourceLanguage(
@@ -171,7 +179,7 @@ actor WhisperKitSpeechPipelineService: SpeechPipelineService {
         return min(max(average, 0), 1)
     }
 
-    private func map(_ error: Error) -> Error {
+    func mapError(_ error: Error) -> Error {
         if let transcriptionError = error as? TranscriptionError {
             return transcriptionError
         }
@@ -181,6 +189,14 @@ actor WhisperKitSpeechPipelineService: SpeechPipelineService {
         }
 
         let description = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if description.localizedCaseInsensitiveContains("model file not found at"),
+           description.localizedCaseInsensitiveContains("melspectrogram")
+        {
+            return ProcessingError.transcriptionFailed(
+                "ClearVoice couldn’t finish setting up the local speech model on this Mac. Keep the Mac online and try again so the Whisper model can download completely."
+            )
+        }
 
         if description.localizedCaseInsensitiveContains("download") {
             return ProcessingError.transcriptionFailed(

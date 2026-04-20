@@ -50,6 +50,7 @@
 		7E1D7616F8ACD548301A7494 /* AVFoundationFormatNormalizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C86657F863B93442AE9EC18 /* AVFoundationFormatNormalizationService.swift */; };
 		7F6B31C14786B09E25927CFC /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB9C5765A8625716036679A9 /* RootView.swift */; };
 		844EE1810C20F6154BA50919 /* OllamaTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7BC56C8495EAF677F3BFA9 /* OllamaTranslationService.swift */; };
+		88E621738E3F99C049F01215 /* WhisperKitSpeechPipelineServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 010032A2C4061BEF0A3A388F /* WhisperKitSpeechPipelineServiceTests.swift */; };
 		8C58D33036148007FB5BA44C /* GeminiTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FEC578ED93B5F0868AD7A0 /* GeminiTranscriptionService.swift */; };
 		90380E4A5BCEAFA2329D928F /* LocalTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F51B90B5A86476DEC7FFF36 /* LocalTranslationService.swift */; };
 		926CC5C150B255DA21B226C0 /* FormatNormalizationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC3DF1C37A84D03FB669E323 /* FormatNormalizationServiceTests.swift */; };
@@ -99,6 +100,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		010032A2C4061BEF0A3A388F /* WhisperKitSpeechPipelineServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitSpeechPipelineServiceTests.swift; sourceTree = "<group>"; };
 		032C700F9E4D341DD7A42297 /* OllamaTranslationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaTranslationServiceTests.swift; sourceTree = "<group>"; };
 		050E389B0D32CC15410E92D3 /* ClearVoiceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearVoiceApp.swift; sourceTree = "<group>"; };
 		05DA28966C272C168CECDDF7 /* GeminiSummarizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiSummarizationService.swift; sourceTree = "<group>"; };
@@ -336,6 +338,7 @@
 				77DB12F4BEDBC998314BE481 /* OpenAIWhisperTranscriptionServiceTests.swift */,
 				6FF57A3BC9624FF1E9D95137 /* OutputPathResolverTests.swift */,
 				5384A0B1E598FA4740CB944E /* ProcessingModeConfigurationTests.swift */,
+				010032A2C4061BEF0A3A388F /* WhisperKitSpeechPipelineServiceTests.swift */,
 				3F9DED54E0BE8C2904846CC0 /* Fixtures */,
 				682A8A4588633BD77B2CCC64 /* Support */,
 			);
@@ -511,6 +514,7 @@
 				C178D1F30A38D5FFD4C59873 /* OpenAIWhisperTranscriptionServiceTests.swift in Sources */,
 				B920F21E58178A83332722D3 /* OutputPathResolverTests.swift in Sources */,
 				CBA28ACF204F51547F744C6B /* ProcessingModeConfigurationTests.swift in Sources */,
+				88E621738E3F99C049F01215 /* WhisperKitSpeechPipelineServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
