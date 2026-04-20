@@ -3,35 +3,34 @@ import SwiftUI
 
 @main
 struct ClearVoiceApp: App {
-    @StateObject private var appViewModel: AppViewModel
-    private let launchRequirementsError: LaunchRequirementsError?
-
-    init() {
-        do {
-            let viewModel = try AppServicesFactory.makeLiveAppViewModel()
-            _appViewModel = StateObject(wrappedValue: viewModel)
-            launchRequirementsError = nil
-        } catch let error as LaunchRequirementsError {
-            _appViewModel = StateObject(wrappedValue: AppViewModel())
-            launchRequirementsError = error
-        } catch {
-            _appViewModel = StateObject(wrappedValue: AppViewModel())
-            launchRequirementsError = LaunchRequirementsError(
-                title: "Couldn’t Start ClearVoice",
-                message: "ClearVoice hit an unexpected startup error: \(error.localizedDescription)"
-            )
-        }
-    }
+    @StateObject private var launchViewModel = AppLaunchViewModel()
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if let launchRequirementsError {
-                    LaunchFailureView(error: launchRequirementsError) {
+                switch launchViewModel.phase {
+                case .loading:
+                    ProgressView("Starting ClearVoice…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.regularMaterial)
+                case .needsAPIKey:
+                    APIKeySetupView(viewModel: launchViewModel) {
                         NSApp.terminate(nil)
                     }
-                } else {
-                    RootView(viewModel: appViewModel)
+                case .ready:
+                    if let appViewModel = launchViewModel.appViewModel {
+                        RootView(viewModel: appViewModel)
+                    } else {
+                        ProgressView("Starting ClearVoice…")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(.regularMaterial)
+                    }
+                case .failed:
+                    LaunchFailureView(
+                        error: launchViewModel.launchError ?? LaunchRequirementsError.unexpectedStartupFailure("Unknown launch state.")
+                    ) {
+                        NSApp.terminate(nil)
+                    }
                 }
             }
             .frame(minWidth: 920, minHeight: 640)

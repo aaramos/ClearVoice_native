@@ -21,4 +21,5 @@ This file records implementation choices that were left to engineering discretio
 - Gemini transcription prompt: structured-output prompt that requests verbatim transcript text, BCP-47 language code, and a model-estimated confidence score between 0 and 1.
 - Gemini confidence heuristic: trusting Gemini's structured `confidence_estimate` output directly for now, then clamping it into `0...1` before downstream fallback logic consumes it.
 - Gemini file handling: always using the Files API upload flow for transcription inputs, then deleting the uploaded remote file after processing even though Gemini also expires files automatically after 48 hours.
-- Launch-time key gating: normal app launches now block on missing `GEMINI_API_KEY` with a dedicated startup failure screen, while the rest of the app continues to use injected stubs in tests.
+- Launch-time key storage: normal app launches now check `GEMINI_API_KEY` first for developer overrides, then fall back to a machine-local Keychain item. If neither is present, ClearVoice shows a first-launch key entry screen instead of an unrecoverable startup failure.
+- Keychain scope: storing the Gemini key as a generic password in the macOS data-protection keychain with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, which keeps the saved credential local to that Mac and prevents migration to another device.
