@@ -4,46 +4,163 @@ struct ConfigureView: View {
     @ObservedObject var viewModel: ConfigureViewModel
     let onBack: () -> Void
     let onStart: () -> Void
+    @State private var showsAdvanced = true
 
     var body: some View {
         StepCard(
             title: "Configure",
-            detail: "The settings model is in place now so later phases can add real controls without changing navigation."
+            detail: "Choose how aggressively ClearVoice should clean the audio and which languages it should use during transcription and translation."
         ) {
             VStack(alignment: .leading, spacing: 20) {
-                Group {
-                    configRow(label: "Intensity", value: viewModel.intensity.band.rawValue.capitalized)
-                    configRow(label: "Input Language", value: viewModel.inputLanguage.displayName)
-                    configRow(label: "Output Language", value: viewModel.outputLanguage.displayName)
-                }
+                summaryCard
+                audioSettingsCard
+                languageSettingsCard
+                advancedSettingsCard
 
                 Text(viewModel.helperText)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
 
                 HStack {
                     Button("Back", action: onBack)
                     Spacer()
-                    Button("Start", action: onStart)
+                    Button("Start Processing", action: onStart)
                         .keyboardShortcut(.defaultAction)
                 }
             }
         }
     }
 
-    private func configRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label)
+    private var summaryCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Current Plan")
                 .font(.headline)
-            Spacer()
-            Text(value)
-                .foregroundStyle(.secondary)
+
+            HStack(spacing: 12) {
+                summaryMetric(
+                    label: "Intensity",
+                    value: viewModel.intensity.band.rawValue.capitalized
+                )
+                Divider()
+                summaryMetric(
+                    label: "Source",
+                    value: viewModel.inputLanguage.displayName
+                )
+                Divider()
+                summaryMetric(
+                    label: "Output",
+                    value: viewModel.outputLanguage.displayName
+                )
+            }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
+        .cardStyle()
+    }
+
+    private var audioSettingsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Audio Cleanup")
+                .font(.headline)
+
+            Picker("Intensity", selection: intensityBandBinding) {
+                ForEach(Intensity.Band.allCases, id: \.self) { band in
+                    Text(band.rawValue.capitalized)
+                        .tag(band)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Text(viewModel.intensityDescription)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .cardStyle()
+    }
+
+    private var languageSettingsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Language Workflow")
+                .font(.headline)
+
+            Picker("Input Language", selection: inputLanguageBinding) {
+                ForEach(viewModel.inputLanguageOptions) { language in
+                    Text(language.displayName)
+                        .tag(language.id)
+                }
+            }
+
+            Picker("Output Language", selection: outputLanguageBinding) {
+                ForEach(viewModel.outputLanguageOptions) { language in
+                    Text(language.displayName)
+                        .tag(language.id)
+                }
+            }
+        }
+        .cardStyle()
+    }
+
+    private var advancedSettingsCard: some View {
+        DisclosureGroup("Advanced", isExpanded: $showsAdvanced) {
+            VStack(alignment: .leading, spacing: 14) {
+                Stepper(value: $viewModel.maxConcurrency, in: 1...8) {
+                    LabeledContent("Parallel Files") {
+                        Text("\(viewModel.maxConcurrency)")
+                            .monospacedDigit()
+                    }
+                }
+
+                Toggle("Preserve channels when possible", isOn: $viewModel.preserveChannels)
+
+                Text(viewModel.advancedSummary)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 12)
+        }
+        .cardStyle()
+    }
+
+    private func summaryMetric(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.title3.weight(.semibold))
+        }
+    }
+
+    private var intensityBandBinding: Binding<Intensity.Band> {
+        Binding(
+            get: { viewModel.intensityBand },
+            set: { viewModel.intensityBand = $0 }
         )
+    }
+
+    private var inputLanguageBinding: Binding<String> {
+        Binding(
+            get: { viewModel.inputLanguage.id },
+            set: { viewModel.selectInputLanguage(id: $0) }
+        )
+    }
+
+    private var outputLanguageBinding: Binding<String> {
+        Binding(
+            get: { viewModel.outputLanguage.id },
+            set: { viewModel.selectOutputLanguage(id: $0) }
+        )
+    }
+}
+
+private extension View {
+    func cardStyle() -> some View {
+        self
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
     }
 }
