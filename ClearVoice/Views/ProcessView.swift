@@ -8,7 +8,7 @@ struct ProcessView: View {
     var body: some View {
         StepCard(
             title: "Process",
-            detail: "ClearVoice processes each file locally end to end: conversion, cleanup, source transcript, English translation, and transcript export."
+            detail: "ClearVoice is temporarily running in enhancement-only mode: conversion plus four local cleanup passes per file."
         ) {
             VStack(alignment: .leading, spacing: 18) {
                 Text(viewModel.statusText)

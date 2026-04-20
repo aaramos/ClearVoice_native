@@ -14,6 +14,15 @@ This branch, `local-offline-v2`, is the local-first refactor. The primary workfl
   - `<name>_clean.m4a`
   - `<name>_transcript.txt`
 
+Temporary evaluation mode on this branch:
+
+- Transcription and translation are currently disabled so audio enhancement can be evaluated in isolation
+- Each per-file output folder now contains four enhanced variants:
+  - `<name>_MIN.m4a`
+  - `<name>_BALANCED.m4a`
+  - `<name>_STRONG.m4a`
+  - `<name>_MAX.m4a`
+
 ## Current Product Shape
 
 - Translation output is fixed to English for now

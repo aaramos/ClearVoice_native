@@ -31,8 +31,8 @@ struct BatchProcessorTests {
     func processorIsolatesFailuresToTheImpactedFile() async throws {
         let harness = try BatchProcessorHarness(fileCount: 4)
         let services = ServiceBundle(
-            audioEnhancement: StubAudioEnhancementService(),
-            speechPipeline: SelectiveFailureSpeechPipelineService(failingBasename: "sample_2_clean"),
+            audioEnhancement: SelectiveFailureEnhancementService(failingBasename: "sample_2"),
+            speechPipeline: FailingIfCalledSpeechPipelineService(),
             export: DefaultExportService()
         )
         let processor = try harness.makeProcessor(services: services, maxConcurrency: 3)
@@ -44,18 +44,18 @@ struct BatchProcessorTests {
 
         let latestItems = await recorder.itemsByBasename()
 
-        #expect(latestItems["sample_2"]?.stage == .failed(error: .transcriptionFailed("Stubbed failure")))
+        #expect(latestItems["sample_2"]?.stage == .failed(error: .enhancementFailed("Stubbed enhancement failure")))
         #expect(latestItems["sample_1"]?.stage == .complete)
         #expect(latestItems["sample_3"]?.stage == .complete)
         #expect(latestItems["sample_4"]?.stage == .complete)
     }
 
     @Test
-    func summaryPlaceholderIsExported() async throws {
+    func enhancementOnlyWritesAllVariantsAndSkipsTranscriptExport() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
-            speechPipeline: StubSpeechPipelineService(),
+            speechPipeline: FailingIfCalledSpeechPipelineService(),
             summaryPlaceholder: "Placeholder summary.",
             export: DefaultExportService()
         )
@@ -68,24 +68,22 @@ struct BatchProcessorTests {
 
         let latestItems = await recorder.itemsByBasename()
         let item = try #require(latestItems["sample_1"])
-        let transcriptURL = try #require(item.outputFolderURL?
-            .appendingPathComponent("sample_1_transcript.txt"))
-        let transcript = try String(contentsOf: transcriptURL, encoding: .utf8)
+        let outputFolder = try #require(item.outputFolderURL)
 
         #expect(item.stage == .complete)
-        #expect(item.summaryText == "Placeholder summary.")
-        #expect(transcript.contains("SUMMARY"))
-        #expect(transcript.contains("Placeholder summary."))
-        #expect(transcript.contains("TRANSLATED TRANSCRIPT"))
-        #expect(transcript.contains("ORIGINAL TRANSCRIPT"))
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MIN.m4a").path))
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_BALANCED.m4a").path))
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_STRONG.m4a").path))
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MAX.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
     }
 
     @Test
-    func languageDetectionFailureUsesActionableMessage() async throws {
+    func speechPipelineIsNotInvokedDuringEnhancementOnlyRuns() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
-            speechPipeline: DetectionFailingSpeechPipelineService(),
+            speechPipeline: FailingIfCalledSpeechPipelineService(),
             export: DefaultExportService()
         )
         let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
@@ -98,32 +96,6 @@ struct BatchProcessorTests {
         let latestItems = await recorder.itemsByBasename()
         let item = try #require(latestItems["sample_1"])
 
-        #expect(item.stage == .failed(error: .transcriptionFailed("ClearVoice couldn’t detect the spoken language. Choose the source language manually and try again.")))
-    }
-
-    @Test
-    func speechPipelineReceivesSpeechSafeWavInput() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 1)
-        let speechPipeline = RecordingSpeechPipelineService()
-        let services = ServiceBundle(
-            audioEnhancement: StubAudioEnhancementService(),
-            formatNormalizationService: StubSpeechSafeFormatNormalizationService(),
-            speechPipeline: speechPipeline,
-            export: DefaultExportService()
-        )
-        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
-        let recorder = ItemRecorder()
-
-        await processor.run(files: harness.items) { item in
-            await recorder.record(item)
-        }
-
-        let receivedExtension = await speechPipeline.receivedPathExtension
-        let latestItems = await recorder.itemsByBasename()
-        let item = try #require(latestItems["sample_1"])
-
-        #expect(receivedExtension == "wav")
-        #expect(item.outputFolderURL?.appendingPathComponent("sample_1_clean.m4a") != nil)
         #expect(item.stage == .complete)
     }
 }
@@ -215,50 +187,27 @@ private actor TrackingEnhancementService: AudioEnhancementService {
     }
 }
 
-private actor SelectiveFailureSpeechPipelineService: SpeechPipelineService {
+private actor SelectiveFailureEnhancementService: AudioEnhancementService {
     let failingBasename: String
 
     init(failingBasename: String) {
         self.failingBasename = failingBasename
     }
 
-    func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
-        if audio.deletingPathExtension().lastPathComponent == failingBasename {
-            throw ProcessingError.transcriptionFailed("Stubbed failure")
+    func enhance(input: URL, output: URL, intensity: Intensity) async throws {
+        if output.lastPathComponent.hasPrefix("\(failingBasename)_") {
+            throw ProcessingError.enhancementFailed("Stubbed enhancement failure")
         }
 
-        let transcript = Transcript(text: "Original \(audio.lastPathComponent)", detectedLanguage: "mr", confidence: 0.9)
-        return SpeechPipelineOutput(
-            transcript: transcript,
-            englishTranslation: "English \(audio.lastPathComponent)"
-        )
+        try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(at: output)
+        try Data("clean".utf8).write(to: output)
     }
 }
 
-private actor DetectionFailingSpeechPipelineService: SpeechPipelineService {
+private actor FailingIfCalledSpeechPipelineService: SpeechPipelineService {
     func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
-        throw TranscriptionError.languageDetectionFailed
-    }
-}
-
-private actor RecordingSpeechPipelineService: SpeechPipelineService {
-    private(set) var receivedPathExtension: String?
-
-    func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
-        receivedPathExtension = audio.pathExtension.lowercased()
-        return SpeechPipelineOutput(
-            transcript: Transcript(text: "Original", detectedLanguage: "mr", confidence: 0.9),
-            englishTranslation: "English"
-        )
-    }
-}
-
-private actor StubSpeechSafeFormatNormalizationService: FormatNormalizationService {
-    func normalize(_ sourceURL: URL) async throws -> (url: URL, requiresCleanup: Bool) {
-        let destinationURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("wav")
-        try Data("wav".utf8).write(to: destinationURL)
-        return (destinationURL, true)
+        Issue.record("Speech pipeline should not be called in enhancement-only mode.")
+        throw ProcessingError.transcriptionFailed("Speech pipeline should not be called.")
     }
 }

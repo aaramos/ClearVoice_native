@@ -5,6 +5,13 @@ struct FileJob: Sendable {
     let resolver: OutputPathResolver
     let services: ServiceBundle
 
+    private static let enhancementBands: [Intensity.Band] = [
+        .minimal,
+        .balanced,
+        .strong,
+        .maximum,
+    ]
+
     func run(
         item: AudioFileItem,
         update: @escaping @Sendable (AudioFileItem) async -> Void
@@ -39,60 +46,24 @@ struct FileJob: Sendable {
                 }
             }
 
-            let cleanURL = item.outputFolderURL!.appendingPathComponent(
-                "\(item.basename)_clean.\(AudioFormatSupport.cleanExportExtension)"
-            )
+            for (index, band) in Self.enhancementBands.enumerated() {
+                let outputURL = item.outputFolderURL!.appendingPathComponent(
+                    "\(item.basename)_\(Self.outputSuffix(for: band)).\(AudioFormatSupport.cleanExportExtension)"
+                )
 
-            item.stage = .cleaning(progress: 0.1)
-            await update(item)
+                let progress = Double(index) / Double(Self.enhancementBands.count)
+                item.stage = .cleaning(progress: progress)
+                await update(item)
 
-            try await services.audioEnhancement.enhance(
-                input: normalizedURL,
-                output: cleanURL,
-                intensity: config.intensity
-            )
+                try await services.audioEnhancement.enhance(
+                    input: normalizedURL,
+                    output: outputURL,
+                    intensity: Intensity(band: band)
+                )
+            }
 
             item.stage = .cleaning(progress: 1.0)
             await update(item)
-
-            item.stage = .transcribing(progress: 0.3)
-            await update(item)
-
-            let speechInput = try await services.formatNormalizationService.normalize(cleanURL)
-            let speechInputURL = speechInput.url
-
-            defer {
-                if speechInput.requiresCleanup {
-                    try? FileManager.default.removeItem(at: speechInputURL)
-                }
-            }
-
-            let speechOutput = try await services.speechPipeline.process(
-                audio: speechInputURL,
-                language: config.inputLanguage
-            )
-
-            item.detectedLanguage = speechOutput.transcript.detectedLanguage
-            item.originalTranscript = speechOutput.transcript.text
-            item.stage = .transcribing(progress: 1.0)
-            await update(item)
-
-            item.stage = .translating
-            await update(item)
-
-            item.translatedTranscript = speechOutput.englishTranslation
-            item.summaryText = services.summaryPlaceholder
-
-            item.stage = .exporting
-            await update(item)
-
-            try await services.export.exportTranscript(
-                to: item.outputFolderURL!,
-                basename: item.basename,
-                summary: item.summaryText,
-                translated: item.translatedTranscript ?? speechOutput.transcript.text,
-                original: item.originalTranscript ?? ""
-            )
 
             item.stage = .complete
             await update(item)
@@ -131,5 +102,18 @@ struct FileJob: Sendable {
         }
 
         return .exportFailed(error.localizedDescription)
+    }
+
+    private static func outputSuffix(for band: Intensity.Band) -> String {
+        switch band {
+        case .minimal:
+            return "MIN"
+        case .balanced:
+            return "BALANCED"
+        case .strong:
+            return "STRONG"
+        case .maximum:
+            return "MAX"
+        }
     }
 }

@@ -103,7 +103,7 @@ final class BatchViewModel: ObservableObject {
                         self.statusText = "Processing finished with \(failureCount) failed and \(skippedCount) skipped. See the file rows below for details."
                     }
                 } else {
-                    self.statusText = "Processing complete. Review polish lands in a later phase."
+                    self.statusText = "Enhancement complete. Each file folder now contains four locally enhanced audio variants."
                 }
             }
         }

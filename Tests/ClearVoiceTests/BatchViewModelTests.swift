@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct BatchViewModelTests {
     @Test
-    func languageDetectionFailuresExposeManualLanguagePrompt() async throws {
+    func enhancementOnlyRunsFinishWithoutLanguagePrompt() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         let sourceFolder = root.appendingPathComponent("source", isDirectory: true)
         let outputFolder = root.appendingPathComponent("output", isDirectory: true)
@@ -18,7 +18,7 @@ struct BatchViewModelTests {
         let viewModel = BatchViewModel(
             services: ServiceBundle(
                 audioEnhancement: StubAudioEnhancementService(),
-                speechPipeline: DetectionFailureSpeechPipelineService(),
+                speechPipeline: FailingIfCalledSpeechPipelineService(),
                 export: DefaultExportService()
             )
         )
@@ -40,13 +40,14 @@ struct BatchViewModelTests {
             await Task.yield()
         }
 
-        #expect(viewModel.languageSelectionPrompt?.contains("choose the source language manually") == true)
-        #expect(viewModel.statusText.contains("manually selected source language"))
+        #expect(viewModel.languageSelectionPrompt == nil)
+        #expect(viewModel.statusText.contains("four locally enhanced audio variants"))
     }
 }
 
-private actor DetectionFailureSpeechPipelineService: SpeechPipelineService {
+private actor FailingIfCalledSpeechPipelineService: SpeechPipelineService {
     func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
-        throw TranscriptionError.languageDetectionFailed
+        Issue.record("Speech pipeline should not be called in enhancement-only mode.")
+        throw ProcessingError.transcriptionFailed("Speech pipeline should not be called.")
     }
 }
