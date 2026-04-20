@@ -19,6 +19,24 @@ struct CloudAudioPreparationServiceTests {
         #expect(preparedFile.processingFormat.sampleRate == 16_000)
         #expect(preparedFile.processingFormat.channelCount == 1)
     }
+
+    @Test
+    func mp3FallsBackToOriginalAudioWhenOptimizationFails() async throws {
+        let sourceURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString).mp3")
+        try Data([0x01, 0x02, 0x03]).write(to: sourceURL)
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        let service = AVFoundationCloudPreparationService { _, _ in
+            throw NSError(domain: "CloudPrep", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "ExtAudioFileRead failed ('bada')"
+            ])
+        }
+
+        let outputURL = try await service.prepare(sourceURL)
+
+        #expect(outputURL == sourceURL)
+    }
 }
 
 private func makeToneWAV() throws -> URL {

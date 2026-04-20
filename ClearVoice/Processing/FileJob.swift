@@ -170,22 +170,10 @@ struct FileJob: Sendable {
             item.stage = .transcribing(progress: 0.3)
             await update(item)
             try await simulatedStepDelay()
-
-            do {
-                return try await services.transcriptionService(for: config).transcribe(
-                    audio: cleanURL,
-                    language: config.inputLanguage
-                )
-            } catch let error as TranscriptionError
-                where services.apiKeyPresent && (error == .modelDownloading || error == .languageNotSupported) {
-                let sourceFileName = item.sourceURL.lastPathComponent
-                logger.warning("Local transcription unavailable for \(sourceFileName, privacy: .public); retrying with Gemini transcription.")
-                return try await cloudTranscribe(
-                    item: &item,
-                    cleanURL: cleanURL,
-                    update: update
-                )
-            }
+            return try await services.transcriptionService(for: config).transcribe(
+                audio: cleanURL,
+                language: config.inputLanguage
+            )
         }
     }
 

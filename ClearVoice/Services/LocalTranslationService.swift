@@ -14,8 +14,9 @@ actor LocalTranslationService: TranslationService {
         let source = Locale.Language(identifier: sourceLanguage)
         let target = Locale.Language(identifier: targetLanguage)
         let availability = LanguageAvailability()
+        let status = await availability.status(from: source, to: target)
 
-        guard await availability.status(from: source, to: target) == .installed else {
+        guard status != .unsupported else {
             throw TranslationServiceError.pairUnavailable
         }
 

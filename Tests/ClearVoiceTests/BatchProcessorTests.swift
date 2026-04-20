@@ -162,7 +162,7 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func localTranscriptionFallsBackToCloudWhenSpeechAssetsAreUnavailable() async throws {
+    func localTranscriptionStaysLocalWhenSpeechAssetsAreUnavailable() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let cloudPreparation = RecordingCloudPreparationService()
         let services = ServiceBundle(
@@ -189,10 +189,8 @@ struct BatchProcessorTests {
         let item = try #require(latestItems["sample_1"])
         let preparedInputs = await cloudPreparation.inputs
 
-        #expect(item.stage == .complete)
-        #expect(item.originalTranscript?.contains("Stub original transcript") == true)
-        #expect(preparedInputs.count == 1)
-        #expect(preparedInputs[0].lastPathComponent == "sample_1_clean.m4a")
+        #expect(item.stage == .failed(error: .transcriptionFailed("Speech support for this language is still downloading on this Mac.")))
+        #expect(preparedInputs.isEmpty)
     }
 }
 
