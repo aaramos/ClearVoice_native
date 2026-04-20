@@ -45,7 +45,7 @@ final class BatchViewModel: ObservableObject {
                 stage: .pending
             )
         }
-        statusText = "Starting a stub pipeline run with exported outputs."
+        statusText = "Starting batch processing."
         didFinish = false
     }
 
@@ -84,7 +84,7 @@ final class BatchViewModel: ObservableObject {
                 self.processor = nil
                 self.isRunning = false
                 self.didFinish = true
-                self.statusText = "Stub pipeline complete. Review placeholder content is now available."
+                self.statusText = "Processing complete. Review polish lands in a later phase."
             }
         }
     }

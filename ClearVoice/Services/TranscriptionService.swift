@@ -1,6 +1,7 @@
 import Foundation
 
 protocol TranscriptionService: Sendable {
+    /// Transcribes the supplied audio file and returns the detected-language metadata used by the rest of the pipeline.
     func transcribe(
         audio: URL,
         language: LanguageSelection

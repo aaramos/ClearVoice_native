@@ -1,6 +1,7 @@
 import Foundation
 
 protocol SummarizationService: Sendable {
+    /// Produces a concise summary in the selected output language from the already translated transcript.
     func summarize(
         text: String,
         inLanguage targetLanguage: String
