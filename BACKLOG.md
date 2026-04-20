@@ -13,3 +13,4 @@
 ## Documentation
 
 - Update the engineering handoff, README, and any behavior docs to reflect the runtime translation fallback: when `Translation` is set to on-device and the local Apple Translation step fails, ClearVoice now retries translation with Gemini if a Gemini key is available.
+- Update the engineering handoff, README, and any behavior docs to reflect the runtime transcription fallback: when `Transcription` is set to on-device and the local Apple speech asset is not installed or still downloading, ClearVoice now retries transcription with Gemini if a Gemini key is available, and the user-facing status text now distinguishes `downloading` from `available but not installed`.

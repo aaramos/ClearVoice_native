@@ -164,10 +164,26 @@ struct FileJob: Sendable {
             item.stage = .transcribing(progress: 0.3)
             await update(item)
             try await simulatedStepDelay()
-            return try await services.transcriptionService(for: config).transcribe(
-                audio: cleanURL,
-                language: config.inputLanguage
-            )
+            let sourceFileName = item.sourceURL.lastPathComponent
+            do {
+                return try await services.transcriptionService(for: config).transcribe(
+                    audio: cleanURL,
+                    language: config.inputLanguage
+                )
+            } catch let error as TranscriptionError {
+                if services.apiKeyPresent, shouldFallbackToCloudTranscription(for: error) {
+                    logger.warning(
+                        "Local transcription unavailable for \(sourceFileName, privacy: .public); retrying with Gemini transcription: \(String(describing: error), privacy: .public)"
+                    )
+                    return try await cloudTranscribe(
+                        item: &item,
+                        cleanURL: cleanURL,
+                        update: update
+                    )
+                }
+
+                throw error
+            }
         }
     }
 
@@ -225,13 +241,24 @@ struct FileJob: Sendable {
         }
     }
 
+    private func shouldFallbackToCloudTranscription(for error: TranscriptionError) -> Bool {
+        switch error {
+        case .modelDownloading, .modelNotInstalled:
+            return true
+        case .languageNotSupported:
+            return false
+        }
+    }
+
     private func wrappedProcessingError(for error: Error) -> ProcessingError {
         if let transcriptionError = error as? TranscriptionError {
             switch transcriptionError {
             case .languageNotSupported:
                 return .transcriptionFailed("ClearVoice couldn’t transcribe this language on-device.")
             case .modelDownloading:
-                return .transcriptionFailed("Speech support for this language is still downloading on this Mac.")
+                return .transcriptionFailed("Speech support for this language is currently downloading on this Mac.")
+            case .modelNotInstalled:
+                return .transcriptionFailed("Speech support for this language is available on this Mac but isn’t installed yet.")
             }
         }
 

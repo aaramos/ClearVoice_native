@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import OSLog
 import Speech
 
 actor LocalSpeechTranscriptionService: TranscriptionService {
@@ -9,6 +10,7 @@ actor LocalSpeechTranscriptionService: TranscriptionService {
     }
 
     private let engine: any Engine
+    private let logger = Logger(subsystem: "com.clearvoice.app", category: "local-transcription")
 
     init(engine: any Engine = SpeechAnalyzerEngine()) {
         self.engine = engine
@@ -22,7 +24,14 @@ actor LocalSpeechTranscriptionService: TranscriptionService {
             throw TranscriptionError.languageNotSupported
         }
 
-        return try await engine.transcribe(audioURL: audio, locale: locale)
+        do {
+            return try await engine.transcribe(audioURL: audio, locale: locale)
+        } catch let error as TranscriptionError {
+            logger.warning(
+                "Local speech asset unavailable for \(locale.identifier, privacy: .public): \(String(describing: error), privacy: .public)"
+            )
+            throw error
+        }
     }
 }
 
@@ -51,12 +60,17 @@ private struct SpeechAnalyzerEngine: LocalSpeechTranscriptionService.Engine {
         )
 
         let assetStatus = await AssetInventory.status(forModules: [transcriber])
-        guard assetStatus != .unsupported else {
+        switch assetStatus {
+        case .unsupported:
             throw TranscriptionError.languageNotSupported
-        }
-
-        guard assetStatus == .installed else {
+        case .supported:
+            throw TranscriptionError.modelNotInstalled
+        case .downloading:
             throw TranscriptionError.modelDownloading
+        case .installed:
+            break
+        @unknown default:
+            throw TranscriptionError.modelNotInstalled
         }
 
         let audioFile = try AVAudioFile(forReading: audioURL)

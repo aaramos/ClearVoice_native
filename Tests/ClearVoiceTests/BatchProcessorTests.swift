@@ -162,11 +162,47 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func localTranscriptionStaysLocalWhenSpeechAssetsAreUnavailable() async throws {
+    func localTranscriptionFallsBackToCloudWhenSpeechAssetsAreDownloading() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1)
+        let cloudPreparation = RecordingCloudPreparationService()
+        let cloudTranscription = RecordingCloudTranscriptionService()
+        let services = ServiceBundle(
+            apiKeyPresent: true,
+            audioEnhancement: StubAudioEnhancementService(),
+            formatNormalizationService: StubFormatNormalizationService(),
+            cloudPreparationService: cloudPreparation,
+            localTranscription: DownloadingLocalTranscriptionService(),
+            cloudTranscription: cloudTranscription,
+            localTranslation: StubTranslationService(),
+            cloudTranslation: StubTranslationService(),
+            localSummarization: StubSummarizationService(),
+            cloudSummarization: StubSummarizationService(),
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+        let preparedInputs = await cloudPreparation.inputs
+        let cloudRequests = await cloudTranscription.requests
+
+        #expect(item.stage == .complete)
+        #expect(preparedInputs.count == 1)
+        #expect(cloudRequests.count == 1)
+        #expect(item.originalTranscript == "[cloud transcript] sample_1_clean.m4a")
+    }
+
+    @Test
+    func localTranscriptionWithoutKeyShowsDownloadingMessage() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let cloudPreparation = RecordingCloudPreparationService()
         let services = ServiceBundle(
-            apiKeyPresent: true,
+            apiKeyPresent: false,
             audioEnhancement: StubAudioEnhancementService(),
             formatNormalizationService: StubFormatNormalizationService(),
             cloudPreparationService: cloudPreparation,
@@ -189,7 +225,39 @@ struct BatchProcessorTests {
         let item = try #require(latestItems["sample_1"])
         let preparedInputs = await cloudPreparation.inputs
 
-        #expect(item.stage == .failed(error: .transcriptionFailed("Speech support for this language is still downloading on this Mac.")))
+        #expect(item.stage == .failed(error: .transcriptionFailed("Speech support for this language is currently downloading on this Mac.")))
+        #expect(preparedInputs.isEmpty)
+    }
+
+    @Test
+    func localTranscriptionWithoutKeyShowsNotInstalledMessage() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1)
+        let cloudPreparation = RecordingCloudPreparationService()
+        let services = ServiceBundle(
+            apiKeyPresent: false,
+            audioEnhancement: StubAudioEnhancementService(),
+            formatNormalizationService: StubFormatNormalizationService(),
+            cloudPreparationService: cloudPreparation,
+            localTranscription: NotInstalledLocalTranscriptionService(),
+            cloudTranscription: StubTranscriptionService(),
+            localTranslation: StubTranslationService(),
+            cloudTranslation: StubTranslationService(),
+            localSummarization: StubSummarizationService(),
+            cloudSummarization: StubSummarizationService(),
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+        let preparedInputs = await cloudPreparation.inputs
+
+        #expect(item.stage == .failed(error: .transcriptionFailed("Speech support for this language is available on this Mac but isn’t installed yet.")))
         #expect(preparedInputs.isEmpty)
     }
 
@@ -387,6 +455,31 @@ private actor DownloadingLocalTranscriptionService: TranscriptionService {
         language: LanguageSelection
     ) async throws -> Transcript {
         throw TranscriptionError.modelDownloading
+    }
+}
+
+private actor NotInstalledLocalTranscriptionService: TranscriptionService {
+    func transcribe(
+        audio: URL,
+        language: LanguageSelection
+    ) async throws -> Transcript {
+        throw TranscriptionError.modelNotInstalled
+    }
+}
+
+private actor RecordingCloudTranscriptionService: TranscriptionService {
+    private(set) var requests: [(audio: URL, language: LanguageSelection)] = []
+
+    func transcribe(
+        audio: URL,
+        language: LanguageSelection
+    ) async throws -> Transcript {
+        requests.append((audio: audio, language: language))
+        return Transcript(
+            text: "[cloud transcript] \(audio.lastPathComponent)",
+            detectedLanguage: "en",
+            confidence: 0.99
+        )
     }
 }
 

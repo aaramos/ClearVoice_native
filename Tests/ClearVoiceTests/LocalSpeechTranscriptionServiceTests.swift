@@ -37,17 +37,38 @@ struct LocalSpeechTranscriptionServiceTests {
 
         #expect(result == expected)
     }
+
+    @Test
+    func surfacesLocalAssetErrorsForSupportedLocale() async {
+        let service = LocalSpeechTranscriptionService(
+            engine: StubLocalSpeechEngine(
+                supportedLocale: Locale(identifier: "ja"),
+                failure: .modelNotInstalled
+            )
+        )
+
+        await #expect(throws: TranscriptionError.modelNotInstalled) {
+            _ = try await service.transcribe(
+                audio: URL(filePath: "/tmp/sample.wav"),
+                language: .specific("ja")
+            )
+        }
+    }
 }
 
 private struct StubLocalSpeechEngine: LocalSpeechTranscriptionService.Engine {
     let supportedLocale: Locale?
-    let transcript: Transcript
+    var transcript: Transcript = Transcript(text: "unused", detectedLanguage: "en", confidence: 1)
+    var failure: TranscriptionError?
 
     func supportedLocale(for language: LanguageSelection) async -> Locale? {
         supportedLocale
     }
 
     func transcribe(audioURL: URL, locale: Locale) async throws -> Transcript {
-        transcript
+        if let failure {
+            throw failure
+        }
+        return transcript
     }
 }

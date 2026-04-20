@@ -7,6 +7,7 @@ enum ServiceError: Error, Equatable, Sendable {
 enum TranscriptionError: Error, Equatable, Sendable {
     case languageNotSupported
     case modelDownloading
+    case modelNotInstalled
 }
 
 protocol TranscriptionService: Sendable {
