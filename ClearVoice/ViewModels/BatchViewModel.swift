@@ -1,17 +1,102 @@
 import Foundation
 
-struct PlaceholderJobStatus: Identifiable, Equatable {
-    let id = UUID()
-    let fileName: String
-    let stage: String
-}
-
 @MainActor
 final class BatchViewModel: ObservableObject {
-    @Published var overviewText = "The processing pipeline will land in Phases 5 through 11."
-    @Published var jobs: [PlaceholderJobStatus] = [
-        PlaceholderJobStatus(fileName: "interview_001.m4a", stage: "Pending"),
-        PlaceholderJobStatus(fileName: "meeting_002.mp3", stage: "Pending"),
-        PlaceholderJobStatus(fileName: "note_003.wav", stage: "Pending"),
-    ]
+    @Published private(set) var files: [AudioFileItem] = []
+    @Published private(set) var statusText = "Choose folders and start a batch to see processing progress."
+    @Published private(set) var isRunning = false
+    @Published private(set) var didFinish = false
+
+    private let services: ServiceBundle
+    private var configuration: BatchConfiguration?
+    private var runTask: Task<Void, Never>?
+
+    init(services: ServiceBundle = .stub) {
+        self.services = services
+    }
+
+    var completedCount: Int {
+        files.filter { $0.stage == .complete }.count
+    }
+
+    var processingCount: Int {
+        files.filter {
+            switch $0.stage {
+            case .analyzing, .cleaning, .transcribing, .translating, .summarizing, .exporting:
+                return true
+            default:
+                return false
+            }
+        }.count
+    }
+
+    var pendingCount: Int {
+        files.filter { $0.stage == .pending }.count
+    }
+
+    func configureRun(files sourceFiles: [URL], configuration: BatchConfiguration) {
+        self.configuration = configuration
+        self.files = sourceFiles.map {
+            AudioFileItem(
+                id: UUID(),
+                sourceURL: $0,
+                durationSeconds: nil,
+                stage: .pending
+            )
+        }
+        statusText = "Starting a stub pipeline run with exported outputs."
+        didFinish = false
+    }
+
+    func startIfNeeded() {
+        guard !isRunning, !didFinish, !files.isEmpty, let configuration else { return }
+
+        isRunning = true
+        runTask = Task { [files, services] in
+            let resolver = try? OutputPathResolver(outputRoot: configuration.outputFolder)
+
+            guard let resolver else {
+                await MainActor.run {
+                    self.statusText = "ClearVoice couldn’t prepare the output folder."
+                    self.isRunning = false
+                }
+                return
+            }
+
+            let fileJob = FileJob(config: configuration, resolver: resolver, services: services)
+
+            for file in files {
+                await fileJob.run(item: file) { updatedItem in
+                    await MainActor.run {
+                        self.apply(updatedItem)
+                    }
+                }
+            }
+
+            await MainActor.run {
+                self.isRunning = false
+                self.didFinish = true
+                self.statusText = "Stub pipeline complete. Review placeholder content is now available."
+            }
+        }
+    }
+
+    func reset() {
+        runTask?.cancel()
+        runTask = nil
+        files = []
+        statusText = "Choose folders and start a batch to see processing progress."
+        isRunning = false
+        didFinish = false
+        configuration = nil
+    }
+
+    private func apply(_ updatedItem: AudioFileItem) {
+        guard let index = files.firstIndex(where: { $0.id == updatedItem.id }) else { return }
+        files[index] = updatedItem
+
+        if isRunning {
+            statusText = "\(completedCount) complete • \(processingCount) processing • \(pendingCount) pending"
+        }
+    }
 }

@@ -22,8 +22,10 @@ final class AppViewModel: ObservableObject {
         switch state {
         case .importing:
             false
-        case .configuring, .processing, .review:
+        case .configuring, .review:
             true
+        case .processing:
+            !batchViewModel.isRunning
         }
     }
 
@@ -57,6 +59,11 @@ final class AppViewModel: ObservableObject {
             guard importViewModel.canProceed else { return }
             state = .configuring
         case .configuring:
+            guard let configuration = makeBatchConfiguration() else { return }
+            batchViewModel.configureRun(
+                files: importViewModel.scanResult.supported,
+                configuration: configuration
+            )
             state = .processing
         case .processing, .review:
             return
@@ -68,6 +75,27 @@ final class AppViewModel: ObservableObject {
     }
 
     func startNewBatch() {
+        batchViewModel.reset()
         state = .importing
+    }
+
+    private func makeBatchConfiguration() -> BatchConfiguration? {
+        guard
+            let sourceFolder = importViewModel.sourceFolderURL,
+            let outputFolder = importViewModel.outputFolderURL
+        else {
+            return nil
+        }
+
+        return BatchConfiguration(
+            sourceFolder: sourceFolder,
+            outputFolder: outputFolder,
+            intensity: configureViewModel.intensity,
+            inputLanguage: configureViewModel.selectedInputLanguage,
+            outputLanguage: configureViewModel.outputLanguage.id,
+            maxConcurrency: configureViewModel.maxConcurrency,
+            recursiveScan: true,
+            preserveChannels: configureViewModel.preserveChannels
+        )
     }
 }
