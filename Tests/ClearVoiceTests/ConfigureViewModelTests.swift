@@ -65,6 +65,7 @@ struct ConfigureViewModelTests {
 
         first.transcriptionMode = .cloud
         first.translationMode = .cloud
+        first.summarizationEnabled = false
 
         let second = ConfigureViewModel(
             apiKeyPresent: true,
@@ -75,6 +76,24 @@ struct ConfigureViewModelTests {
 
         #expect(second.transcriptionMode == .cloud)
         #expect(second.translationMode == .cloud)
+        #expect(second.summarizationEnabled == false)
+    }
+
+    @Test
+    func disablingSummarizationRemovesItFromCloudPlan() async {
+        let store = makeStore()
+        let viewModel = ConfigureViewModel(
+            apiKeyPresent: true,
+            processingModeStore: store,
+            localSpeechSupportProvider: { [Locale(identifier: "en")] }
+        )
+
+        viewModel.summarizationEnabled = false
+        await viewModel.updateRoutingForLanguage(viewModel.inputLanguage)
+
+        #expect(viewModel.batchProcessingModeConfiguration.summarizationEnabled == false)
+        #expect(!viewModel.batchCloudSteps.contains("Summarization"))
+        #expect(viewModel.processingSummaryText.contains("Summarization is off"))
     }
 
     private func makeStore() -> ProcessingModeStore {

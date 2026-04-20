@@ -89,7 +89,7 @@ struct FileJob: Sendable {
 
             let summary: String?
 
-            if config.processingMode.summarization == .cloud && services.apiKeyPresent {
+            if config.processingMode.summarizationEnabled && services.apiKeyPresent {
                 item.stage = .summarizing
                 await update(item)
                 try await simulatedStepDelay()

@@ -111,6 +111,6 @@ struct ServiceBundle: Sendable {
     }
 
     func summarizationService(for config: BatchConfiguration) -> any SummarizationService {
-        config.processingMode.summarization == .cloud ? cloudSummarization : localSummarization
+        config.processingMode.summarizationEnabled ? cloudSummarization : localSummarization
     }
 }

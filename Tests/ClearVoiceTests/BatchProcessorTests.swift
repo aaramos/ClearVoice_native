@@ -116,6 +116,52 @@ struct BatchProcessorTests {
     }
 
     @Test
+    func disabledSummarizationSkipsSummaryGeneration() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1)
+        let services = ServiceBundle(
+            apiKeyPresent: true,
+            audioEnhancement: StubAudioEnhancementService(),
+            transcription: StubTranscriptionService(),
+            translation: StubTranslationService(),
+            summarization: FailingSummarizationService(),
+            export: DefaultExportService()
+        )
+        let configuration = BatchConfiguration(
+            sourceFolder: harness.sourceFolder,
+            outputFolder: harness.outputFolder,
+            intensity: .balanced,
+            inputLanguage: .auto,
+            outputLanguage: "en",
+            maxConcurrency: 1,
+            recursiveScan: true,
+            preserveChannels: false,
+            processingMode: ProcessingModeConfiguration(
+                transcription: .local,
+                translation: .local,
+                summarizationEnabled: false
+            )
+        )
+        let resolver = try OutputPathResolver(outputRoot: harness.outputFolder)
+        let processor = BatchProcessor(config: configuration, resolver: resolver, services: services)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+        let transcriptURL = try #require(item.outputFolderURL?
+            .appendingPathComponent("sample_1_transcript.txt"))
+        let transcript = try String(contentsOf: transcriptURL, encoding: .utf8)
+
+        #expect(item.stage == .complete)
+        #expect(item.summaryText == nil)
+        #expect(!transcript.contains("SUMMARY"))
+        #expect(transcript.contains("TRANSLATED TRANSCRIPT"))
+    }
+
+    @Test
     func localTranscriptionFallsBackToCloudWhenSpeechAssetsAreUnavailable() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let cloudPreparation = RecordingCloudPreparationService()

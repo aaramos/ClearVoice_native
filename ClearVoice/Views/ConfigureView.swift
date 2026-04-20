@@ -134,12 +134,7 @@ struct ConfigureView: View {
                     apiKeyPresent: true
                 )
 
-                ProcessingModeToggleRow(
-                    label: "Summarization",
-                    mode: .constant(viewModel.summarizationMode),
-                    isEnabled: false,
-                    apiKeyPresent: true
-                )
+                summarizationRow
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("All steps run on this Mac")
@@ -151,10 +146,23 @@ struct ConfigureView: View {
 
                 staticProcessingRow(label: "Transcription", badgeText: "On-device", tint: .green)
                 staticProcessingRow(label: "Translation", badgeText: "On-device", tint: .green)
-                staticProcessingRow(label: "Summarization", badgeText: "Requires Gemini key", tint: .orange)
+                staticProcessingRow(label: "Summarization", badgeText: "Off", tint: .secondary)
             }
         }
         .cardStyle()
+    }
+
+    private var summarizationRow: some View {
+        HStack(spacing: 12) {
+            Text("Summarization")
+            Spacer()
+            processingBadge(
+                text: viewModel.summarizationEnabled ? "Gemini" : "Off",
+                tint: viewModel.summarizationEnabled ? .blue : .secondary
+            )
+            Toggle("", isOn: $viewModel.summarizationEnabled)
+                .labelsHidden()
+        }
     }
 
     private var advancedSettingsCard: some View {
@@ -196,16 +204,20 @@ struct ConfigureView: View {
         HStack {
             Text(label)
             Spacer()
-            Text(badgeText)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(tint)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule()
-                        .fill(tint.opacity(0.12))
-                )
+            processingBadge(text: badgeText, tint: tint)
         }
+    }
+
+    private func processingBadge(text: String, tint: Color) -> some View {
+        Text(text)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(tint.opacity(0.12))
+            )
     }
 
     private func summaryMetric(label: String, value: String) -> some View {

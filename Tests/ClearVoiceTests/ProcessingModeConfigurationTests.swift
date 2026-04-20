@@ -4,12 +4,12 @@ import Testing
 
 struct ProcessingModeConfigurationTests {
     @Test
-    func defaultsUseLocalModesExceptCloudSummarization() {
+    func defaultsUseLocalModesWithSummarizationEnabled() {
         let configuration = ProcessingModeConfiguration()
 
         #expect(configuration.transcription == .local)
         #expect(configuration.translation == .local)
-        #expect(configuration.summarization == .cloud)
+        #expect(configuration.summarizationEnabled)
     }
 
     @Test
@@ -17,7 +17,7 @@ struct ProcessingModeConfigurationTests {
         let configuration = ProcessingModeConfiguration(
             transcription: .cloud,
             translation: .local,
-            summarization: .cloud
+            summarizationEnabled: false
         )
 
         let data = try JSONEncoder().encode(configuration)
@@ -47,7 +47,7 @@ struct ProcessingModeConfigurationTests {
             ProcessingModeConfiguration(
                 transcription: .cloud,
                 translation: .cloud,
-                summarization: .local
+                summarizationEnabled: false
             )
         )
 
@@ -55,7 +55,7 @@ struct ProcessingModeConfigurationTests {
 
         #expect(loaded.transcription == .cloud)
         #expect(loaded.translation == .cloud)
-        #expect(loaded.summarization == .cloud)
+        #expect(loaded.summarizationEnabled == false)
     }
 }
 

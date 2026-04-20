@@ -8,5 +8,5 @@ enum ProcessingMode: String, Codable, Equatable, Sendable {
 struct ProcessingModeConfiguration: Codable, Equatable, Sendable {
     var transcription: ProcessingMode = .local
     var translation: ProcessingMode = .local
-    var summarization: ProcessingMode = .cloud
+    var summarizationEnabled = true
 }

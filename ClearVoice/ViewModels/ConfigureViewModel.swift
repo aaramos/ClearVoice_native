@@ -18,6 +18,9 @@ final class ConfigureViewModel: ObservableObject {
     @Published var translationMode: ProcessingMode {
         didSet { persistProcessingModes() }
     }
+    @Published var summarizationEnabled: Bool {
+        didSet { persistProcessingModes() }
+    }
     @Published private(set) var canToggleTranscription: Bool
     @Published private(set) var canStart: Bool
 
@@ -41,14 +44,11 @@ final class ConfigureViewModel: ObservableObject {
         let storedModes = processingModeStore.load()
         self.transcriptionMode = storedModes.transcription
         self.translationMode = storedModes.translation
+        self.summarizationEnabled = storedModes.summarizationEnabled
         self.canToggleTranscription = apiKeyPresent
         self.canStart = true
 
         Task { await updateRoutingForLanguage(inputLanguage) }
-    }
-
-    var summarizationMode: ProcessingMode {
-        .cloud
     }
 
     var canToggleTranslation: Bool {
@@ -99,26 +99,35 @@ final class ConfigureViewModel: ObservableObject {
         var configuration = ProcessingModeConfiguration()
         configuration.transcription = effectiveTranscriptionMode
         configuration.translation = apiKeyPresent ? translationMode : .local
-        configuration.summarization = .cloud
+        configuration.summarizationEnabled = apiKeyPresent && summarizationEnabled
         return configuration
     }
 
     var processingSummaryText: String {
-        if !apiKeyPresent {
-            return "All steps run on this Mac. No audio leaves your device."
-        }
-
         let cloudSteps = batchCloudSteps
+        let summarizationIsOn = batchProcessingModeConfiguration.summarizationEnabled
 
-        if cloudSteps.isEmpty {
-            return "All steps run on this Mac. No audio leaves your device."
+        if !apiKeyPresent || cloudSteps.isEmpty {
+            if summarizationIsOn {
+                return "All steps run on this Mac. No audio leaves your device."
+            }
+
+            return "Summarization is off. All enabled steps run on this Mac."
         }
 
         if cloudSteps.contains("Transcription") {
-            return "Audio will be sent to Gemini for \(cloudSteps.joinedList). Other steps run on this Mac."
+            if summarizationIsOn {
+                return "Audio will be sent to Gemini for \(cloudSteps.joinedList). Other steps run on this Mac."
+            }
+
+            return "Audio will be sent to Gemini for \(cloudSteps.joinedList). Summarization is off."
         }
 
-        return "Text will be sent to Gemini for \(cloudSteps.joinedList). Audio stays on this Mac."
+        if summarizationIsOn {
+            return "Text will be sent to Gemini for \(cloudSteps.joinedList). Audio stays on this Mac."
+        }
+
+        return "Text will be sent to Gemini for \(cloudSteps.joinedList). Summarization is off."
     }
 
     var batchCloudSteps: [String] {
@@ -132,7 +141,7 @@ final class ConfigureViewModel: ObservableObject {
             steps.append("Translation")
         }
 
-        if apiKeyPresent {
+        if apiKeyPresent && batchProcessingModeConfiguration.summarizationEnabled {
             steps.append("Summarization")
         }
 
@@ -194,7 +203,7 @@ final class ConfigureViewModel: ObservableObject {
             ProcessingModeConfiguration(
                 transcription: transcriptionMode,
                 translation: translationMode,
-                summarization: .cloud
+                summarizationEnabled: summarizationEnabled
             )
         )
     }
