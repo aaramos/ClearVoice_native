@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Testing
 @testable import ClearVoice
 
@@ -76,6 +77,41 @@ struct OpenAIWhisperTranscriptionServiceTests {
         #expect(requests.count == 2)
     }
 
+    @Test
+    func cloudHTTPClientHonorsRetryAfterFor429Responses() async throws {
+        let transport = MockHTTPTransport(
+            responses: [
+                .success(
+                    statusCode: 429,
+                    body: Data("{\"error\":\"rate limited\"}".utf8),
+                    headers: ["Retry-After": "7"]
+                ),
+                .success(statusCode: 200, body: Data("ok".utf8))
+            ]
+        )
+        let recorder = SleepRecorder()
+        let client = CloudHTTPClient(
+            transport: transport,
+            retryPolicy: RetryPolicy(maxAttempts: 2, baseDelayMilliseconds: 0, maxJitterMilliseconds: 0),
+            logger: Logger(subsystem: "com.clearvoice.app", category: "test"),
+            sleep: { milliseconds in
+                await recorder.record(milliseconds)
+            },
+            jitterMilliseconds: { 0 }
+        )
+
+        var request = URLRequest(url: URL(string: "https://example.com/test")!)
+        request.httpMethod = "POST"
+
+        let data = try await client.send(request: request, body: Data("payload".utf8))
+        let delays = await recorder.recordedMilliseconds()
+        let requests = await transport.capturedRequests()
+
+        #expect(String(decoding: data, as: UTF8.self) == "ok")
+        #expect(delays == [7_000])
+        #expect(requests.count == 2)
+    }
+
     private func makeTemporaryAudioFile(
         named basename: String,
         extension pathExtension: String
@@ -87,5 +123,17 @@ struct OpenAIWhisperTranscriptionServiceTests {
         let fileURL = folder.appendingPathComponent("\(basename).\(pathExtension)")
         try Data("test-audio".utf8).write(to: fileURL)
         return fileURL
+    }
+}
+
+private actor SleepRecorder {
+    private var recorded: [UInt64] = []
+
+    func record(_ milliseconds: UInt64) {
+        recorded.append(milliseconds)
+    }
+
+    func recordedMilliseconds() -> [UInt64] {
+        recorded
     }
 }

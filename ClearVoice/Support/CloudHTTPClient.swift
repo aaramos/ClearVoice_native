@@ -41,13 +41,13 @@ struct RetryPolicy: Sendable {
 actor CloudHTTPClient {
     enum RequestError: Error, Sendable {
         case invalidResponse
-        case unsuccessfulStatus(code: Int, bodySnippet: String)
+        case unsuccessfulStatus(code: Int, bodySnippet: String, retryAfterMilliseconds: UInt64?)
 
         var isRetriable: Bool {
             switch self {
             case .invalidResponse:
                 return true
-            case .unsuccessfulStatus(let code, _):
+            case .unsuccessfulStatus(let code, _, _):
                 return code == 429 || (500...599).contains(code)
             }
         }
@@ -92,7 +92,8 @@ actor CloudHTTPClient {
                 guard (200...299).contains(response.statusCode) else {
                     throw RequestError.unsuccessfulStatus(
                         code: response.statusCode,
-                        bodySnippet: String(decoding: data.prefix(240), as: UTF8.self)
+                        bodySnippet: String(decoding: data.prefix(240), as: UTF8.self),
+                        retryAfterMilliseconds: Self.retryAfterMilliseconds(from: response)
                     )
                 }
 
@@ -104,7 +105,7 @@ actor CloudHTTPClient {
                     throw error
                 }
 
-                let delay = delayMilliseconds(forAttempt: attempt)
+                let delay = delayMilliseconds(forAttempt: attempt, error: error)
                 logger.warning("Retrying request after \(delay, privacy: .public)ms due to transient response.")
                 try await sleep(delay)
             } catch let error as URLError {
@@ -131,6 +132,30 @@ actor CloudHTTPClient {
         return exponentialDelay + cappedJitter
     }
 
+    private func delayMilliseconds(forAttempt attempt: Int, error: RequestError) -> UInt64 {
+        let baseDelay = delayMilliseconds(forAttempt: attempt)
+
+        switch error {
+        case .invalidResponse:
+            return baseDelay
+        case .unsuccessfulStatus(let code, _, let retryAfterMilliseconds):
+            let statusDelay: UInt64
+
+            if code == 429 {
+                let rateLimitDelay = max(retryPolicy.baseDelayMilliseconds, 5_000) * UInt64(1 << (attempt - 1))
+                statusDelay = max(baseDelay, rateLimitDelay)
+            } else {
+                statusDelay = baseDelay
+            }
+
+            if let retryAfterMilliseconds {
+                return max(statusDelay, retryAfterMilliseconds)
+            }
+
+            return statusDelay
+        }
+    }
+
     private func isRetriable(error: URLError) -> Bool {
         switch error.code {
         case .timedOut,
@@ -144,5 +169,35 @@ actor CloudHTTPClient {
         default:
             return false
         }
+    }
+
+    private static func retryAfterMilliseconds(from response: HTTPURLResponse) -> UInt64? {
+        guard
+            let rawValue = response.value(forHTTPHeaderField: "Retry-After")?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+            !rawValue.isEmpty
+        else {
+            return nil
+        }
+
+        if let seconds = Double(rawValue), seconds > 0 {
+            return UInt64(seconds * 1_000)
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEE',' dd MMM yyyy HH':'mm':'ss z"
+
+        guard let retryDate = formatter.date(from: rawValue) else {
+            return nil
+        }
+
+        let delaySeconds = retryDate.timeIntervalSinceNow
+        guard delaySeconds > 0 else {
+            return nil
+        }
+
+        return UInt64(delaySeconds * 1_000)
     }
 }

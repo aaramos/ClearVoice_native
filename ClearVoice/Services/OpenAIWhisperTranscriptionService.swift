@@ -133,7 +133,7 @@ actor OpenAIWhisperTranscriptionService: TranscriptionService {
         switch error {
         case .invalidResponse:
             return "OpenAI returned an unreadable transcription response."
-        case .unsuccessfulStatus(let code, let bodySnippet):
+        case .unsuccessfulStatus(let code, let bodySnippet, _):
             let trimmedBody = bodySnippet.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmedBody.isEmpty {
                 return "OpenAI transcription failed with status \(code)."

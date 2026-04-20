@@ -30,7 +30,10 @@ struct GeminiTranslationServiceTests {
             client: GeminiDeveloperClient(
                 apiKey: "gemini-test-key",
                 transport: transport,
-                retryPolicy: RetryPolicy(maxAttempts: 1, baseDelayMilliseconds: 0, maxJitterMilliseconds: 0)
+                retryPolicy: RetryPolicy(maxAttempts: 1, baseDelayMilliseconds: 0, maxJitterMilliseconds: 0),
+                rateLimiter: GeminiRateLimiter(
+                    policy: GeminiThrottlePolicy(requestsPerMinute: 10_000, baseCooldownMilliseconds: 0)
+                )
             )
         )
 
@@ -45,7 +48,7 @@ struct GeminiTranslationServiceTests {
 
         #expect(translated == "Hello from ClearVoice")
         #expect(requests.count == 1)
-        #expect(requests[0].request.url?.absoluteString == "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent")
+        #expect(requests[0].request.url?.absoluteString == "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent")
         #expect(requests[0].request.value(forHTTPHeaderField: "x-goog-api-key") == "gemini-test-key")
         #expect(requestBody.contains("Translate this spoken-audio transcript from Hindi (hi) to English (en)."))
         #expect(requestBody.contains("Output only the translated transcript"))
@@ -59,7 +62,10 @@ struct GeminiTranslationServiceTests {
             client: GeminiDeveloperClient(
                 apiKey: "gemini-test-key",
                 transport: transport,
-                retryPolicy: RetryPolicy(maxAttempts: 1, baseDelayMilliseconds: 0, maxJitterMilliseconds: 0)
+                retryPolicy: RetryPolicy(maxAttempts: 1, baseDelayMilliseconds: 0, maxJitterMilliseconds: 0),
+                rateLimiter: GeminiRateLimiter(
+                    policy: GeminiThrottlePolicy(requestsPerMinute: 10_000, baseCooldownMilliseconds: 0)
+                )
             )
         )
 

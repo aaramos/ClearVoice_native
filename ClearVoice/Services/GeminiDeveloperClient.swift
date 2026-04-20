@@ -1,14 +1,139 @@
 import Foundation
 import OSLog
 
+struct GeminiThrottlePolicy: Sendable {
+    let requestsPerMinute: Int
+    let baseCooldownMilliseconds: UInt64
+
+    static let `default` = GeminiThrottlePolicy(
+        requestsPerMinute: 8,
+        baseCooldownMilliseconds: 15_000
+    )
+}
+
+actor GeminiRateLimiter {
+    private let policy: GeminiThrottlePolicy
+    private let logger = Logger(subsystem: "com.clearvoice.app", category: "gemini-rate")
+    private let sleep: @Sendable (UInt64) async throws -> Void
+    private let now: @Sendable () -> Date
+    private var requestTimestamps: [Date] = []
+    private var lastRequestAt: Date?
+    private var cooldownUntil: Date?
+    private var consecutiveRateLimitHits = 0
+
+    init(
+        policy: GeminiThrottlePolicy = .default,
+        sleep: @escaping @Sendable (UInt64) async throws -> Void = { milliseconds in
+            try await Task.sleep(nanoseconds: milliseconds * 1_000_000)
+        },
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) {
+        self.policy = policy
+        self.sleep = sleep
+        self.now = now
+    }
+
+    func acquire() async throws {
+        while true {
+            let currentTime = now()
+            prune(using: currentTime)
+
+            let delay = max(
+                cooldownDelay(from: currentTime),
+                minimumSpacingDelay(from: currentTime),
+                rollingWindowDelay(from: currentTime)
+            )
+
+            guard delay > 0 else {
+                requestTimestamps.append(currentTime)
+                lastRequestAt = currentTime
+                return
+            }
+
+            try await sleep(delay)
+        }
+    }
+
+    func registerSuccess() {
+        consecutiveRateLimitHits = 0
+    }
+
+    func registerRateLimit(retryAfterMilliseconds: UInt64?) {
+        let currentTime = now()
+        consecutiveRateLimitHits = min(consecutiveRateLimitHits + 1, 4)
+
+        let fallbackCooldown = policy.baseCooldownMilliseconds * UInt64(1 << (consecutiveRateLimitHits - 1))
+        let appliedCooldown = max(retryAfterMilliseconds ?? 0, fallbackCooldown)
+        let candidateCooldown = currentTime.addingTimeInterval(TimeInterval(appliedCooldown) / 1_000)
+
+        if let cooldownUntil {
+            self.cooldownUntil = max(cooldownUntil, candidateCooldown)
+        } else {
+            self.cooldownUntil = candidateCooldown
+        }
+
+        logger.warning(
+            "Gemini rate limit hit; pausing new Gemini requests for \(appliedCooldown, privacy: .public)ms."
+        )
+    }
+
+    private var minimumSpacingMilliseconds: UInt64 {
+        max(1, UInt64(ceil(60_000.0 / Double(policy.requestsPerMinute))))
+    }
+
+    private func prune(using currentTime: Date) {
+        requestTimestamps.removeAll { currentTime.timeIntervalSince($0) >= 60 }
+
+        if let cooldownUntil, currentTime >= cooldownUntil {
+            self.cooldownUntil = nil
+        }
+    }
+
+    private func cooldownDelay(from currentTime: Date) -> UInt64 {
+        guard let cooldownUntil, cooldownUntil > currentTime else {
+            return 0
+        }
+
+        return UInt64(cooldownUntil.timeIntervalSince(currentTime) * 1_000)
+    }
+
+    private func minimumSpacingDelay(from currentTime: Date) -> UInt64 {
+        guard let lastRequestAt else {
+            return 0
+        }
+
+        let elapsedMilliseconds = UInt64(max(0, currentTime.timeIntervalSince(lastRequestAt) * 1_000))
+        guard elapsedMilliseconds < minimumSpacingMilliseconds else {
+            return 0
+        }
+
+        return minimumSpacingMilliseconds - elapsedMilliseconds
+    }
+
+    private func rollingWindowDelay(from currentTime: Date) -> UInt64 {
+        guard requestTimestamps.count >= policy.requestsPerMinute, let earliest = requestTimestamps.first else {
+            return 0
+        }
+
+        let delaySeconds = 60 - currentTime.timeIntervalSince(earliest)
+        guard delaySeconds > 0 else {
+            return 0
+        }
+
+        return UInt64(delaySeconds * 1_000)
+    }
+}
+
 actor GeminiDeveloperClient {
     private let apiKey: String
     private let httpClient: CloudHTTPClient
+    private let rateLimiter: GeminiRateLimiter
 
     init(
         apiKey: String,
         transport: any HTTPTransport = URLSessionHTTPTransport(),
-        retryPolicy: RetryPolicy = .default
+        retryPolicy: RetryPolicy = .default,
+        rateLimiter: GeminiRateLimiter = GeminiRateLimiter()
     ) {
         self.apiKey = apiKey
         self.httpClient = CloudHTTPClient(
@@ -16,6 +141,17 @@ actor GeminiDeveloperClient {
             retryPolicy: retryPolicy,
             logger: Logger(subsystem: "com.clearvoice.app", category: "gemini")
         )
+        self.rateLimiter = rateLimiter
+    }
+
+    init(
+        apiKey: String,
+        httpClient: CloudHTTPClient,
+        rateLimiter: GeminiRateLimiter = GeminiRateLimiter()
+    ) {
+        self.apiKey = apiKey
+        self.httpClient = httpClient
+        self.rateLimiter = rateLimiter
     }
 
     func uploadFile(from sourceURL: URL) async throws -> GeminiUploadedFile {
@@ -34,7 +170,7 @@ actor GeminiDeveloperClient {
         let metadata = try JSONEncoder().encode(
             GeminiUploadMetadata(file: GeminiUploadFile(displayName: sourceURL.lastPathComponent))
         )
-        let (_, startResponse) = try await httpClient.sendWithResponse(request: startRequest, body: metadata)
+        let (_, startResponse) = try await sendWithResponse(request: startRequest, body: metadata)
 
         guard
             let uploadURLString = startResponse.value(forHTTPHeaderField: "x-goog-upload-url"),
@@ -49,7 +185,7 @@ actor GeminiDeveloperClient {
         uploadRequest.setValue("0", forHTTPHeaderField: "X-Goog-Upload-Offset")
         uploadRequest.setValue("upload, finalize", forHTTPHeaderField: "X-Goog-Upload-Command")
 
-        let responseData = try await httpClient.send(request: uploadRequest, body: fileData)
+        let responseData = try await send(request: uploadRequest, body: fileData)
         return try JSONDecoder().decode(GeminiUploadResponse.self, from: responseData).file
     }
 
@@ -60,7 +196,7 @@ actor GeminiDeveloperClient {
         request.httpMethod = "DELETE"
         request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
 
-        _ = try await httpClient.send(request: request, body: nil)
+        _ = try await send(request: request, body: nil)
     }
 
     func generateText(
@@ -87,7 +223,7 @@ actor GeminiDeveloperClient {
         request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let responseData = try await httpClient.send(
+        let responseData = try await send(
             request: request,
             body: try JSONEncoder().encode(requestBody)
         )
@@ -121,6 +257,40 @@ actor GeminiDeveloperClient {
 
         parts.append(GeminiPart(text: prompt, fileData: nil))
         return parts
+    }
+
+    private func send(request: URLRequest, body: Data?) async throws -> Data {
+        try await rateLimiter.acquire()
+
+        do {
+            let data = try await httpClient.send(request: request, body: body)
+            await rateLimiter.registerSuccess()
+            return data
+        } catch let error as CloudHTTPClient.RequestError {
+            await registerRateLimitIfNeeded(for: error)
+            throw error
+        }
+    }
+
+    private func sendWithResponse(request: URLRequest, body: Data?) async throws -> (Data, HTTPURLResponse) {
+        try await rateLimiter.acquire()
+
+        do {
+            let response = try await httpClient.sendWithResponse(request: request, body: body)
+            await rateLimiter.registerSuccess()
+            return response
+        } catch let error as CloudHTTPClient.RequestError {
+            await registerRateLimitIfNeeded(for: error)
+            throw error
+        }
+    }
+
+    private func registerRateLimitIfNeeded(for error: CloudHTTPClient.RequestError) async {
+        guard case let .unsuccessfulStatus(code, _, retryAfterMilliseconds) = error, code == 429 else {
+            return
+        }
+
+        await rateLimiter.registerRateLimit(retryAfterMilliseconds: retryAfterMilliseconds)
     }
 }
 

@@ -6,7 +6,7 @@ actor GeminiTranslationService: TranslationService {
 
     init(
         client: GeminiDeveloperClient,
-        model: String = "gemini-2.5-flash"
+        model: String = "gemini-2.5-flash-lite"
     ) {
         self.client = client
         self.model = model
@@ -47,7 +47,7 @@ actor GeminiTranslationService: TranslationService {
         switch error {
         case .invalidResponse:
             return "Gemini returned an unreadable translation response."
-        case .unsuccessfulStatus(let code, let bodySnippet):
+        case .unsuccessfulStatus(let code, let bodySnippet, _):
             let trimmedBody = bodySnippet.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmedBody.isEmpty {
                 return "Gemini translation failed with status \(code)."

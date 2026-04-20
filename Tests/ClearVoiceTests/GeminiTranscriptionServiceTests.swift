@@ -49,7 +49,10 @@ struct GeminiTranscriptionServiceTests {
             client: GeminiDeveloperClient(
                 apiKey: "gemini-test-key",
                 transport: transport,
-                retryPolicy: RetryPolicy(maxAttempts: 1, baseDelayMilliseconds: 0, maxJitterMilliseconds: 0)
+                retryPolicy: RetryPolicy(maxAttempts: 1, baseDelayMilliseconds: 0, maxJitterMilliseconds: 0),
+                rateLimiter: GeminiRateLimiter(
+                    policy: GeminiThrottlePolicy(requestsPerMinute: 10_000, baseCooldownMilliseconds: 0)
+                )
             )
         )
         let audioURL = try makeTemporaryAudioFile(named: "sample", extension: "m4a")

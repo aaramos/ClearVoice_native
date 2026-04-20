@@ -47,7 +47,7 @@ actor OllamaSummarizationService: SummarizationService {
         switch error {
         case .invalidResponse:
             return "Ollama returned an unreadable summarization response."
-        case .unsuccessfulStatus(let code, let bodySnippet):
+        case .unsuccessfulStatus(let code, let bodySnippet, _):
             let trimmedBody = bodySnippet.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmedBody.isEmpty {
                 return "Ollama summarization failed with status \(code)."

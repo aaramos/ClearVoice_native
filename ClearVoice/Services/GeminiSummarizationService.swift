@@ -6,7 +6,7 @@ actor GeminiSummarizationService: SummarizationService {
 
     init(
         client: GeminiDeveloperClient,
-        model: String = "gemini-2.5-flash"
+        model: String = "gemini-2.5-flash-lite"
     ) {
         self.client = client
         self.model = model
@@ -42,7 +42,7 @@ actor GeminiSummarizationService: SummarizationService {
         switch error {
         case .invalidResponse:
             return "Gemini returned an unreadable summarization response."
-        case .unsuccessfulStatus(let code, let bodySnippet):
+        case .unsuccessfulStatus(let code, let bodySnippet, _):
             let trimmedBody = bodySnippet.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmedBody.isEmpty {
                 return "Gemini summarization failed with status \(code)."

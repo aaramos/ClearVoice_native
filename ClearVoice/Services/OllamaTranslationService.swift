@@ -54,7 +54,7 @@ actor OllamaTranslationService: TranslationService {
         switch error {
         case .invalidResponse:
             return "Ollama returned an unreadable translation response."
-        case .unsuccessfulStatus(let code, let bodySnippet):
+        case .unsuccessfulStatus(let code, let bodySnippet, _):
             let trimmedBody = bodySnippet.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmedBody.isEmpty {
                 return "Ollama translation failed with status \(code)."
