@@ -28,3 +28,19 @@ This file records implementation choices that were left to engineering discretio
 - WMA support posture: ClearVoice now uses a local FFmpeg executable for source-format normalization, and `.wma` is admitted at scan time and normalized to temporary `.m4a` before enhancement/transcription. Common absolute macOS install paths are probed because Finder-launched app processes may not inherit a useful shell `PATH`.
 - Gemini free-tier protection: ClearVoice now applies a shared, client-side Gemini request throttle across upload, transcription, translation, summarization, and delete calls. The default policy is intentionally conservative at 8 requests per minute with adaptive cooldown after 429 responses.
 - Gemini model routing: transcription stays on `gemini-2.5-flash`, while translation and summarization now default to `gemini-2.5-flash-lite` to reduce quota pressure on the text-only steps.
+
+## 2026-04-20
+
+- Branching strategy: the local-first redesign lives on `local-offline-v2` so the earlier Gemini-heavy workflow remains intact on `main` for comparison, rollback, or selective reuse.
+- Primary workflow posture: the active batch path on this branch is local-first and does not use Gemini in the normal processing flow. Existing cloud services stay in the repo for rollback safety, but they are no longer the branch's main architecture.
+- Apple speech terminology correction: the earlier product discussion referenced `SFSpeechRecognizer`, but the code being replaced in ClearVoice used `SpeechTranscriber` and `SpeechAnalyzer`.
+- Speech model stack: using WhisperKit as the main local speech engine, with one pass for source-language transcription and one pass for English translation.
+- Whisper model choice: defaulting to WhisperKit's multilingual `large-v3-v20240930_626MB` model to prioritize Marathi and other non-English speech accuracy over faster but weaker small-model performance.
+- Model provisioning for this branch: deferring first-run onboarding and allowing WhisperKit to download its local model on demand into `~/Library/Application Support/ClearVoice/Models`.
+- Conversion pipeline: every accepted source format is normalized into a temporary `16 kHz` mono WAV for local speech processing.
+- Final clean-audio export: always writing the user-visible enhanced audio artifact as `<basename>_clean.m4a`.
+- Enhancement implementation: replacing the copy stub in the primary workflow with an FFmpeg-based speech cleanup chain using filtering, denoising, and speech normalization tuned for intelligibility over music fidelity.
+- Translation scope: fixing translation output to English for this branch instead of keeping the broader arbitrary-target-language product surface.
+- Summarization release scope: deferring real summarization for this release while keeping the code shape and exporting a placeholder summary block for transcript compatibility.
+- Auto-detect fallback UX: when local language detection confidence is too low, the file fails with a direct instruction to rerun after choosing the input language manually.
+- Concurrency posture: local processing remains configurable from `1` to `5` files in parallel, with a default of `2` to balance throughput against RAM and CPU pressure on Apple Silicon laptops and desktops.

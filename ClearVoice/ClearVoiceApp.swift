@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 @main
@@ -13,10 +12,6 @@ struct ClearVoiceApp: App {
                     ProgressView("Starting ClearVoice…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(.regularMaterial)
-                case .needsAPIKey:
-                    APIKeySetupView(viewModel: launchViewModel) {
-                        NSApp.terminate(nil)
-                    }
                 case .ready:
                     if let appViewModel = launchViewModel.appViewModel {
                         RootView(viewModel: appViewModel)

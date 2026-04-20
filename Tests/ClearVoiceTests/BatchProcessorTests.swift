@@ -6,12 +6,10 @@ struct BatchProcessorTests {
     @Test
     func processorNeverExceedsConfiguredConcurrency() async throws {
         let harness = try BatchProcessorHarness(fileCount: 5)
-        let enhancement = TrackingEnhancementService(delayMilliseconds: 250)
+        let enhancement = TrackingEnhancementService(delayMilliseconds: 200)
         let services = ServiceBundle(
             audioEnhancement: enhancement,
-            transcription: StubTranscriptionService(),
-            translation: StubTranslationService(),
-            summarization: StubSummarizationService(),
+            speechPipeline: StubSpeechPipelineService(),
             export: DefaultExportService()
         )
         let processor = try harness.makeProcessor(services: services, maxConcurrency: 3)
@@ -34,9 +32,7 @@ struct BatchProcessorTests {
         let harness = try BatchProcessorHarness(fileCount: 4)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
-            transcription: SelectiveFailureTranscriptionService(failingBasename: "sample_2"),
-            translation: StubTranslationService(),
-            summarization: StubSummarizationService(),
+            speechPipeline: SelectiveFailureSpeechPipelineService(failingBasename: "sample_2_clean"),
             export: DefaultExportService()
         )
         let processor = try harness.makeProcessor(services: services, maxConcurrency: 3)
@@ -55,44 +51,12 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func stopAfterCurrentPreventsNewFilesFromStarting() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 6)
-        let enhancement = TrackingEnhancementService(delayMilliseconds: 300)
-        let services = ServiceBundle(
-            audioEnhancement: enhancement,
-            transcription: StubTranscriptionService(),
-            translation: StubTranslationService(),
-            summarization: StubSummarizationService(),
-            export: DefaultExportService()
-        )
-        let processor = try harness.makeProcessor(services: services, maxConcurrency: 3)
-        let recorder = ItemRecorder()
-
-        let runTask = Task {
-            await processor.run(files: harness.items) { item in
-                await recorder.record(item)
-            }
-        }
-
-        await enhancement.waitUntilActiveCount(atLeast: 3)
-        await processor.requestStopAfterCurrent()
-        await runTask.value
-
-        let latestItems = await recorder.items()
-
-        #expect(latestItems.count == 3)
-        #expect(latestItems.allSatisfy { $0.stage == .complete })
-    }
-
-    @Test
-    func summarizationFailureExportsTranscriptWithoutSummary() async throws {
+    func summaryPlaceholderIsExported() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
-            apiKeyPresent: true,
             audioEnhancement: StubAudioEnhancementService(),
-            transcription: StubTranscriptionService(),
-            translation: StubTranslationService(),
-            summarization: FailingSummarizationService(),
+            speechPipeline: StubSpeechPipelineService(),
+            summaryPlaceholder: "Placeholder summary.",
             export: DefaultExportService()
         )
         let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
@@ -109,74 +73,19 @@ struct BatchProcessorTests {
         let transcript = try String(contentsOf: transcriptURL, encoding: .utf8)
 
         #expect(item.stage == .complete)
-        #expect(item.summaryText == nil)
-        #expect(!transcript.contains("SUMMARY"))
+        #expect(item.summaryText == "Placeholder summary.")
+        #expect(transcript.contains("SUMMARY"))
+        #expect(transcript.contains("Placeholder summary."))
         #expect(transcript.contains("TRANSLATED TRANSCRIPT"))
         #expect(transcript.contains("ORIGINAL TRANSCRIPT"))
     }
 
     @Test
-    func disabledSummarizationSkipsSummaryGeneration() async throws {
+    func languageDetectionFailureUsesActionableMessage() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
-            apiKeyPresent: true,
             audioEnhancement: StubAudioEnhancementService(),
-            transcription: StubTranscriptionService(),
-            translation: StubTranslationService(),
-            summarization: FailingSummarizationService(),
-            export: DefaultExportService()
-        )
-        let configuration = BatchConfiguration(
-            sourceFolder: harness.sourceFolder,
-            outputFolder: harness.outputFolder,
-            intensity: .balanced,
-            inputLanguage: .auto,
-            outputLanguage: "en",
-            maxConcurrency: 1,
-            recursiveScan: true,
-            preserveChannels: false,
-            processingMode: ProcessingModeConfiguration(
-                transcription: .local,
-                translation: .local,
-                summarizationEnabled: false
-            )
-        )
-        let resolver = try OutputPathResolver(outputRoot: harness.outputFolder)
-        let processor = BatchProcessor(config: configuration, resolver: resolver, services: services)
-        let recorder = ItemRecorder()
-
-        await processor.run(files: harness.items) { item in
-            await recorder.record(item)
-        }
-
-        let latestItems = await recorder.itemsByBasename()
-        let item = try #require(latestItems["sample_1"])
-        let transcriptURL = try #require(item.outputFolderURL?
-            .appendingPathComponent("sample_1_transcript.txt"))
-        let transcript = try String(contentsOf: transcriptURL, encoding: .utf8)
-
-        #expect(item.stage == .complete)
-        #expect(item.summaryText == nil)
-        #expect(!transcript.contains("SUMMARY"))
-        #expect(transcript.contains("TRANSLATED TRANSCRIPT"))
-    }
-
-    @Test
-    func localTranscriptionFallsBackToCloudWhenSpeechAssetsAreDownloading() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 1)
-        let cloudPreparation = RecordingCloudPreparationService()
-        let cloudTranscription = RecordingCloudTranscriptionService()
-        let services = ServiceBundle(
-            apiKeyPresent: true,
-            audioEnhancement: StubAudioEnhancementService(),
-            formatNormalizationService: StubFormatNormalizationService(),
-            cloudPreparationService: cloudPreparation,
-            localTranscription: DownloadingLocalTranscriptionService(),
-            cloudTranscription: cloudTranscription,
-            localTranslation: StubTranslationService(),
-            cloudTranslation: StubTranslationService(),
-            localSummarization: StubSummarizationService(),
-            cloudSummarization: StubSummarizationService(),
+            speechPipeline: DetectionFailingSpeechPipelineService(),
             export: DefaultExportService()
         )
         let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
@@ -188,117 +97,8 @@ struct BatchProcessorTests {
 
         let latestItems = await recorder.itemsByBasename()
         let item = try #require(latestItems["sample_1"])
-        let preparedInputs = await cloudPreparation.inputs
-        let cloudRequests = await cloudTranscription.requests
 
-        #expect(item.stage == .complete)
-        #expect(preparedInputs.count == 1)
-        #expect(cloudRequests.count == 1)
-        #expect(item.originalTranscript == "[cloud transcript] sample_1_clean.m4a")
-    }
-
-    @Test
-    func localTranscriptionWithoutKeyShowsDownloadingMessage() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 1)
-        let cloudPreparation = RecordingCloudPreparationService()
-        let services = ServiceBundle(
-            apiKeyPresent: false,
-            audioEnhancement: StubAudioEnhancementService(),
-            formatNormalizationService: StubFormatNormalizationService(),
-            cloudPreparationService: cloudPreparation,
-            localTranscription: DownloadingLocalTranscriptionService(),
-            cloudTranscription: StubTranscriptionService(),
-            localTranslation: StubTranslationService(),
-            cloudTranslation: StubTranslationService(),
-            localSummarization: StubSummarizationService(),
-            cloudSummarization: StubSummarizationService(),
-            export: DefaultExportService()
-        )
-        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
-        let recorder = ItemRecorder()
-
-        await processor.run(files: harness.items) { item in
-            await recorder.record(item)
-        }
-
-        let latestItems = await recorder.itemsByBasename()
-        let item = try #require(latestItems["sample_1"])
-        let preparedInputs = await cloudPreparation.inputs
-
-        #expect(item.stage == .failed(error: .transcriptionFailed("Speech support for this language is currently downloading on this Mac.")))
-        #expect(preparedInputs.isEmpty)
-    }
-
-    @Test
-    func localTranscriptionWithoutKeyShowsNotInstalledMessage() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 1)
-        let cloudPreparation = RecordingCloudPreparationService()
-        let services = ServiceBundle(
-            apiKeyPresent: false,
-            audioEnhancement: StubAudioEnhancementService(),
-            formatNormalizationService: StubFormatNormalizationService(),
-            cloudPreparationService: cloudPreparation,
-            localTranscription: NotInstalledLocalTranscriptionService(),
-            cloudTranscription: StubTranscriptionService(),
-            localTranslation: StubTranslationService(),
-            cloudTranslation: StubTranslationService(),
-            localSummarization: StubSummarizationService(),
-            cloudSummarization: StubSummarizationService(),
-            export: DefaultExportService()
-        )
-        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
-        let recorder = ItemRecorder()
-
-        await processor.run(files: harness.items) { item in
-            await recorder.record(item)
-        }
-
-        let latestItems = await recorder.itemsByBasename()
-        let item = try #require(latestItems["sample_1"])
-        let preparedInputs = await cloudPreparation.inputs
-
-        #expect(item.stage == .failed(error: .transcriptionFailed("Speech support for this language is available on this Mac but isn’t installed yet.")))
-        #expect(preparedInputs.isEmpty)
-    }
-
-    @Test
-    func localTranslationFallsBackToCloudWhenLocalTranslationFails() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 1)
-        let cloudTranslation = RecordingCloudTranslationService()
-        let services = ServiceBundle(
-            apiKeyPresent: true,
-            audioEnhancement: StubAudioEnhancementService(),
-            localTranscription: StubTranscriptionService(),
-            cloudTranscription: StubTranscriptionService(),
-            localTranslation: FailingLocalTranslationService(),
-            cloudTranslation: cloudTranslation,
-            localSummarization: StubSummarizationService(),
-            cloudSummarization: StubSummarizationService(),
-            export: DefaultExportService()
-        )
-        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
-        let recorder = ItemRecorder()
-
-        await processor.run(files: harness.items) { item in
-            await recorder.record(item)
-        }
-
-        let latestItems = await recorder.itemsByBasename()
-        let item = try #require(latestItems["sample_1"])
-        let translatedInput = await cloudTranslation.requests
-        let transcriptURL = try #require(item.outputFolderURL?
-            .appendingPathComponent("sample_1_transcript.txt"))
-        let transcript = try String(contentsOf: transcriptURL, encoding: .utf8)
-        let request = try #require(translatedInput.first)
-        let expectedText = "Stub original transcript for sample 1 clean."
-
-        #expect(item.stage == .complete)
-        #expect(item.translatedTranscript == "[cloud fallback] \(expectedText)")
-        #expect(translatedInput.count == 1)
-        #expect(request.text == expectedText)
-        #expect(request.from == "en")
-        #expect(request.to == "en")
-        #expect(transcript.contains("[cloud fallback] \(expectedText)"))
+        #expect(item.stage == .failed(error: .transcriptionFailed("ClearVoice couldn’t detect the spoken language. Choose the source language manually and try again.")))
     }
 }
 
@@ -320,12 +120,13 @@ private struct BatchProcessorHarness {
         var generatedItems: [AudioFileItem] = []
 
         for index in 1...fileCount {
-            let url = sourceFolder.appendingPathComponent("sample_\(index).m4a")
-            try Data([0x01, 0x02, 0x03]).write(to: url)
+            let basename = "sample_\(index)"
+            let sourceURL = sourceFolder.appendingPathComponent("\(basename).wav")
+            try Data("stub".utf8).write(to: sourceURL)
             generatedItems.append(
                 AudioFileItem(
                     id: UUID(),
-                    sourceURL: url,
+                    sourceURL: sourceURL,
                     durationSeconds: nil,
                     stage: .pending
                 )
@@ -335,182 +136,81 @@ private struct BatchProcessorHarness {
         items = generatedItems
     }
 
-    func makeProcessor(
-        services: ServiceBundle,
-        maxConcurrency: Int
-    ) throws -> BatchProcessor {
+    func makeProcessor(services: ServiceBundle, maxConcurrency: Int) throws -> BatchProcessor {
         let configuration = BatchConfiguration(
             sourceFolder: sourceFolder,
             outputFolder: outputFolder,
             intensity: .balanced,
-            inputLanguage: .auto,
+            inputLanguage: .specific("mr"),
             outputLanguage: "en",
             maxConcurrency: maxConcurrency,
             recursiveScan: true,
             preserveChannels: false
         )
-
         let resolver = try OutputPathResolver(outputRoot: outputFolder)
         return BatchProcessor(config: configuration, resolver: resolver, services: services)
     }
 }
 
 private actor ItemRecorder {
-    private var latestByID: [UUID: AudioFileItem] = [:]
+    private var latestById: [UUID: AudioFileItem] = [:]
 
     func record(_ item: AudioFileItem) {
-        latestByID[item.id] = item
+        latestById[item.id] = item
     }
 
     func items() -> [AudioFileItem] {
-        Array(latestByID.values)
+        latestById.values.sorted { $0.basename < $1.basename }
     }
 
     func itemsByBasename() -> [String: AudioFileItem] {
-        Dictionary(uniqueKeysWithValues: latestByID.values.map { ($0.basename, $0) })
+        Dictionary(uniqueKeysWithValues: latestById.values.map { ($0.basename, $0) })
     }
 }
 
 private actor TrackingEnhancementService: AudioEnhancementService {
-    private let delayNanoseconds: UInt64
+    private let delayMilliseconds: UInt64
     private var activeCount = 0
-    private var waiter: (target: Int, continuation: CheckedContinuation<Void, Never>)?
     private(set) var maxActiveCount = 0
 
     init(delayMilliseconds: UInt64) {
-        self.delayNanoseconds = delayMilliseconds * 1_000_000
+        self.delayMilliseconds = delayMilliseconds
     }
 
-    func enhance(
-        input: URL,
-        output: URL,
-        intensity: Intensity
-    ) async throws {
+    func enhance(input: URL, output: URL, intensity: Intensity) async throws {
         activeCount += 1
         maxActiveCount = max(maxActiveCount, activeCount)
-
-        if let waiter, activeCount >= waiter.target {
-            self.waiter = nil
-            waiter.continuation.resume()
-        }
-
         defer { activeCount -= 1 }
 
         try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try Data(contentsOf: input).write(to: output)
-        try await Task.sleep(nanoseconds: delayNanoseconds)
-    }
-
-    func waitUntilActiveCount(atLeast target: Int) async {
-        if activeCount >= target {
-            return
-        }
-
-        await withCheckedContinuation { continuation in
-            waiter = (target, continuation)
-        }
+        try? FileManager.default.removeItem(at: output)
+        try Data("clean".utf8).write(to: output)
+        try await Task.sleep(for: .milliseconds(delayMilliseconds))
     }
 }
 
-private actor SelectiveFailureTranscriptionService: TranscriptionService {
+private actor SelectiveFailureSpeechPipelineService: SpeechPipelineService {
     let failingBasename: String
 
     init(failingBasename: String) {
         self.failingBasename = failingBasename
     }
 
-    func transcribe(
-        audio: URL,
-        language: LanguageSelection
-    ) async throws -> Transcript {
-        let originalBasename = audio
-            .deletingPathExtension()
-            .lastPathComponent
-            .replacingOccurrences(of: "_clean", with: "")
-
-        if originalBasename == failingBasename {
+    func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
+        if audio.deletingPathExtension().lastPathComponent == failingBasename {
             throw ProcessingError.transcriptionFailed("Stubbed failure")
         }
 
-        return Transcript(
-            text: "Stub transcript for \(audio.lastPathComponent)",
-            detectedLanguage: "en",
-            confidence: 0.99
+        let transcript = Transcript(text: "Original \(audio.lastPathComponent)", detectedLanguage: "mr", confidence: 0.9)
+        return SpeechPipelineOutput(
+            transcript: transcript,
+            englishTranslation: "English \(audio.lastPathComponent)"
         )
     }
 }
 
-private actor FailingSummarizationService: SummarizationService {
-    func summarize(
-        text: String,
-        inLanguage targetLanguage: String
-    ) async throws -> String {
-        throw ProcessingError.summarizationFailed("Gemini summarization failed with status 503.")
-    }
-}
-
-private actor DownloadingLocalTranscriptionService: TranscriptionService {
-    func transcribe(
-        audio: URL,
-        language: LanguageSelection
-    ) async throws -> Transcript {
-        throw TranscriptionError.modelDownloading
-    }
-}
-
-private actor NotInstalledLocalTranscriptionService: TranscriptionService {
-    func transcribe(
-        audio: URL,
-        language: LanguageSelection
-    ) async throws -> Transcript {
-        throw TranscriptionError.modelNotInstalled
-    }
-}
-
-private actor RecordingCloudTranscriptionService: TranscriptionService {
-    private(set) var requests: [(audio: URL, language: LanguageSelection)] = []
-
-    func transcribe(
-        audio: URL,
-        language: LanguageSelection
-    ) async throws -> Transcript {
-        requests.append((audio: audio, language: language))
-        return Transcript(
-            text: "[cloud transcript] \(audio.lastPathComponent)",
-            detectedLanguage: "en",
-            confidence: 0.99
-        )
-    }
-}
-
-private actor FailingLocalTranslationService: TranslationService {
-    func translate(
-        text: String,
-        from sourceLanguage: String,
-        to targetLanguage: String
-    ) async throws -> String {
-        throw ProcessingError.translationFailed("Local translation model is unavailable.")
-    }
-}
-
-private actor RecordingCloudTranslationService: TranslationService {
-    private(set) var requests: [(text: String, from: String, to: String)] = []
-
-    func translate(
-        text: String,
-        from sourceLanguage: String,
-        to targetLanguage: String
-    ) async throws -> String {
-        requests.append((text: text, from: sourceLanguage, to: targetLanguage))
-        return "[cloud fallback] \(text)"
-    }
-}
-
-private actor RecordingCloudPreparationService: CloudAudioPreparationService {
-    private(set) var inputs: [URL] = []
-
-    func prepare(_ sourceURL: URL) async throws -> URL {
-        inputs.append(sourceURL)
-        return sourceURL
+private actor DetectionFailingSpeechPipelineService: SpeechPipelineService {
+    func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
+        throw TranscriptionError.languageDetectionFailed
     }
 }

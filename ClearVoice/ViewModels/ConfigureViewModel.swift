@@ -1,58 +1,13 @@
 import Foundation
-import Speech
 
 @MainActor
 final class ConfigureViewModel: ObservableObject {
     @Published var intensity = Intensity.balanced
-    @Published var inputLanguage = Language.autoDetect {
-        didSet {
-            Task { await updateRoutingForLanguage(inputLanguage) }
-        }
-    }
-    @Published var outputLanguage = Language.english
-    @Published var maxConcurrency = 3
-    @Published var preserveChannels = false
-    @Published var transcriptionMode: ProcessingMode {
-        didSet { persistProcessingModes() }
-    }
-    @Published var translationMode: ProcessingMode {
-        didSet { persistProcessingModes() }
-    }
-    @Published var summarizationEnabled: Bool {
-        didSet { persistProcessingModes() }
-    }
-    @Published private(set) var canToggleTranscription: Bool
-    @Published private(set) var canStart: Bool
+    @Published var inputLanguage = Language.autoDetect
+    @Published var maxConcurrency = 2
 
-    let apiKeyPresent: Bool
-
-    private let processingModeStore: ProcessingModeStore
-    private let onRequestAPIKeySetup: @MainActor () -> Void
-    private let localSpeechSupportProvider: @Sendable () async -> [Locale]
-
-    init(
-        apiKeyPresent: Bool = false,
-        processingModeStore: ProcessingModeStore = .shared,
-        onRequestAPIKeySetup: @escaping @MainActor () -> Void = {},
-        localSpeechSupportProvider: @escaping @Sendable () async -> [Locale] = { await SpeechTranscriber.supportedLocales }
-    ) {
-        self.apiKeyPresent = apiKeyPresent
-        self.processingModeStore = processingModeStore
-        self.onRequestAPIKeySetup = onRequestAPIKeySetup
-        self.localSpeechSupportProvider = localSpeechSupportProvider
-
-        let storedModes = processingModeStore.load()
-        self.transcriptionMode = storedModes.transcription
-        self.translationMode = storedModes.translation
-        self.summarizationEnabled = storedModes.summarizationEnabled
-        self.canToggleTranscription = apiKeyPresent
-        self.canStart = true
-
-        Task { await updateRoutingForLanguage(inputLanguage) }
-    }
-
-    var canToggleTranslation: Bool {
-        apiKeyPresent
+    var canStart: Bool {
+        true
     }
 
     var intensityBand: Intensity.Band {
@@ -64,167 +19,42 @@ final class ConfigureViewModel: ObservableObject {
         Language.prioritized
     }
 
-    var outputLanguageOptions: [Language] {
-        Language.prioritized.filter { $0 != .autoDetect }
+    var outputLanguage: Language {
+        .english
     }
 
     var helperText: String {
-        let sourceLanguage = inputLanguage == .autoDetect ? "auto-detect the source language" : "transcribe in \(inputLanguage.displayName)"
-        return "ClearVoice will \(sourceLanguage), translate into \(outputLanguage.displayName), and process up to \(maxConcurrency) files in parallel."
+        if inputLanguage == .autoDetect {
+            return "ClearVoice will clean the audio locally, detect the spoken language, write the source transcript, and produce an English translation. If language detection fails, rerun the batch after choosing the source language manually."
+        }
+
+        return "ClearVoice will clean the audio locally, transcribe in \(inputLanguage.displayName), and produce an English translation."
     }
 
     var intensityDescription: String {
         switch intensity.band {
         case .minimal:
-            return "Light cleanup for already-usable recordings."
+            return "Light cleanup for already-usable speech."
         case .balanced:
-            return "Recommended for most voice notes and interviews."
+            return "Recommended for most voice recordings."
         case .strong:
-            return "More aggressive noise reduction for rougher captures."
+            return "More aggressive cleanup for noisy speech."
         case .maximum:
-            return "Highest cleanup intensity for difficult recordings."
+            return "Highest cleanup for difficult recordings, with the most processing."
         }
     }
 
     var advancedSummary: String {
-        let channelSummary = preserveChannels ? "Preserve original channels when possible." : "Downmix when the pipeline benefits from it."
-        return "\(channelSummary) Parallelism is capped at \(maxConcurrency) file\(maxConcurrency == 1 ? "" : "s")."
+        "All processing runs on this Mac. Parallelism can be set between 1 and 5 files. Start with 2 unless the machine is clearly keeping up."
     }
 
     var selectedInputLanguage: LanguageSelection {
         inputLanguage.id == Language.autoDetect.id ? .auto : .specific(inputLanguage.id)
     }
 
-    var batchProcessingModeConfiguration: ProcessingModeConfiguration {
-        var configuration = ProcessingModeConfiguration()
-        configuration.transcription = effectiveTranscriptionMode
-        configuration.translation = apiKeyPresent ? translationMode : .local
-        configuration.summarizationEnabled = apiKeyPresent && summarizationEnabled
-        return configuration
-    }
-
-    var processingSummaryText: String {
-        let cloudSteps = batchCloudSteps
-        let summarizationIsOn = batchProcessingModeConfiguration.summarizationEnabled
-
-        if !apiKeyPresent || cloudSteps.isEmpty {
-            if summarizationIsOn {
-                return "All steps run on this Mac. No audio leaves your device."
-            }
-
-            return "Summarization is off. All enabled steps run on this Mac."
-        }
-
-        if cloudSteps.contains("Transcription") {
-            if summarizationIsOn {
-                return "Audio will be sent to Gemini for \(cloudSteps.joinedList). Other steps run on this Mac."
-            }
-
-            return "Audio will be sent to Gemini for \(cloudSteps.joinedList). Summarization is off."
-        }
-
-        if summarizationIsOn {
-            return "Text will be sent to Gemini for \(cloudSteps.joinedList). Audio stays on this Mac."
-        }
-
-        return "Text will be sent to Gemini for \(cloudSteps.joinedList). Summarization is off."
-    }
-
-    var batchCloudSteps: [String] {
-        var steps: [String] = []
-
-        if batchProcessingModeConfiguration.transcription == .cloud {
-            steps.append("Transcription")
-        }
-
-        if batchProcessingModeConfiguration.translation == .cloud {
-            steps.append("Translation")
-        }
-
-        if apiKeyPresent && batchProcessingModeConfiguration.summarizationEnabled {
-            steps.append("Summarization")
-        }
-
-        return steps
-    }
-
-    var shouldOptimizeUpload: Bool {
-        batchProcessingModeConfiguration.transcription == .cloud
-    }
-
     func selectInputLanguage(id: String) {
         if let match = inputLanguageOptions.first(where: { $0.id == id }) {
             inputLanguage = match
-        }
-    }
-
-    func selectOutputLanguage(id: String) {
-        if let match = outputLanguageOptions.first(where: { $0.id == id }) {
-            outputLanguage = match
-        }
-    }
-
-    func requestAPIKeySetup() {
-        onRequestAPIKeySetup()
-    }
-
-    func updateRoutingForLanguage(_ language: Language) async {
-        let supportedLocales = await localSpeechSupportProvider()
-        Language.updateLocalSpeechSupport(with: supportedLocales)
-
-        let isSupportedLocally = language.isSupportedLocally
-
-        if !isSupportedLocally {
-            transcriptionMode = .cloud
-            canToggleTranscription = false
-            canStart = apiKeyPresent
-            return
-        }
-
-        canToggleTranscription = apiKeyPresent
-
-        if !apiKeyPresent {
-            transcriptionMode = .local
-        }
-
-        canStart = true
-    }
-
-    private var effectiveTranscriptionMode: ProcessingMode {
-        if !inputLanguage.isSupportedLocally {
-            return .cloud
-        }
-
-        return apiKeyPresent ? transcriptionMode : .local
-    }
-
-    private func persistProcessingModes() {
-        processingModeStore.save(
-            ProcessingModeConfiguration(
-                transcription: transcriptionMode,
-                translation: translationMode,
-                summarizationEnabled: summarizationEnabled
-            )
-        )
-    }
-}
-
-private extension Array where Element == String {
-    var joinedList: String {
-        switch count {
-        case 0:
-            return ""
-        case 1:
-            return self[0].lowercased()
-        case 2:
-            return "\(self[0].lowercased()) and \(self[1].lowercased())"
-        default:
-            let head = dropLast().map { $0.lowercased() }.joined(separator: ", ")
-            guard let tail = last?.lowercased() else {
-                return head
-            }
-
-            return "\(head), and \(tail)"
         }
     }
 }

@@ -9,23 +9,17 @@ struct ConfigureView: View {
     var body: some View {
         StepCard(
             title: "Configure",
-            detail: "Choose how aggressively ClearVoice should clean the audio and which languages it should use during transcription and translation."
+            detail: "Choose how aggressively ClearVoice should clean the audio, which language to transcribe, and how many local jobs to run at once."
         ) {
             VStack(alignment: .leading, spacing: 20) {
                 summaryCard
                 audioSettingsCard
                 languageSettingsCard
-                processingSettingsCard
                 advancedSettingsCard
 
                 Text(viewModel.helperText)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-
-                if !viewModel.canStart {
-                    Label("This language requires Gemini transcription. Add a Gemini key to continue.", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                }
 
                 Spacer()
 
@@ -97,85 +91,28 @@ struct ConfigureView: View {
                 }
             }
 
-            Picker("Output Language", selection: outputLanguageBinding) {
-                ForEach(viewModel.outputLanguageOptions) { language in
-                    Text(language.displayName)
-                        .tag(language.id)
-                }
-            }
-        }
-        .cardStyle()
-    }
-
-    private var processingSettingsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Divider()
-
-            Text("Processing")
-                .font(.headline)
-
-            if viewModel.apiKeyPresent {
-                Text(viewModel.processingSummaryText)
+            LabeledContent("Output Language") {
+                Text(viewModel.outputLanguage.displayName)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                ProcessingModeToggleRow(
-                    label: "Transcription",
-                    mode: $viewModel.transcriptionMode,
-                    isEnabled: viewModel.canToggleTranscription,
-                    apiKeyPresent: true,
-                    badgeSuffix: transcriptionBadgeSuffix
-                )
-
-                ProcessingModeToggleRow(
-                    label: "Translation",
-                    mode: $viewModel.translationMode,
-                    isEnabled: viewModel.canToggleTranslation,
-                    apiKeyPresent: true
-                )
-
-                summarizationRow
-            } else {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("All steps run on this Mac")
-                        .font(.subheadline.weight(.medium))
-                    Button("Add Gemini key →", action: viewModel.requestAPIKeySetup)
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.blue)
-                }
-
-                staticProcessingRow(label: "Transcription", badgeText: "On-device", tint: .green)
-                staticProcessingRow(label: "Translation", badgeText: "On-device", tint: .green)
-                staticProcessingRow(label: "Summarization", badgeText: "Off", tint: .secondary)
             }
+
+            Text("English translation is fixed in this version so we can stabilize the local pipeline first.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .cardStyle()
-    }
-
-    private var summarizationRow: some View {
-        HStack(spacing: 12) {
-            Text("Summarization")
-            Spacer()
-            processingBadge(
-                text: viewModel.summarizationEnabled ? "Gemini" : "Off",
-                tint: viewModel.summarizationEnabled ? .blue : .secondary
-            )
-            Toggle("", isOn: $viewModel.summarizationEnabled)
-                .labelsHidden()
-        }
     }
 
     private var advancedSettingsCard: some View {
         DisclosureGroup("Advanced", isExpanded: $showsAdvanced) {
             VStack(alignment: .leading, spacing: 14) {
-                Stepper(value: $viewModel.maxConcurrency, in: 1...8) {
+                Stepper(value: $viewModel.maxConcurrency, in: 1...5) {
                     LabeledContent("Parallel Files") {
                         Text("\(viewModel.maxConcurrency)")
                             .monospacedDigit()
                     }
                 }
-
-                Toggle("Preserve channels when possible", isOn: $viewModel.preserveChannels)
 
                 Text(viewModel.advancedSummary)
                     .foregroundStyle(.secondary)
@@ -184,40 +121,6 @@ struct ConfigureView: View {
             .padding(.top, 12)
         }
         .cardStyle()
-    }
-
-    private var transcriptionBadgeSuffix: String? {
-        var suffixes: [String] = []
-
-        if !viewModel.canToggleTranscription {
-            suffixes.append("auto")
-        }
-
-        if viewModel.shouldOptimizeUpload && viewModel.transcriptionMode == .cloud {
-            suffixes.append("audio optimized for upload")
-        }
-
-        return suffixes.isEmpty ? nil : suffixes.joined(separator: " · ")
-    }
-
-    private func staticProcessingRow(label: String, badgeText: String, tint: Color) -> some View {
-        HStack {
-            Text(label)
-            Spacer()
-            processingBadge(text: badgeText, tint: tint)
-        }
-    }
-
-    private func processingBadge(text: String, tint: Color) -> some View {
-        Text(text)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                Capsule()
-                    .fill(tint.opacity(0.12))
-            )
     }
 
     private func summaryMetric(label: String, value: String) -> some View {
@@ -243,13 +146,6 @@ struct ConfigureView: View {
             set: { viewModel.selectInputLanguage(id: $0) }
         )
     }
-
-    private var outputLanguageBinding: Binding<String> {
-        Binding(
-            get: { viewModel.outputLanguage.id },
-            set: { viewModel.selectOutputLanguage(id: $0) }
-        )
-    }
 }
 
 private extension View {
@@ -258,7 +154,7 @@ private extension View {
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color(nsColor: .controlBackgroundColor))
             )
     }

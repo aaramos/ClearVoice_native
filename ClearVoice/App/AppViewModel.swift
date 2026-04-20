@@ -92,11 +92,15 @@ final class AppViewModel: ObservableObject {
             outputFolder: outputFolder,
             intensity: configureViewModel.intensity,
             inputLanguage: configureViewModel.selectedInputLanguage,
-            outputLanguage: configureViewModel.outputLanguage.id,
+            outputLanguage: Language.english.id,
             maxConcurrency: configureViewModel.maxConcurrency,
             recursiveScan: true,
-            preserveChannels: configureViewModel.preserveChannels,
-            processingMode: configureViewModel.batchProcessingModeConfiguration
+            preserveChannels: false,
+            processingMode: ProcessingModeConfiguration(
+                transcription: .local,
+                translation: .local,
+                summarizationEnabled: true
+            )
         )
     }
 }

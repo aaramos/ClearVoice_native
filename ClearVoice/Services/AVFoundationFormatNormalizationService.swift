@@ -1,7 +1,7 @@
 import Foundation
 import OSLog
 
-actor FFmpegFormatNormalizationService: FormatNormalizationService {
+actor FFmpegSpeechFormatNormalizationService: FormatNormalizationService {
     typealias Runner = @Sendable (URL, URL, URL) async throws -> Void
 
     private let fileManager: FileManager
@@ -11,8 +11,8 @@ actor FFmpegFormatNormalizationService: FormatNormalizationService {
 
     init(
         fileManager: FileManager = .default,
-        ffmpegURL: URL? = FFmpegFormatNormalizationService.resolveFFmpegURL(),
-        runner: @escaping Runner = FFmpegFormatNormalizationService.defaultRunner
+        ffmpegURL: URL? = FFmpegSpeechFormatNormalizationService.resolveFFmpegURL(),
+        runner: @escaping Runner = FFmpegSpeechFormatNormalizationService.defaultRunner
     ) {
         self.fileManager = fileManager
         self.ffmpegURL = ffmpegURL
@@ -20,23 +20,23 @@ actor FFmpegFormatNormalizationService: FormatNormalizationService {
     }
 
     func normalize(_ sourceURL: URL) async throws -> (url: URL, requiresCleanup: Bool) {
-        let sourceExtension = sourceURL.pathExtension.lowercased()
-
-        guard AudioFormatSupport.requiresNormalization(for: sourceExtension) else {
-            return (sourceURL, false)
+        guard AudioFormatSupport.acceptedSourceExtensions.contains(sourceURL.pathExtension.lowercased()) else {
+            throw ProcessingError.enhancementFailed(
+                "ClearVoice couldn’t convert this audio format into the speech-processing format."
+            )
         }
 
         guard let ffmpegURL else {
             throw ProcessingError.enhancementFailed(
-                "ClearVoice couldn’t normalize this audio format because FFmpeg is unavailable on this Mac."
+                "ClearVoice couldn’t convert audio because FFmpeg is unavailable on this Mac."
             )
         }
 
         let outputURL = fileManager.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension(AudioFormatSupport.normalizedOutputExtension)
+            .appendingPathExtension("wav")
 
-        logger.debug("Normalizing audio format with FFmpeg at \(sourceURL.lastPathComponent, privacy: .public)")
+        logger.debug("Converting source audio into speech-processing WAV for \(sourceURL.lastPathComponent, privacy: .public)")
         try await runner(ffmpegURL, sourceURL, outputURL)
         return (outputURL, true)
     }
@@ -52,11 +52,7 @@ actor FFmpegFormatNormalizationService: FormatNormalizationService {
         }
 
         if let path = environment["PATH"] {
-            candidates.append(
-                contentsOf: path
-                    .split(separator: ":")
-                    .map { String($0) + "/ffmpeg" }
-            )
+            candidates.append(contentsOf: path.split(separator: ":").map { String($0) + "/ffmpeg" })
         }
 
         candidates.append(contentsOf: [
@@ -68,7 +64,6 @@ actor FFmpegFormatNormalizationService: FormatNormalizationService {
         for candidate in candidates {
             guard !candidate.isEmpty else { continue }
             let expandedPath = NSString(string: candidate).expandingTildeInPath
-
             if fileManager.isExecutableFile(atPath: expandedPath) {
                 return URL(fileURLWithPath: expandedPath)
             }
@@ -86,8 +81,9 @@ actor FFmpegFormatNormalizationService: FormatNormalizationService {
             "-y",
             "-i", sourceURL.path,
             "-vn",
-            "-c:a", "aac",
-            "-b:a", "128k",
+            "-ac", "1",
+            "-ar", "16000",
+            "-c:a", "pcm_s16le",
             destinationURL.path,
         ]
 
@@ -107,10 +103,10 @@ actor FFmpegFormatNormalizationService: FormatNormalizationService {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             if let detail, !detail.isEmpty {
-                throw ProcessingError.enhancementFailed("ClearVoice couldn’t normalize this audio format: \(detail)")
+                throw ProcessingError.enhancementFailed("ClearVoice couldn’t convert this audio file: \(detail)")
             }
 
-            throw ProcessingError.enhancementFailed("ClearVoice couldn’t normalize this audio format.")
+            throw ProcessingError.enhancementFailed("ClearVoice couldn’t convert this audio file.")
         }
     }
 }

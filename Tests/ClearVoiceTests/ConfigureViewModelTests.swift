@@ -1,105 +1,33 @@
-import Foundation
 import Testing
 @testable import ClearVoice
 
 @MainActor
 struct ConfigureViewModelTests {
     @Test
-    func unsupportedLanguageWithoutKeyDisablesStartAndLocksCloudTranscription() async {
-        let store = makeStore()
-        let viewModel = ConfigureViewModel(
-            apiKeyPresent: false,
-            processingModeStore: store,
-            localSpeechSupportProvider: { [Locale(identifier: "hi")] }
-        )
+    func defaultsMatchLocalFirstWorkflow() {
+        let viewModel = ConfigureViewModel()
 
-        viewModel.selectInputLanguage(id: Language.gujarati.id)
-        await viewModel.updateRoutingForLanguage(viewModel.inputLanguage)
-
-        #expect(viewModel.transcriptionMode == .cloud)
-        #expect(viewModel.canToggleTranscription == false)
-        #expect(viewModel.canStart == false)
-    }
-
-    @Test
-    func unsupportedLanguageWithKeyKeepsStartEnabledAndLocksCloudTranscription() async {
-        let store = makeStore()
-        let viewModel = ConfigureViewModel(
-            apiKeyPresent: true,
-            processingModeStore: store,
-            localSpeechSupportProvider: { [Locale(identifier: "hi")] }
-        )
-
-        viewModel.selectInputLanguage(id: Language.gujarati.id)
-        await viewModel.updateRoutingForLanguage(viewModel.inputLanguage)
-
-        #expect(viewModel.transcriptionMode == .cloud)
-        #expect(viewModel.canToggleTranscription == false)
+        #expect(viewModel.inputLanguage == .autoDetect)
+        #expect(viewModel.outputLanguage == .english)
+        #expect(viewModel.maxConcurrency == 2)
         #expect(viewModel.canStart)
     }
 
     @Test
-    func supportedLanguageLeavesTranscriptionToggleAvailable() async {
-        let store = makeStore()
-        let viewModel = ConfigureViewModel(
-            apiKeyPresent: true,
-            processingModeStore: store,
-            localSpeechSupportProvider: { [Locale(identifier: "hi"), Locale(identifier: "gu")] }
-        )
+    func selectingInputLanguageUpdatesSelection() {
+        let viewModel = ConfigureViewModel()
 
-        viewModel.selectInputLanguage(id: Language.hindi.id)
-        await viewModel.updateRoutingForLanguage(viewModel.inputLanguage)
+        viewModel.selectInputLanguage(id: Language.marathi.id)
 
-        #expect(viewModel.canToggleTranscription)
-        #expect(viewModel.canStart)
+        #expect(viewModel.inputLanguage == .marathi)
+        #expect(viewModel.selectedInputLanguage == .specific("mr"))
     }
 
     @Test
-    func toggleStatePersistsAcrossViewModelReinitialization() async {
-        let store = makeStore()
-        let first = ConfigureViewModel(
-            apiKeyPresent: true,
-            processingModeStore: store,
-            localSpeechSupportProvider: { [Locale(identifier: "hi")] }
-        )
+    func helperTextExplainsManualRetryForAutoDetect() {
+        let viewModel = ConfigureViewModel()
 
-        first.transcriptionMode = .cloud
-        first.translationMode = .cloud
-        first.summarizationEnabled = false
-
-        let second = ConfigureViewModel(
-            apiKeyPresent: true,
-            processingModeStore: store,
-            localSpeechSupportProvider: { [Locale(identifier: "hi")] }
-        )
-        await second.updateRoutingForLanguage(second.inputLanguage)
-
-        #expect(second.transcriptionMode == .cloud)
-        #expect(second.translationMode == .cloud)
-        #expect(second.summarizationEnabled == false)
-    }
-
-    @Test
-    func disablingSummarizationRemovesItFromCloudPlan() async {
-        let store = makeStore()
-        let viewModel = ConfigureViewModel(
-            apiKeyPresent: true,
-            processingModeStore: store,
-            localSpeechSupportProvider: { [Locale(identifier: "en")] }
-        )
-
-        viewModel.summarizationEnabled = false
-        await viewModel.updateRoutingForLanguage(viewModel.inputLanguage)
-
-        #expect(viewModel.batchProcessingModeConfiguration.summarizationEnabled == false)
-        #expect(!viewModel.batchCloudSteps.contains("Summarization"))
-        #expect(viewModel.processingSummaryText.contains("Summarization is off"))
-    }
-
-    private func makeStore() -> ProcessingModeStore {
-        let suiteName = "ClearVoice.ConfigureViewModelTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
-        return ProcessingModeStore(userDefaults: defaults)
+        #expect(viewModel.helperText.contains("detect the spoken language"))
+        #expect(viewModel.helperText.contains("choosing the source language manually"))
     }
 }

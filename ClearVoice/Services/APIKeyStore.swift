@@ -8,6 +8,13 @@ protocol APIKeyStore {
     var hasKey: Bool { get }
 }
 
+private extension String {
+    var trimmedNonEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
 extension APIKeyStore {
     var hasKey: Bool {
         (try? readGeminiAPIKey())?.trimmedNonEmpty != nil

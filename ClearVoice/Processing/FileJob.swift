@@ -1,12 +1,9 @@
 import Foundation
-import OSLog
 
 struct FileJob: Sendable {
     let config: BatchConfiguration
     let resolver: OutputPathResolver
     let services: ServiceBundle
-
-    private let logger = Logger(subsystem: "com.clearvoice.app", category: "file-job")
 
     func run(
         item: AudioFileItem,
@@ -26,18 +23,15 @@ struct FileJob: Sendable {
         do {
             item.stage = .analyzing
             await update(item)
-            try await simulatedStepDelay()
 
             item.stage = .analyzingFormat
             await update(item)
 
+            item.stage = .normalizingFormat
+            await update(item)
+
             let normalized = try await services.formatNormalizationService.normalize(item.sourceURL)
             let normalizedURL = normalized.url
-
-            if normalized.requiresCleanup {
-                item.stage = .normalizingFormat
-                await update(item)
-            }
 
             defer {
                 if normalized.requiresCleanup {
@@ -46,12 +40,11 @@ struct FileJob: Sendable {
             }
 
             let cleanURL = item.outputFolderURL!.appendingPathComponent(
-                "\(item.basename)_clean.\(normalizedURL.pathExtension)"
+                "\(item.basename)_clean.\(AudioFormatSupport.cleanExportExtension)"
             )
 
             item.stage = .cleaning(progress: 0.1)
             await update(item)
-            try await simulatedStepDelay()
 
             try await services.audioEnhancement.enhance(
                 input: normalizedURL,
@@ -62,54 +55,24 @@ struct FileJob: Sendable {
             item.stage = .cleaning(progress: 1.0)
             await update(item)
 
-            let transcript = try await transcribe(
-                item: &item,
-                cleanURL: cleanURL,
-                update: update
+            item.stage = .transcribing(progress: 0.3)
+            await update(item)
+
+            let speechOutput = try await services.speechPipeline.process(
+                audio: cleanURL,
+                language: config.inputLanguage
             )
-            item.detectedLanguage = transcript.detectedLanguage
-            item.originalTranscript = transcript.text
+
+            item.detectedLanguage = speechOutput.transcript.detectedLanguage
+            item.originalTranscript = speechOutput.transcript.text
             item.stage = .transcribing(progress: 1.0)
             await update(item)
 
             item.stage = .translating
             await update(item)
-            try await simulatedStepDelay()
 
-            item.translatedTranscript = try await translate(
-                transcript: transcript,
-                sourceFileName: item.sourceURL.lastPathComponent
-            )
-
-            let summary: String?
-
-            if config.processingMode.summarizationEnabled && services.apiKeyPresent {
-                item.stage = .summarizing
-                await update(item)
-                try await simulatedStepDelay()
-
-                do {
-                    // FUTURE: Local summarization via FoundationModels (Apple Intelligence on-device LLM).
-                    // Requires entitlement approval from Apple developer program.
-                    // When available, replace UnavailableSummarizationService with a FoundationModelsSummarizationService
-                    // that uses FoundationModels.LanguageModel to generate summaries without cloud dependency.
-                    // A small CoreML model is a secondary fallback option if FoundationModels entitlement is unavailable.
-                    summary = try await services.summarizationService(for: config).summarize(
-                        text: item.translatedTranscript ?? transcript.text,
-                        inLanguage: config.outputLanguage
-                    )
-                } catch let error as ProcessingError {
-                    logger.warning("Summarization failed for \(item.sourceURL.lastPathComponent, privacy: .public); exporting transcript without summary: \(String(describing: error), privacy: .public)")
-                    summary = nil
-                } catch {
-                    logger.warning("Summarization failed for \(item.sourceURL.lastPathComponent, privacy: .public); exporting transcript without summary: \(error.localizedDescription, privacy: .public)")
-                    summary = nil
-                }
-            } else {
-                summary = nil
-            }
-
-            item.summaryText = summary
+            item.translatedTranscript = speechOutput.englishTranslation
+            item.summaryText = services.summaryPlaceholder
 
             item.stage = .exporting
             await update(item)
@@ -117,8 +80,8 @@ struct FileJob: Sendable {
             try await services.export.exportTranscript(
                 to: item.outputFolderURL!,
                 basename: item.basename,
-                summary: summary,
-                translated: item.translatedTranscript ?? transcript.text,
+                summary: item.summaryText,
+                translated: item.translatedTranscript ?? speechOutput.transcript.text,
                 original: item.originalTranscript ?? ""
             )
 
@@ -144,126 +107,18 @@ struct FileJob: Sendable {
         }
     }
 
-    private func simulatedStepDelay() async throws {
-        try await Task.sleep(for: .milliseconds(220))
-    }
-
-    private func transcribe(
-        item: inout AudioFileItem,
-        cleanURL: URL,
-        update: @escaping @Sendable (AudioFileItem) async -> Void
-    ) async throws -> Transcript {
-        switch config.processingMode.transcription {
-        case .cloud:
-            return try await cloudTranscribe(
-                item: &item,
-                cleanURL: cleanURL,
-                update: update
-            )
-        case .local:
-            item.stage = .transcribing(progress: 0.3)
-            await update(item)
-            try await simulatedStepDelay()
-            let sourceFileName = item.sourceURL.lastPathComponent
-            do {
-                return try await services.transcriptionService(for: config).transcribe(
-                    audio: cleanURL,
-                    language: config.inputLanguage
-                )
-            } catch let error as TranscriptionError {
-                if services.apiKeyPresent, shouldFallbackToCloudTranscription(for: error) {
-                    logger.warning(
-                        "Local transcription unavailable for \(sourceFileName, privacy: .public); retrying with Gemini transcription: \(String(describing: error), privacy: .public)"
-                    )
-                    return try await cloudTranscribe(
-                        item: &item,
-                        cleanURL: cleanURL,
-                        update: update
-                    )
-                }
-
-                throw error
-            }
-        }
-    }
-
-    private func cloudTranscribe(
-        item: inout AudioFileItem,
-        cleanURL: URL,
-        update: @escaping @Sendable (AudioFileItem) async -> Void
-    ) async throws -> Transcript {
-        item.stage = .optimizingForUpload
-        await update(item)
-
-        let preparedURL = try await services.cloudPreparationService.prepare(cleanURL)
-        defer {
-            if preparedURL != cleanURL {
-                try? FileManager.default.removeItem(at: preparedURL)
-            }
-        }
-
-        item.stage = .transcribing(progress: 0.3)
-        await update(item)
-        try await simulatedStepDelay()
-
-        return try await services.cloudTranscriptionService().transcribe(
-            audio: preparedURL,
-            language: config.inputLanguage
-        )
-    }
-
-    private func translate(
-        transcript: Transcript,
-        sourceFileName: String
-    ) async throws -> String {
-        do {
-            return try await services.translationService(for: config).translate(
-                text: transcript.text,
-                from: transcript.detectedLanguage,
-                to: config.outputLanguage
-            )
-        } catch {
-            if config.processingMode.translation == .local, services.apiKeyPresent {
-                logger.warning("Local translation failed for \(sourceFileName, privacy: .public); retrying with Gemini translation: \(error.localizedDescription, privacy: .public)")
-                return try await services.cloudTranslationService().translate(
-                    text: transcript.text,
-                    from: transcript.detectedLanguage,
-                    to: config.outputLanguage
-                )
-            }
-
-            if let translationError = error as? TranslationServiceError, translationError == .pairUnavailable {
-                logger.warning("Local translation unavailable for \(transcript.detectedLanguage, privacy: .public) -> \(config.outputLanguage, privacy: .public); passing transcript through untranslated")
-                return transcript.text
-            }
-
-            throw error
-        }
-    }
-
-    private func shouldFallbackToCloudTranscription(for error: TranscriptionError) -> Bool {
-        switch error {
-        case .modelDownloading, .modelNotInstalled:
-            return true
-        case .languageNotSupported:
-            return false
-        }
-    }
-
     private func wrappedProcessingError(for error: Error) -> ProcessingError {
         if let transcriptionError = error as? TranscriptionError {
             switch transcriptionError {
             case .languageNotSupported:
-                return .transcriptionFailed("ClearVoice couldn’t transcribe this language on-device.")
+                return .transcriptionFailed("ClearVoice couldn’t transcribe this language with the local speech model.")
+            case .languageDetectionFailed:
+                return .transcriptionFailed("ClearVoice couldn’t detect the spoken language. Choose the source language manually and try again.")
             case .modelDownloading:
-                return .transcriptionFailed("Speech support for this language is currently downloading on this Mac.")
+                return .transcriptionFailed("ClearVoice is still downloading the local speech model for this language.")
             case .modelNotInstalled:
-                return .transcriptionFailed("Speech support for this language is available on this Mac but isn’t installed yet.")
+                return .transcriptionFailed("ClearVoice needs the local speech model for this language before it can continue.")
             }
-        }
-
-        if let serviceError = error as? ServiceError, serviceError == .cloudUnavailable {
-            return .transcriptionFailed("Gemini is unavailable because no API key is configured.")
         }
 
         return .exportFailed(error.localizedDescription)

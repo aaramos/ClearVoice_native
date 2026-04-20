@@ -8,7 +8,7 @@ struct ProcessView: View {
     var body: some View {
         StepCard(
             title: "Process",
-            detail: "ClearVoice processes each file end to end, including normalization, upload prep when needed, and transcript export."
+            detail: "ClearVoice processes each file locally end to end: conversion, cleanup, source transcript, English translation, and transcript export."
         ) {
             VStack(alignment: .leading, spacing: 18) {
                 Text(viewModel.statusText)
@@ -30,11 +30,20 @@ struct ProcessView: View {
                 }
 
                 ForEach(viewModel.files) { file in
-                    HStack {
-                        Text(file.sourceURL.lastPathComponent)
-                        Spacer()
-                        Text(stageLabel(for: file.stage))
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(file.sourceURL.lastPathComponent)
+                            Spacer()
+                            Text(stageLabel(for: file.stage))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let detail = stageDetail(for: file.stage) {
+                            Text(detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     .padding()
                     .background(
@@ -99,6 +108,31 @@ struct ProcessView: View {
             "Failed"
         case .skipped:
             "Skipped"
+        }
+    }
+
+    private func stageDetail(for stage: ProcessingStage) -> String? {
+        switch stage {
+        case .failed(let error):
+            switch error {
+            case .audioUnreadable:
+                return "ClearVoice couldn’t read this audio file."
+            case .enhancementFailed(let message),
+                    .transcriptionFailed(let message),
+                    .translationFailed(let message),
+                    .summarizationFailed(let message),
+                    .exportFailed(let message):
+                return message
+            case .cancelled:
+                return "Processing stopped before this file finished."
+            }
+        case .skipped(let reason):
+            switch reason {
+            case .outputFolderExists(let url):
+                return "Skipped because \(url.lastPathComponent) already exists in the output folder."
+            }
+        default:
+            return nil
         }
     }
 }

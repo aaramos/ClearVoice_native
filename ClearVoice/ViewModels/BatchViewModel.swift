@@ -84,7 +84,20 @@ final class BatchViewModel: ObservableObject {
                 self.processor = nil
                 self.isRunning = false
                 self.didFinish = true
-                self.statusText = "Processing complete. Review polish lands in a later phase."
+                let failureCount = self.files.filter {
+                    if case .failed = $0.stage { return true }
+                    return false
+                }.count
+                let skippedCount = self.files.filter {
+                    if case .skipped = $0.stage { return true }
+                    return false
+                }.count
+
+                if failureCount > 0 || skippedCount > 0 {
+                    self.statusText = "Processing finished with \(failureCount) failed and \(skippedCount) skipped. See the file rows below for details."
+                } else {
+                    self.statusText = "Processing complete. Review polish lands in a later phase."
+                }
             }
         }
     }

@@ -3,39 +3,26 @@ import Testing
 
 struct AppServicesFactoryTests {
     @Test
-    func resolvedGeminiAPIKeyPrefersEnvironmentVariable() throws {
-        let key = try AppServicesFactory.resolvedGeminiAPIKey(
-            environment: ["GEMINI_API_KEY": "env-key"],
-            apiKeyStore: MockAPIKeyStore(storedKey: "saved-key")
-        )
+    @MainActor
+    func makeAppViewModelBuildsLocalFirstWorkflow() {
+        let viewModel = AppServicesFactory.makeAppViewModel()
 
-        #expect(key == "env-key")
+        #expect(viewModel.configureViewModel.maxConcurrency == 2)
+        #expect(viewModel.configureViewModel.outputLanguage == .english)
     }
 
     @Test
-    func resolvedGeminiAPIKeyFallsBackToKeychainWhenEnvironmentMissing() throws {
-        let key = try AppServicesFactory.resolvedGeminiAPIKey(
-            environment: [:],
-            apiKeyStore: MockAPIKeyStore(storedKey: "saved-key")
-        )
+    func makeServiceBundleProvidesPlaceholderSummary() {
+        let services = AppServicesFactory.makeServiceBundle()
 
-        #expect(key == "saved-key")
+        #expect(!services.summaryPlaceholder.isEmpty)
     }
 
     @Test
-    func keychainLaunchErrorExplainsStorageLocation() {
-        let error = LaunchRequirementsError.keychainAccessFailed("Keychain access is unavailable.")
+    func launchErrorUsesPlainStartupMessage() {
+        let error = LaunchRequirementsError.unexpectedStartupFailure("Test failure")
 
-        #expect(error.title == "Couldn’t Access Your Saved API Key")
-        #expect(error.message.contains("Keychain"))
-    }
-
-    @Test
-    func apiKeyStoreHasKeyReflectsStoredValue() {
-        let withKey = MockAPIKeyStore(storedKey: "saved-key")
-        let withoutKey = MockAPIKeyStore()
-
-        #expect(withKey.hasKey)
-        #expect(!withoutKey.hasKey)
+        #expect(error.title == "Couldn’t Start ClearVoice")
+        #expect(error.message.contains("Test failure"))
     }
 }

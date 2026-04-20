@@ -1,35 +1,42 @@
 # ClearVoice
 
-ClearVoice is a native macOS batch audio utility for cleaning recordings, transcribing them, translating them, and exporting a transcript package per source file.
+ClearVoice is a native macOS batch audio utility for cleaning speech recordings, writing a transcript in the spoken language, and producing an English translation for each source file.
 
-## Current Setup
+This branch, `local-offline-v2`, is the local-first refactor. The primary workflow runs on this Mac without Gemini in the processing path.
 
-The live cloud path now uses a single Google Gemini key.
+## What This Branch Does
 
-On first launch, ClearVoice now prompts for that key and stores it in the macOS Keychain for the current user on that Mac. You do not need to paste the key on every launch.
+- Accepts local audio files, including `.wma`
+- Converts source audio into a speech-processing format with FFmpeg
+- Enhances speech locally and exports a final clean audio file as `.m4a`
+- Runs local transcription plus English translation with WhisperKit
+- Exports one folder per source file containing:
+  - `<name>_clean.m4a`
+  - `<name>_transcript.txt`
 
-For signed builds with the right entitlements, ClearVoice prefers the stricter data-protection Keychain path. For the current unsigned local build, it automatically falls back to the standard login Keychain so setup still works.
+## Current Product Shape
 
-For developer overrides, ClearVoice still honors `GEMINI_API_KEY` from the launch environment before falling back to Keychain storage:
+- Translation output is fixed to English for now
+- Summarization is deferred for this release
+- The transcript export currently includes a placeholder summary block so the file shape stays stable while summarization is stubbed
+- Auto language detection is supported, but if the local model cannot detect the spoken language confidently, ClearVoice tells the user to rerun after choosing the input language manually
+- Parallelism is configurable from the UI between `1` and `5` files, with a default of `2`
 
-```sh
-export GEMINI_API_KEY="your-key-here"
-./script/build_and_run.sh
-```
+## Local Requirements
 
-If you want Finder-launched or drag-installed builds to use an environment override, set it at the macOS launch-services level before launching the app:
-
-```sh
-launchctl setenv GEMINI_API_KEY "your-key-here"
-```
-
-## Development
-
-Install FFmpeg locally for `.wma` conversion support:
+Install FFmpeg:
 
 ```sh
 brew install ffmpeg
 ```
+
+WhisperKit models are downloaded on demand into the current user's Application Support directory the first time local speech processing runs:
+
+- `~/Library/Application Support/ClearVoice/Models`
+
+Because first-run setup UX is deferred on this branch, keep the Mac online for the first transcription run so the local speech model can download if needed.
+
+## Development
 
 Build and run:
 
@@ -45,8 +52,9 @@ xcodebuild test -project ClearVoice.xcodeproj -scheme ClearVoice -destination 'p
 
 ## Known Limitations
 
-- Phase 8 audio DSP work is still in progress, so the current export path uses the existing clean-audio stub behavior.
-- The live Gemini path is implemented, covered by unit tests, and verified to launch locally, but it has not yet been exercised against a real Gemini API key in this shell session.
-- ClearVoice now rate-limits Gemini calls conservatively to reduce free-tier 429 errors, so cloud-heavy batches may progress more slowly than the local pipeline.
-- WMA conversion now depends on a local FFmpeg executable. On this Mac, ClearVoice can find common install locations such as `/opt/homebrew/bin/ffmpeg`, but unsigned Finder-launched builds on another machine will fail to normalize `.wma` inputs unless FFmpeg is installed in a discoverable path.
-- `.dmg` packaging is planned for a later phase; use the local run script for now.
+- This branch is intentionally English-only for translation
+- Summarization is a placeholder, not a real model-backed feature yet
+- The first local transcription run may need to download the WhisperKit model before processing can begin
+- First-run onboarding for model setup is still deferred
+- The legacy Gemini, Apple Speech, and Apple Translation codepaths still exist in the repo for reference and rollback safety, but they are not part of the primary workflow on this branch
+- `.dmg` packaging is still planned for a later phase
