@@ -192,6 +192,46 @@ struct BatchProcessorTests {
         #expect(item.stage == .failed(error: .transcriptionFailed("Speech support for this language is still downloading on this Mac.")))
         #expect(preparedInputs.isEmpty)
     }
+
+    @Test
+    func localTranslationFallsBackToCloudWhenLocalTranslationFails() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1)
+        let cloudTranslation = RecordingCloudTranslationService()
+        let services = ServiceBundle(
+            apiKeyPresent: true,
+            audioEnhancement: StubAudioEnhancementService(),
+            localTranscription: StubTranscriptionService(),
+            cloudTranscription: StubTranscriptionService(),
+            localTranslation: FailingLocalTranslationService(),
+            cloudTranslation: cloudTranslation,
+            localSummarization: StubSummarizationService(),
+            cloudSummarization: StubSummarizationService(),
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+        let translatedInput = await cloudTranslation.requests
+        let transcriptURL = try #require(item.outputFolderURL?
+            .appendingPathComponent("sample_1_transcript.txt"))
+        let transcript = try String(contentsOf: transcriptURL, encoding: .utf8)
+        let request = try #require(translatedInput.first)
+        let expectedText = "Stub original transcript for sample 1 clean."
+
+        #expect(item.stage == .complete)
+        #expect(item.translatedTranscript == "[cloud fallback] \(expectedText)")
+        #expect(translatedInput.count == 1)
+        #expect(request.text == expectedText)
+        #expect(request.from == "en")
+        #expect(request.to == "en")
+        #expect(transcript.contains("[cloud fallback] \(expectedText)"))
+    }
 }
 
 private struct BatchProcessorHarness {
@@ -347,6 +387,29 @@ private actor DownloadingLocalTranscriptionService: TranscriptionService {
         language: LanguageSelection
     ) async throws -> Transcript {
         throw TranscriptionError.modelDownloading
+    }
+}
+
+private actor FailingLocalTranslationService: TranslationService {
+    func translate(
+        text: String,
+        from sourceLanguage: String,
+        to targetLanguage: String
+    ) async throws -> String {
+        throw ProcessingError.translationFailed("Local translation model is unavailable.")
+    }
+}
+
+private actor RecordingCloudTranslationService: TranslationService {
+    private(set) var requests: [(text: String, from: String, to: String)] = []
+
+    func translate(
+        text: String,
+        from sourceLanguage: String,
+        to targetLanguage: String
+    ) async throws -> String {
+        requests.append((text: text, from: sourceLanguage, to: targetLanguage))
+        return "[cloud fallback] \(text)"
     }
 }
 

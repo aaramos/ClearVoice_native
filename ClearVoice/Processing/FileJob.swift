@@ -76,16 +76,10 @@ struct FileJob: Sendable {
             await update(item)
             try await simulatedStepDelay()
 
-            do {
-                item.translatedTranscript = try await services.translationService(for: config).translate(
-                    text: transcript.text,
-                    from: transcript.detectedLanguage,
-                    to: config.outputLanguage
-                )
-            } catch TranslationServiceError.pairUnavailable {
-                logger.warning("Local translation unavailable for \(transcript.detectedLanguage, privacy: .public) -> \(config.outputLanguage, privacy: .public); passing transcript through untranslated")
-                item.translatedTranscript = transcript.text
-            }
+            item.translatedTranscript = try await translate(
+                transcript: transcript,
+                sourceFileName: item.sourceURL.lastPathComponent
+            )
 
             let summary: String?
 
@@ -200,6 +194,35 @@ struct FileJob: Sendable {
             audio: preparedURL,
             language: config.inputLanguage
         )
+    }
+
+    private func translate(
+        transcript: Transcript,
+        sourceFileName: String
+    ) async throws -> String {
+        do {
+            return try await services.translationService(for: config).translate(
+                text: transcript.text,
+                from: transcript.detectedLanguage,
+                to: config.outputLanguage
+            )
+        } catch {
+            if config.processingMode.translation == .local, services.apiKeyPresent {
+                logger.warning("Local translation failed for \(sourceFileName, privacy: .public); retrying with Gemini translation: \(error.localizedDescription, privacy: .public)")
+                return try await services.cloudTranslationService().translate(
+                    text: transcript.text,
+                    from: transcript.detectedLanguage,
+                    to: config.outputLanguage
+                )
+            }
+
+            if let translationError = error as? TranslationServiceError, translationError == .pairUnavailable {
+                logger.warning("Local translation unavailable for \(transcript.detectedLanguage, privacy: .public) -> \(config.outputLanguage, privacy: .public); passing transcript through untranslated")
+                return transcript.text
+            }
+
+            throw error
+        }
     }
 
     private func wrappedProcessingError(for error: Error) -> ProcessingError {

@@ -110,6 +110,10 @@ struct ServiceBundle: Sendable {
         config.processingMode.translation == .cloud ? cloudTranslation : localTranslation
     }
 
+    func cloudTranslationService() -> any TranslationService {
+        cloudTranslation
+    }
+
     func summarizationService(for config: BatchConfiguration) -> any SummarizationService {
         config.processingMode.summarizationEnabled ? cloudSummarization : localSummarization
     }
