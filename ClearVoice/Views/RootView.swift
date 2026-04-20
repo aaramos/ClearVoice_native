@@ -10,7 +10,7 @@ struct RootView: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(32)
-                .background(Color(nsColor: .windowBackgroundColor))
+                .background(.regularMaterial)
         }
     }
 
