@@ -35,6 +35,11 @@ enum APIKeyStoreError: Error, LocalizedError, Equatable {
 }
 
 struct KeychainGeminiAPIKeyStore: APIKeyStore {
+    private enum Backend {
+        case dataProtection
+        case legacyLoginKeychain
+    }
+
     private let service: String
     private let account: String
     private let label: String
@@ -50,7 +55,31 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
     }
 
     func readGeminiAPIKey() throws -> String? {
-        var query = baseQuery()
+        do {
+            if let key = try readGeminiAPIKey(using: .dataProtection) {
+                return key
+            }
+        } catch APIKeyStoreError.readFailed(let status) where status != errSecMissingEntitlement {
+            throw APIKeyStoreError.readFailed(status: status)
+        }
+
+        return try readGeminiAPIKey(using: .legacyLoginKeychain)
+    }
+
+    func saveGeminiAPIKey(_ apiKey: String) throws {
+        guard let trimmedKey = apiKey.trimmedNonEmpty else {
+            throw APIKeyStoreError.invalidInput
+        }
+
+        do {
+            try saveGeminiAPIKey(trimmedKey, using: .dataProtection)
+        } catch APIKeyStoreError.saveFailed(let status) where status == errSecMissingEntitlement {
+            try saveGeminiAPIKey(trimmedKey, using: .legacyLoginKeychain)
+        }
+    }
+
+    private func readGeminiAPIKey(using backend: Backend) throws -> String? {
+        var query = baseQuery(for: backend)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
 
@@ -74,16 +103,15 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
         }
     }
 
-    func saveGeminiAPIKey(_ apiKey: String) throws {
-        guard let trimmedKey = apiKey.trimmedNonEmpty else {
-            throw APIKeyStoreError.invalidInput
-        }
-
-        let keyData = Data(trimmedKey.utf8)
-        var addQuery = baseQuery()
+    private func saveGeminiAPIKey(_ apiKey: String, using backend: Backend) throws {
+        let keyData = Data(apiKey.utf8)
+        var addQuery = baseQuery(for: backend)
         addQuery[kSecAttrLabel as String] = label
-        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         addQuery[kSecValueData as String] = keyData
+
+        if case .dataProtection = backend {
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        }
 
         let status = SecItemAdd(addQuery as CFDictionary, nil)
 
@@ -91,14 +119,17 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
         case errSecSuccess:
             return
         case errSecDuplicateItem:
-            let attributesToUpdate: [String: Any] = [
-                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            var attributesToUpdate: [String: Any] = [
                 kSecAttrLabel as String: label,
                 kSecValueData as String: keyData
             ]
 
+            if case .dataProtection = backend {
+                attributesToUpdate[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            }
+
             let updateStatus = SecItemUpdate(
-                baseQuery() as CFDictionary,
+                baseQuery(for: backend) as CFDictionary,
                 attributesToUpdate as CFDictionary
             )
 
@@ -110,13 +141,21 @@ struct KeychainGeminiAPIKeyStore: APIKeyStore {
         }
     }
 
-    private func baseQuery() -> [String: Any] {
-        [
+    private func baseQuery(for backend: Backend) -> [String: Any] {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
-            kSecUseDataProtectionKeychain as String: true
+            kSecAttrAccount as String: account
         ]
+
+        switch backend {
+        case .dataProtection:
+            query[kSecAttrSynchronizable as String] = kCFBooleanFalse as Any
+            query[kSecUseDataProtectionKeychain as String] = true
+        case .legacyLoginKeychain:
+            break
+        }
+
+        return query
     }
 }

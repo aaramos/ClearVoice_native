@@ -8,6 +8,8 @@ The live cloud path now uses a single Google Gemini key.
 
 On first launch, ClearVoice now prompts for that key and stores it in the macOS Keychain for the current user on that Mac. You do not need to paste the key on every launch.
 
+For signed builds with the right entitlements, ClearVoice prefers the stricter data-protection Keychain path. For the current unsigned local build, it automatically falls back to the standard login Keychain so setup still works.
+
 For developer overrides, ClearVoice still honors `GEMINI_API_KEY` from the launch environment before falling back to Keychain storage:
 
 ```sh
