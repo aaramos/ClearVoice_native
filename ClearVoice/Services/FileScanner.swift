@@ -15,14 +15,6 @@ struct ScanResult: Equatable, Sendable {
 }
 
 actor LocalFileScanner: FileScanner {
-    private static let supportedExtensions: Set<String> = [
-        "wav",
-        "mp3",
-        "m4a",
-        "aac",
-        "flac",
-    ]
-
     private let fileManager: FileManager
 
     init(fileManager: FileManager = .default) {
@@ -36,7 +28,7 @@ actor LocalFileScanner: FileScanner {
         var totalDurationSeconds: TimeInterval = 0
 
         for url in urls {
-            guard Self.supportedExtensions.contains(url.pathExtension.lowercased()) else {
+            guard AudioFormatSupport.acceptedSourceExtensions.contains(url.pathExtension.lowercased()) else {
                 skipped.append(url)
                 continue
             }

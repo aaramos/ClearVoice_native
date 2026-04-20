@@ -1,67 +1,115 @@
-import AVFoundation
 import Foundation
 import OSLog
 
-actor AVFoundationFormatNormalizationService: FormatNormalizationService {
-    typealias Exporter = @Sendable (AVURLAsset, URL) async throws -> Void
+actor FFmpegFormatNormalizationService: FormatNormalizationService {
+    typealias Runner = @Sendable (URL, URL, URL) async throws -> Void
 
-    private let exporter: Exporter
     private let fileManager: FileManager
+    private let ffmpegURL: URL?
+    private let runner: Runner
     private let logger = Logger(subsystem: "com.clearvoice.app", category: "normalize")
 
     init(
         fileManager: FileManager = .default,
-        exporter: @escaping Exporter = AVFoundationFormatNormalizationService.defaultExporter
+        ffmpegURL: URL? = FFmpegFormatNormalizationService.resolveFFmpegURL(),
+        runner: @escaping Runner = FFmpegFormatNormalizationService.defaultRunner
     ) {
         self.fileManager = fileManager
-        self.exporter = exporter
+        self.ffmpegURL = ffmpegURL
+        self.runner = runner
     }
 
     func normalize(_ sourceURL: URL) async throws -> (url: URL, requiresCleanup: Bool) {
-        let asset = AVURLAsset(url: sourceURL)
-        let normalizedExtension = sourceURL.pathExtension.lowercased()
+        let sourceExtension = sourceURL.pathExtension.lowercased()
 
-        guard !Self.supportedExtensions.contains(normalizedExtension) else {
+        guard AudioFormatSupport.requiresNormalization(for: sourceExtension) else {
             return (sourceURL, false)
+        }
+
+        guard let ffmpegURL else {
+            throw ProcessingError.enhancementFailed(
+                "ClearVoice couldn’t normalize this audio format because FFmpeg is unavailable on this Mac."
+            )
         }
 
         let outputURL = fileManager.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("m4a")
+            .appendingPathExtension(AudioFormatSupport.normalizedOutputExtension)
 
-        logger.debug("Normalizing unsupported audio format at \(sourceURL.lastPathComponent, privacy: .public)")
-        try await exporter(asset, outputURL)
+        logger.debug("Normalizing audio format with FFmpeg at \(sourceURL.lastPathComponent, privacy: .public)")
+        try await runner(ffmpegURL, sourceURL, outputURL)
         return (outputURL, true)
     }
 
-    private static let supportedExtensions: Set<String> = [
-        "wav",
-        "mp3",
-        "m4a",
-        "aac",
-        "flac",
-    ]
+    static func resolveFFmpegURL(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        fileManager: FileManager = .default
+    ) -> URL? {
+        var candidates: [String] = []
 
-    private static let defaultExporter: Exporter = { asset, destinationURL in
-        try await AVFoundationFormatNormalizationService.exportToM4A(
-            asset: asset,
-            destinationURL: destinationURL
-        )
-    }
-
-    private static func exportToM4A(asset: AVURLAsset, destinationURL: URL) async throws {
-        guard let exportSession = AVAssetExportSession(
-            asset: asset,
-            presetName: AVAssetExportPresetAppleM4A
-        ) else {
-            throw ProcessingError.enhancementFailed("ClearVoice couldn’t normalize this audio format.")
+        if let explicitPath = environment["FFMPEG_PATH"], !explicitPath.isEmpty {
+            candidates.append(explicitPath)
         }
 
+        if let path = environment["PATH"] {
+            candidates.append(
+                contentsOf: path
+                    .split(separator: ":")
+                    .map { String($0) + "/ffmpeg" }
+            )
+        }
+
+        candidates.append(contentsOf: [
+            "/opt/homebrew/bin/ffmpeg",
+            "/usr/local/bin/ffmpeg",
+            "/usr/bin/ffmpeg",
+        ])
+
+        for candidate in candidates {
+            guard !candidate.isEmpty else { continue }
+            let expandedPath = NSString(string: candidate).expandingTildeInPath
+
+            if fileManager.isExecutableFile(atPath: expandedPath) {
+                return URL(fileURLWithPath: expandedPath)
+            }
+        }
+
+        return nil
+    }
+
+    private static let defaultRunner: Runner = { ffmpegURL, sourceURL, destinationURL in
+        let process = Process()
+        process.executableURL = ffmpegURL
+        process.arguments = [
+            "-hide_banner",
+            "-loglevel", "error",
+            "-y",
+            "-i", sourceURL.path,
+            "-vn",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            destinationURL.path,
+        ]
+
+        let errorPipe = Pipe()
+        process.standardError = errorPipe
+
         do {
-            try await exportSession.export(to: destinationURL, as: .m4a)
-        } catch is CancellationError {
-            throw ProcessingError.cancelled
+            try process.run()
+            process.waitUntilExit()
         } catch {
+            throw ProcessingError.enhancementFailed("ClearVoice couldn’t start FFmpeg: \(error.localizedDescription)")
+        }
+
+        guard process.terminationStatus == 0 else {
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let detail = String(data: errorData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if let detail, !detail.isEmpty {
+                throw ProcessingError.enhancementFailed("ClearVoice couldn’t normalize this audio format: \(detail)")
+            }
+
             throw ProcessingError.enhancementFailed("ClearVoice couldn’t normalize this audio format.")
         }
     }

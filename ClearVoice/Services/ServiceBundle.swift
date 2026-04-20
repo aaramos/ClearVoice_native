@@ -86,7 +86,7 @@ struct ServiceBundle: Sendable {
         return ServiceBundle(
             apiKeyPresent: true,
             audioEnhancement: StubAudioEnhancementService(),
-            formatNormalizationService: AVFoundationFormatNormalizationService(),
+            formatNormalizationService: FFmpegFormatNormalizationService(),
             cloudPreparationService: AVFoundationCloudPreparationService(),
             localTranscription: LocalSpeechTranscriptionService(),
             cloudTranscription: GeminiTranscriptionService(client: geminiClient),

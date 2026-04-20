@@ -35,6 +35,23 @@ struct ImportViewModelTests {
         #expect(viewModel.formattedDuration == "10m")
         #expect(viewModel.canProceed)
     }
+
+    @Test
+    func realScannerAdmitsWMAForNormalization() async throws {
+        let folders = try NestedTemporaryFolders()
+        let sourceFile = folders.source.appendingPathComponent("legacy_note.wma")
+        try Data([0x01, 0x02, 0x03]).write(to: sourceFile)
+
+        let viewModel = ImportViewModel(fileScanner: LocalFileScanner())
+
+        viewModel.selectOutputFolder(folders.outputSibling)
+        viewModel.selectSourceFolder(folders.source)
+        await viewModel.waitForScheduledScan()
+
+        #expect(viewModel.supportedFileCount == 1)
+        #expect(viewModel.skippedFileCount == 0)
+        #expect(viewModel.canProceed)
+    }
 }
 
 private struct NestedTemporaryFolders {

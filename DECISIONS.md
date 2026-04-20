@@ -4,7 +4,7 @@ This file records implementation choices that were left to engineering discretio
 
 ## 2026-04-19
 
-- Project root: created the app under `/Users/adrian/Apps/Projects/Benchmarking/ClearVoice` so the full repo stays inside the writable workspace while still keeping the handoff docs untouched in `/Users/adrian/Apps/Projects/clear_vision/docs`.
+- Project root: the active native repo now lives at `/Users/adrian/Apps/Projects/ClearVoice_native`.
 - Project generation: using `xcodegen` to generate and version a native `.xcodeproj` from `project.yml` instead of hand-editing Xcode project files.
 - Bundle identifier: `com.clearvoice.ClearVoice`.
 - Target layout: app target `ClearVoice`, test target `ClearVoiceTests`.
@@ -25,4 +25,4 @@ This file records implementation choices that were left to engineering discretio
 - Cloud resilience: treat Gemini summarization as best-effort so a transient cloud failure still exports the translated and original transcript instead of failing the whole file; transcription remains required and retries now use a longer default backoff window.
 - Translation resilience: when the user selects on-device translation, ClearVoice still attempts Apple Translation first, but any runtime local translation failure now falls back to Gemini when a Gemini key is available rather than silently leaving the transcript untranslated.
 - Transcription resilience: when the user selects on-device transcription, ClearVoice still attempts Apple Speech first, but if Apple reports the speech asset is `downloading` or merely `supported`/not installed, ClearVoice now falls back to Gemini when a Gemini key is available instead of failing the file.
-- WMA support posture: native Apple media APIs on this machine do not reliably normalize WMA inputs, so WMA is no longer advertised as supported in the scanner until an external transcoder is added.
+- WMA support posture: ClearVoice now uses a local FFmpeg executable for source-format normalization, and `.wma` is admitted at scan time and normalized to temporary `.m4a` before enhancement/transcription. Common absolute macOS install paths are probed because Finder-launched app processes may not inherit a useful shell `PATH`.

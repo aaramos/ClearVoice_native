@@ -23,7 +23,7 @@ enum AppServicesFactory {
         guard let geminiAPIKey else {
             return ServiceBundle(
                 audioEnhancement: StubAudioEnhancementService(),
-                formatNormalizationService: AVFoundationFormatNormalizationService(),
+                formatNormalizationService: FFmpegFormatNormalizationService(),
                 cloudPreparationService: NoOpCloudAudioPreparationService(),
                 localTranscription: LocalSpeechTranscriptionService(),
                 cloudTranscription: UnavailableTranscriptionService(),
