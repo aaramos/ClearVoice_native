@@ -14,6 +14,29 @@ struct ProcessView: View {
                 Text(viewModel.statusText)
                     .foregroundStyle(.secondary)
 
+                if let languageSelectionPrompt = viewModel.languageSelectionPrompt {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .padding(.top, 2)
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(languageSelectionPrompt)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Button("Choose Source Language", action: onBack)
+                                .disabled(viewModel.isRunning)
+                        }
+
+                        Spacer()
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.orange.opacity(0.12))
+                    )
+                }
+
                 if !viewModel.files.isEmpty {
                     HStack {
                         metric(label: "Complete", value: "\(viewModel.completedCount)")

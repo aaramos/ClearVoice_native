@@ -8,15 +8,21 @@ actor WhisperKitSpeechPipelineService: SpeechPipelineService {
     private let modelDirectory: URL
     private let logger = Logger(subsystem: "com.clearvoice.app", category: "whisperkit")
     private let languageConfidenceThreshold: Float
+    private let translationService: (any TranslationService)?
+    private let translationTargetLanguage: String
 
     init(
         modelName: String = "large-v3-v20240930_626MB",
         modelDirectory: URL? = nil,
-        languageConfidenceThreshold: Float = 0.55
+        languageConfidenceThreshold: Float = 0.55,
+        translationService: (any TranslationService)? = nil,
+        translationTargetLanguage: String = "en"
     ) {
         self.modelName = modelName
         self.modelDirectory = modelDirectory ?? Self.defaultModelDirectory()
         self.languageConfidenceThreshold = languageConfidenceThreshold
+        self.translationService = translationService
+        self.translationTargetLanguage = translationTargetLanguage
     }
 
     func process(
@@ -44,23 +50,31 @@ actor WhisperKitSpeechPipelineService: SpeechPipelineService {
                 throw ProcessingError.transcriptionFailed("ClearVoice returned an empty source transcript from the local speech model.")
             }
 
-            let englishResults = try await runtime.transcribe(
-                audioPath: audio.path,
-                decodeOptions: translateOptions(sourceLanguage: sourceLanguage)
-            )
-            let englishText = consolidatedText(from: englishResults)
-
-            guard !englishText.isEmpty else {
-                throw ProcessingError.translationFailed("ClearVoice returned an empty English translation from the local speech model.")
-            }
-
             let transcript = Transcript(
                 text: originalText,
                 detectedLanguage: transcriptResults.first?.language ?? sourceLanguage,
                 confidence: confidence(from: transcriptResults)
             )
 
-            await runtime.unloadModels()
+            let englishText: String
+
+            if let translationService {
+                await runtime.unloadModels()
+                whisperKit = nil
+                englishText = try await translationService.translate(
+                    text: originalText,
+                    from: transcript.detectedLanguage,
+                    to: translationTargetLanguage
+                )
+            } else {
+                englishText = try await fallbackEnglishTranslation(
+                    using: runtime,
+                    audio: audio,
+                    sourceLanguage: sourceLanguage
+                )
+                await runtime.unloadModels()
+                whisperKit = nil
+            }
 
             return SpeechPipelineOutput(
                 transcript: transcript,
@@ -143,6 +157,24 @@ actor WhisperKitSpeechPipelineService: SpeechPipelineService {
             detectLanguage: false,
             concurrentWorkerCount: 1
         )
+    }
+
+    private func fallbackEnglishTranslation(
+        using runtime: WhisperKit,
+        audio: URL,
+        sourceLanguage: String
+    ) async throws -> String {
+        let englishResults = try await runtime.transcribe(
+            audioPath: audio.path,
+            decodeOptions: translateOptions(sourceLanguage: sourceLanguage)
+        )
+        let englishText = consolidatedText(from: englishResults)
+
+        guard !englishText.isEmpty else {
+            throw ProcessingError.translationFailed("ClearVoice returned an empty English translation from the local speech model.")
+        }
+
+        return englishText
     }
 
     private func consolidatedText(from results: [TranscriptionResult]) -> String {

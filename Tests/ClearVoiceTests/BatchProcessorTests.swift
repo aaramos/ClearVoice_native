@@ -100,6 +100,32 @@ struct BatchProcessorTests {
 
         #expect(item.stage == .failed(error: .transcriptionFailed("ClearVoice couldn’t detect the spoken language. Choose the source language manually and try again.")))
     }
+
+    @Test
+    func speechPipelineReceivesSpeechSafeWavInput() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1)
+        let speechPipeline = RecordingSpeechPipelineService()
+        let services = ServiceBundle(
+            audioEnhancement: StubAudioEnhancementService(),
+            formatNormalizationService: StubSpeechSafeFormatNormalizationService(),
+            speechPipeline: speechPipeline,
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let receivedExtension = await speechPipeline.receivedPathExtension
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+
+        #expect(receivedExtension == "wav")
+        #expect(item.outputFolderURL?.appendingPathComponent("sample_1_clean.m4a") != nil)
+        #expect(item.stage == .complete)
+    }
 }
 
 private struct BatchProcessorHarness {
@@ -212,5 +238,27 @@ private actor SelectiveFailureSpeechPipelineService: SpeechPipelineService {
 private actor DetectionFailingSpeechPipelineService: SpeechPipelineService {
     func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
         throw TranscriptionError.languageDetectionFailed
+    }
+}
+
+private actor RecordingSpeechPipelineService: SpeechPipelineService {
+    private(set) var receivedPathExtension: String?
+
+    func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
+        receivedPathExtension = audio.pathExtension.lowercased()
+        return SpeechPipelineOutput(
+            transcript: Transcript(text: "Original", detectedLanguage: "mr", confidence: 0.9),
+            englishTranslation: "English"
+        )
+    }
+}
+
+private actor StubSpeechSafeFormatNormalizationService: FormatNormalizationService {
+    func normalize(_ sourceURL: URL) async throws -> (url: URL, requiresCleanup: Bool) {
+        let destinationURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("wav")
+        try Data("wav".utf8).write(to: destinationURL)
+        return (destinationURL, true)
     }
 }

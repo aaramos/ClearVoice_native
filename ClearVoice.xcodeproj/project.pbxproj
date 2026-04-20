@@ -12,6 +12,7 @@
 		09FD40E09511ADDEA6482D71 /* GeminiDeveloperClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200419689ADD25B8D3A322B6 /* GeminiDeveloperClient.swift */; };
 		0A08C236EE874072268D7812 /* GeminiTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31693940DE68799C042FCFEF /* GeminiTranslationService.swift */; };
 		0B38E5F0D85F396F0EB95C48 /* BatchProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4320471F12A0B0165CC84591 /* BatchProcessorTests.swift */; };
+		0E5563B7ABE4B0E04B75F684 /* LocalOllamaTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD4905653A8BF9C2301A81B /* LocalOllamaTranslationService.swift */; };
 		0F7BA6B5C1E1C5A12F9C0DEC /* ClearVoiceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050E389B0D32CC15410E92D3 /* ClearVoiceApp.swift */; };
 		0F8B9E2330F9720D33DB8EC4 /* Transcript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12B03C482C841A67900D536A /* Transcript.swift */; };
 		0FC915BA0DF238ED05E67A57 /* AudioFileItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B6A4B0275AAD073851A186 /* AudioFileItem.swift */; };
@@ -81,12 +82,14 @@
 		D428DB3A412B6F5CCF0AC485 /* FormatNormalizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A40F91D1DB9DDDB2EBACCBD /* FormatNormalizationService.swift */; };
 		D8031901C274A4D98386C5D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5AE43363D4BCDF9066B0ECC8 /* Assets.xcassets */; };
 		D962EC8BB18543A4DFF8D817 /* expected_transcript.txt in Resources */ = {isa = PBXBuildFile; fileRef = BE5058BF2F804FA25969F68A /* expected_transcript.txt */; };
+		D9B801CA7C07F40E94D96CB2 /* LocalOllamaTranslationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0455D3C5D0276E876296BDD /* LocalOllamaTranslationServiceTests.swift */; };
 		E11AE4167C22584B2594F9D0 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1064A3805D4AA3F066FED3AC /* ImportView.swift */; };
 		E44E2D8A9B3DF75402F34A32 /* ConfigureViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30A1BBCCE880E29B1400AEF /* ConfigureViewModelTests.swift */; };
 		E7330F86647F4CD65848A546 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD479F07A42B13CE1AC9CDF /* AppState.swift */; };
 		EC3E82ECB5B22EBFF7CFE0B0 /* GeminiSummarizationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 619BBA53EFC08A8305138189 /* GeminiSummarizationServiceTests.swift */; };
 		F23DD0E19389C6B712F55FDB /* OutputPathResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37DC09E9B76B136331E6713F /* OutputPathResolver.swift */; };
 		F405A347E022FC45C42AC05A /* BatchConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60972E7BE4D5CD8C99228DEF /* BatchConfiguration.swift */; };
+		F5D002F7CBF1886986E16D54 /* BatchViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D68D1974A34483B1C493602 /* BatchViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -110,6 +113,7 @@
 		12ACB3CB20B537F3E00AC2D8 /* FileScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileScanner.swift; sourceTree = "<group>"; };
 		12B03C482C841A67900D536A /* Transcript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcript.swift; sourceTree = "<group>"; };
 		1A3E12D92C399BC28C348C79 /* LocalSpeechTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSpeechTranscriptionService.swift; sourceTree = "<group>"; };
+		1CD4905653A8BF9C2301A81B /* LocalOllamaTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalOllamaTranslationService.swift; sourceTree = "<group>"; };
 		1D7B230E0827D1E2D0501223 /* ConfigureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureView.swift; sourceTree = "<group>"; };
 		1FA5985DF411F60FD9E6492A /* AppLaunchViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLaunchViewModelTests.swift; sourceTree = "<group>"; };
 		200419689ADD25B8D3A322B6 /* GeminiDeveloperClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiDeveloperClient.swift; sourceTree = "<group>"; };
@@ -126,6 +130,7 @@
 		37DC09E9B76B136331E6713F /* OutputPathResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputPathResolver.swift; sourceTree = "<group>"; };
 		39B6A4B0275AAD073851A186 /* AudioFileItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFileItem.swift; sourceTree = "<group>"; };
 		3AD479F07A42B13CE1AC9CDF /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		3D68D1974A34483B1C493602 /* BatchViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchViewModelTests.swift; sourceTree = "<group>"; };
 		4320471F12A0B0165CC84591 /* BatchProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchProcessorTests.swift; sourceTree = "<group>"; };
 		440946C4DE068ECD7CF851BD /* OpenAIWhisperTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIWhisperTranscriptionService.swift; sourceTree = "<group>"; };
 		45C9B0FD3659F076841CACB7 /* APIKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyStore.swift; sourceTree = "<group>"; };
@@ -166,6 +171,7 @@
 		C0750D7C985ACAD2C103ABEC /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		C54CBA8E97577272AF29BE6E /* LocalSpeechTranscriptionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSpeechTranscriptionServiceTests.swift; sourceTree = "<group>"; };
 		C8CFE32689A6CE760FE66769 /* AppServicesFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppServicesFactoryTests.swift; sourceTree = "<group>"; };
+		D0455D3C5D0276E876296BDD /* LocalOllamaTranslationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalOllamaTranslationServiceTests.swift; sourceTree = "<group>"; };
 		D3CB4CD0FF165ECDAEB70963 /* AsyncSemaphore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncSemaphore.swift; sourceTree = "<group>"; };
 		DB3CD5822A810F0828426BCA /* BatchProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchProcessor.swift; sourceTree = "<group>"; };
 		DC0C94828383B4851320DB88 /* CloudAudioPreparationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAudioPreparationServiceTests.swift; sourceTree = "<group>"; };
@@ -287,6 +293,7 @@
 				05DA28966C272C168CECDDF7 /* GeminiSummarizationService.swift */,
 				11FEC578ED93B5F0868AD7A0 /* GeminiTranscriptionService.swift */,
 				31693940DE68799C042FCFEF /* GeminiTranslationService.swift */,
+				1CD4905653A8BF9C2301A81B /* LocalOllamaTranslationService.swift */,
 				1A3E12D92C399BC28C348C79 /* LocalSpeechTranscriptionService.swift */,
 				4F51B90B5A86476DEC7FFF36 /* LocalTranslationService.swift */,
 				862D40FBD96CBCB604A32069 /* OllamaCloudChatClient.swift */,
@@ -324,6 +331,7 @@
 				C8CFE32689A6CE760FE66769 /* AppServicesFactoryTests.swift */,
 				2D03412F66C01539EEC03FE7 /* AppViewModelTests.swift */,
 				4320471F12A0B0165CC84591 /* BatchProcessorTests.swift */,
+				3D68D1974A34483B1C493602 /* BatchViewModelTests.swift */,
 				DC0C94828383B4851320DB88 /* CloudAudioPreparationServiceTests.swift */,
 				B30A1BBCCE880E29B1400AEF /* ConfigureViewModelTests.swift */,
 				2B2993C11FAAE4D5980D7B79 /* ExportServiceTests.swift */,
@@ -332,6 +340,7 @@
 				938DCEBF4E2D2F6487CBE2A6 /* GeminiTranscriptionServiceTests.swift */,
 				2A6EC8F7D8DFE366C4C88EAB /* GeminiTranslationServiceTests.swift */,
 				A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */,
+				D0455D3C5D0276E876296BDD /* LocalOllamaTranslationServiceTests.swift */,
 				C54CBA8E97577272AF29BE6E /* LocalSpeechTranscriptionServiceTests.swift */,
 				954587F6F34F64D9BB314C33 /* OllamaSummarizationServiceTests.swift */,
 				032C700F9E4D341DD7A42297 /* OllamaTranslationServiceTests.swift */,
@@ -498,6 +507,7 @@
 				7361E3F3F26DC3FF2B7F3B80 /* AppServicesFactoryTests.swift in Sources */,
 				5B322C3099C687EEAA98BD0C /* AppViewModelTests.swift in Sources */,
 				0B38E5F0D85F396F0EB95C48 /* BatchProcessorTests.swift in Sources */,
+				F5D002F7CBF1886986E16D54 /* BatchViewModelTests.swift in Sources */,
 				C306BBD607906B91EB01971F /* CloudAudioPreparationServiceTests.swift in Sources */,
 				E44E2D8A9B3DF75402F34A32 /* ConfigureViewModelTests.swift in Sources */,
 				CC950BE12D5BF93878805B49 /* ExportServiceTests.swift in Sources */,
@@ -506,6 +516,7 @@
 				78AF15BDBBFCD3720FBDA387 /* GeminiTranscriptionServiceTests.swift in Sources */,
 				004D6185722608AF89615B15 /* GeminiTranslationServiceTests.swift in Sources */,
 				06DAB6EF3579DB0EE3864740 /* ImportViewModelTests.swift in Sources */,
+				D9B801CA7C07F40E94D96CB2 /* LocalOllamaTranslationServiceTests.swift in Sources */,
 				332E44446599FC8226BC0D22 /* LocalSpeechTranscriptionServiceTests.swift in Sources */,
 				1FCD855EE586ED49F481D113 /* MockAPIKeyStore.swift in Sources */,
 				92C68BF4BD8094932A4FFBF2 /* MockHTTPTransport.swift in Sources */,
@@ -555,6 +566,7 @@
 				49BC8506D176FC9551B9710D /* Intensity.swift in Sources */,
 				B5233D117F6E492CFE6A01C0 /* Language.swift in Sources */,
 				2C7B030B6A00F1DF713F1FFD /* LaunchFailureView.swift in Sources */,
+				0E5563B7ABE4B0E04B75F684 /* LocalOllamaTranslationService.swift in Sources */,
 				A3C7A98D98323B4E415099FF /* LocalSpeechTranscriptionService.swift in Sources */,
 				90380E4A5BCEAFA2329D928F /* LocalTranslationService.swift in Sources */,
 				375C987AF5BA15E36E87BC80 /* MultipartFormData.swift in Sources */,

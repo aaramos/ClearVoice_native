@@ -58,8 +58,17 @@ struct FileJob: Sendable {
             item.stage = .transcribing(progress: 0.3)
             await update(item)
 
+            let speechInput = try await services.formatNormalizationService.normalize(cleanURL)
+            let speechInputURL = speechInput.url
+
+            defer {
+                if speechInput.requiresCleanup {
+                    try? FileManager.default.removeItem(at: speechInputURL)
+                }
+            }
+
             let speechOutput = try await services.speechPipeline.process(
-                audio: cleanURL,
+                audio: speechInputURL,
                 language: config.inputLanguage
             )
 

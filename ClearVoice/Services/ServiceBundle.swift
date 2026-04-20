@@ -51,10 +51,15 @@ struct ServiceBundle: Sendable {
     static func live(
         modelDirectory: URL? = nil
     ) -> ServiceBundle {
+        let translationService = LocalOllamaTranslationService()
+
         return ServiceBundle(
             audioEnhancement: FFmpegAudioEnhancementService(),
             formatNormalizationService: FFmpegSpeechFormatNormalizationService(),
-            speechPipeline: WhisperKitSpeechPipelineService(modelDirectory: modelDirectory),
+            speechPipeline: WhisperKitSpeechPipelineService(
+                modelDirectory: modelDirectory,
+                translationService: translationService
+            ),
             export: DefaultExportService()
         )
     }

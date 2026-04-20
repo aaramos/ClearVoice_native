@@ -6,6 +6,7 @@ final class BatchViewModel: ObservableObject {
     @Published private(set) var statusText = "Choose folders and start a batch to see processing progress."
     @Published private(set) var isRunning = false
     @Published private(set) var didFinish = false
+    @Published private(set) var languageSelectionPrompt: String?
 
     private let services: ServiceBundle
     private var configuration: BatchConfiguration?
@@ -47,6 +48,7 @@ final class BatchViewModel: ObservableObject {
         }
         statusText = "Starting batch processing."
         didFinish = false
+        languageSelectionPrompt = nil
     }
 
     func startIfNeeded() {
@@ -94,7 +96,12 @@ final class BatchViewModel: ObservableObject {
                 }.count
 
                 if failureCount > 0 || skippedCount > 0 {
-                    self.statusText = "Processing finished with \(failureCount) failed and \(skippedCount) skipped. See the file rows below for details."
+                    if self.hasLanguageSelectionFailure {
+                        self.languageSelectionPrompt = "ClearVoice couldn’t detect the spoken language for one or more files. Go back, choose the source language manually, and run the batch again."
+                        self.statusText = "Processing stopped because ClearVoice needs a manually selected source language for one or more files."
+                    } else {
+                        self.statusText = "Processing finished with \(failureCount) failed and \(skippedCount) skipped. See the file rows below for details."
+                    }
                 } else {
                     self.statusText = "Processing complete. Review polish lands in a later phase."
                 }
@@ -109,6 +116,7 @@ final class BatchViewModel: ObservableObject {
         statusText = "Choose folders and start a batch to see processing progress."
         isRunning = false
         didFinish = false
+        languageSelectionPrompt = nil
         configuration = nil
         processor = nil
     }
@@ -120,5 +128,25 @@ final class BatchViewModel: ObservableObject {
         if isRunning {
             statusText = "\(completedCount) complete • \(processingCount) processing • \(pendingCount) pending"
         }
+    }
+
+    private var hasLanguageSelectionFailure: Bool {
+        files.contains { item in
+            guard case .failed(let error) = item.stage else {
+                return false
+            }
+
+            return error.requiresManualLanguageSelection
+        }
+    }
+}
+
+private extension ProcessingError {
+    var requiresManualLanguageSelection: Bool {
+        guard case .transcriptionFailed(let message) = self else {
+            return false
+        }
+
+        return message.localizedCaseInsensitiveContains("choose the source language manually")
     }
 }
