@@ -10,6 +10,7 @@ final class BatchViewModel: ObservableObject {
     private let services: ServiceBundle
     private var configuration: BatchConfiguration?
     private var runTask: Task<Void, Never>?
+    private var processor: BatchProcessor?
 
     init(services: ServiceBundle = .stub) {
         self.services = services
@@ -63,17 +64,24 @@ final class BatchViewModel: ObservableObject {
                 return
             }
 
-            let fileJob = FileJob(config: configuration, resolver: resolver, services: services)
+            let processor = BatchProcessor(
+                config: configuration,
+                resolver: resolver,
+                services: services
+            )
 
-            for file in files {
-                await fileJob.run(item: file) { updatedItem in
-                    await MainActor.run {
-                        self.apply(updatedItem)
-                    }
+            await MainActor.run {
+                self.processor = processor
+            }
+
+            await processor.run(files: files) { updatedItem in
+                await MainActor.run {
+                    self.apply(updatedItem)
                 }
             }
 
             await MainActor.run {
+                self.processor = nil
                 self.isRunning = false
                 self.didFinish = true
                 self.statusText = "Stub pipeline complete. Review placeholder content is now available."
@@ -89,6 +97,7 @@ final class BatchViewModel: ObservableObject {
         isRunning = false
         didFinish = false
         configuration = nil
+        processor = nil
     }
 
     private func apply(_ updatedItem: AudioFileItem) {
