@@ -102,6 +102,10 @@ struct ServiceBundle: Sendable {
         config.processingMode.transcription == .cloud ? cloudTranscription : localTranscription
     }
 
+    func cloudTranscriptionService() -> any TranscriptionService {
+        cloudTranscription
+    }
+
     func translationService(for config: BatchConfiguration) -> any TranslationService {
         config.processingMode.translation == .cloud ? cloudTranslation : localTranslation
     }

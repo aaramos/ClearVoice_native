@@ -114,6 +114,40 @@ struct BatchProcessorTests {
         #expect(transcript.contains("TRANSLATED TRANSCRIPT"))
         #expect(transcript.contains("ORIGINAL TRANSCRIPT"))
     }
+
+    @Test
+    func localTranscriptionFallsBackToCloudWhenSpeechAssetsAreUnavailable() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1)
+        let cloudPreparation = RecordingCloudPreparationService()
+        let services = ServiceBundle(
+            apiKeyPresent: true,
+            audioEnhancement: StubAudioEnhancementService(),
+            formatNormalizationService: StubFormatNormalizationService(),
+            cloudPreparationService: cloudPreparation,
+            localTranscription: DownloadingLocalTranscriptionService(),
+            cloudTranscription: StubTranscriptionService(),
+            localTranslation: StubTranslationService(),
+            cloudTranslation: StubTranslationService(),
+            localSummarization: StubSummarizationService(),
+            cloudSummarization: StubSummarizationService(),
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+        let preparedInputs = await cloudPreparation.inputs
+
+        #expect(item.stage == .complete)
+        #expect(item.originalTranscript?.contains("Stub original transcript") == true)
+        #expect(preparedInputs.count == 1)
+        #expect(preparedInputs[0].lastPathComponent == "sample_1_clean.m4a")
+    }
 }
 
 private struct BatchProcessorHarness {
@@ -260,5 +294,23 @@ private actor FailingSummarizationService: SummarizationService {
         inLanguage targetLanguage: String
     ) async throws -> String {
         throw ProcessingError.summarizationFailed("Gemini summarization failed with status 503.")
+    }
+}
+
+private actor DownloadingLocalTranscriptionService: TranscriptionService {
+    func transcribe(
+        audio: URL,
+        language: LanguageSelection
+    ) async throws -> Transcript {
+        throw TranscriptionError.modelDownloading
+    }
+}
+
+private actor RecordingCloudPreparationService: CloudAudioPreparationService {
+    private(set) var inputs: [URL] = []
+
+    func prepare(_ sourceURL: URL) async throws -> URL {
+        inputs.append(sourceURL)
+        return sourceURL
     }
 }

@@ -62,30 +62,10 @@ struct FileJob: Sendable {
             item.stage = .cleaning(progress: 1.0)
             await update(item)
 
-            let transcribeURL: URL
-
-            if config.processingMode.transcription == .cloud {
-                item.stage = .optimizingForUpload
-                await update(item)
-
-                let preparedURL = try await services.cloudPreparationService.prepare(cleanURL)
-                defer {
-                    if preparedURL != cleanURL {
-                        try? FileManager.default.removeItem(at: preparedURL)
-                    }
-                }
-                transcribeURL = preparedURL
-            } else {
-                transcribeURL = cleanURL
-            }
-
-            item.stage = .transcribing(progress: 0.3)
-            await update(item)
-            try await simulatedStepDelay()
-
-            let transcript = try await services.transcriptionService(for: config).transcribe(
-                audio: transcribeURL,
-                language: config.inputLanguage
+            let transcript = try await transcribe(
+                item: &item,
+                cleanURL: cleanURL,
+                update: update
             )
             item.detectedLanguage = transcript.detectedLanguage
             item.originalTranscript = transcript.text
@@ -172,6 +152,66 @@ struct FileJob: Sendable {
 
     private func simulatedStepDelay() async throws {
         try await Task.sleep(for: .milliseconds(220))
+    }
+
+    private func transcribe(
+        item: inout AudioFileItem,
+        cleanURL: URL,
+        update: @escaping @Sendable (AudioFileItem) async -> Void
+    ) async throws -> Transcript {
+        switch config.processingMode.transcription {
+        case .cloud:
+            return try await cloudTranscribe(
+                item: &item,
+                cleanURL: cleanURL,
+                update: update
+            )
+        case .local:
+            item.stage = .transcribing(progress: 0.3)
+            await update(item)
+            try await simulatedStepDelay()
+
+            do {
+                return try await services.transcriptionService(for: config).transcribe(
+                    audio: cleanURL,
+                    language: config.inputLanguage
+                )
+            } catch let error as TranscriptionError
+                where services.apiKeyPresent && (error == .modelDownloading || error == .languageNotSupported) {
+                let sourceFileName = item.sourceURL.lastPathComponent
+                logger.warning("Local transcription unavailable for \(sourceFileName, privacy: .public); retrying with Gemini transcription.")
+                return try await cloudTranscribe(
+                    item: &item,
+                    cleanURL: cleanURL,
+                    update: update
+                )
+            }
+        }
+    }
+
+    private func cloudTranscribe(
+        item: inout AudioFileItem,
+        cleanURL: URL,
+        update: @escaping @Sendable (AudioFileItem) async -> Void
+    ) async throws -> Transcript {
+        item.stage = .optimizingForUpload
+        await update(item)
+
+        let preparedURL = try await services.cloudPreparationService.prepare(cleanURL)
+        defer {
+            if preparedURL != cleanURL {
+                try? FileManager.default.removeItem(at: preparedURL)
+            }
+        }
+
+        item.stage = .transcribing(progress: 0.3)
+        await update(item)
+        try await simulatedStepDelay()
+
+        return try await services.cloudTranscriptionService().transcribe(
+            audio: preparedURL,
+            language: config.inputLanguage
+        )
     }
 
     private func wrappedProcessingError(for error: Error) -> ProcessingError {
