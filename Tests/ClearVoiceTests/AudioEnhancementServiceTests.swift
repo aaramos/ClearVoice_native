@@ -80,6 +80,7 @@ struct AudioEnhancementServiceTests {
         let service = DeepFilterNetAudioEnhancementService(
             ffmpegURL: URL(filePath: "/tmp/fake-ffmpeg"),
             deepFilterURL: URL(filePath: "/tmp/fake-deep-filter"),
+            variant: .direct,
             ffmpegRunner: { _, arguments in
                 await ffmpegCapture.record(arguments)
                 if let destination = arguments.last {
@@ -111,6 +112,46 @@ struct AudioEnhancementServiceTests {
     }
 
     @Test
+    func hybridVariantUsesMaximumCleanupBeforeDeepFilter() async throws {
+        let sourceURL = makeTemporaryAudioFile(named: "speech.wav")
+        let outputURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("m4a")
+        let ffmpegCapture = CommandCapture()
+
+        let service = DeepFilterNetAudioEnhancementService(
+            ffmpegURL: URL(filePath: "/tmp/fake-ffmpeg"),
+            deepFilterURL: URL(filePath: "/tmp/fake-deep-filter"),
+            variant: .hybrid,
+            ffmpegRunner: { _, arguments in
+                await ffmpegCapture.record(arguments)
+                if let destination = arguments.last {
+                    try Data([0x01, 0x02]).write(to: URL(filePath: destination))
+                }
+            },
+            deepFilterRunner: { _, arguments in
+                let input = try #require(arguments.last)
+                let outputDirectoryIndex = try #require(arguments.firstIndex(of: "-o"))
+                let outputDirectory = URL(filePath: arguments[outputDirectoryIndex + 1])
+                let enhancedURL = outputDirectory.appendingPathComponent(URL(filePath: input).lastPathComponent)
+                try Data([0x0A, 0x0B]).write(to: enhancedURL)
+            }
+        )
+
+        try await service.enhance(input: sourceURL, output: outputURL)
+
+        let ffmpegCommands = await ffmpegCapture.values()
+        let afIndex = try #require(ffmpegCommands.first?.firstIndex(of: "-af"))
+        let preprocessFilter = try #require(ffmpegCommands.first?[ffmpegCommands[0].index(after: afIndex)])
+
+        let outputSuffix = await service.outputSuffix
+        #expect(outputSuffix == "HYBRID")
+        #expect(preprocessFilter.contains("afftdn=nr=22:nf=-58:tn=1:gs=10"))
+        #expect(preprocessFilter.contains("agate=threshold=0.035:ratio=3.0:range=0.3:attack=30:release=420:detection=rms"))
+        #expect(preprocessFilter.contains("speechnorm=e=10.0:r=5e-05:l=1"))
+    }
+
+    @Test
     func missingDeepFilterProducesActionableError() async {
         let sourceURL = makeTemporaryAudioFile(named: "speech.wav")
         let outputURL = FileManager.default.temporaryDirectory
@@ -119,6 +160,7 @@ struct AudioEnhancementServiceTests {
         let service = DeepFilterNetAudioEnhancementService(
             ffmpegURL: URL(filePath: "/tmp/fake-ffmpeg"),
             deepFilterURL: nil,
+            variant: .direct,
             ffmpegRunner: { _, _ in
                 Issue.record("FFmpeg should not be called when deep-filter is missing.")
             },

@@ -17,6 +17,35 @@ protocol ComparisonEnhancementService: Sendable {
     ) async throws
 }
 
+struct DeepFilterNetVariant {
+    let outputSuffix: String
+    let preprocessFilterGraph: String
+    let postprocessFilterGraph: String
+
+    static let direct = DeepFilterNetVariant(
+        outputSuffix: "DFN",
+        preprocessFilterGraph: [
+            "adeclick=window=20:overlap=75:arorder=2:threshold=3:burst=4:method=save",
+            "adeclip=window=55:overlap=75:arorder=8:threshold=8:hsize=1200:method=save",
+        ].joined(separator: ","),
+        postprocessFilterGraph: [
+            "highpass=f=80",
+            "lowpass=f=7800",
+            "speechnorm=e=4.0:r=0.0001:l=1",
+        ].joined(separator: ",")
+    )
+
+    static let hybrid = DeepFilterNetVariant(
+        outputSuffix: "HYBRID",
+        preprocessFilterGraph: FFmpegAudioEnhancementService.filterGraph(for: .maximum),
+        postprocessFilterGraph: [
+            "highpass=f=80",
+            "lowpass=f=7600",
+            "speechnorm=e=4.0:r=0.0001:l=1",
+        ].joined(separator: ",")
+    )
+}
+
 actor StubAudioEnhancementService: AudioEnhancementService {
     private let fileManager: FileManager
 
@@ -37,41 +66,53 @@ actor StubAudioEnhancementService: AudioEnhancementService {
 actor DeepFilterNetAudioEnhancementService: ComparisonEnhancementService {
     typealias CommandRunner = @Sendable (URL, [String]) async throws -> Void
 
-    let outputSuffix = "DFN"
+    let outputSuffix: String
 
     private let fileManager: FileManager
     private let ffmpegURL: URL?
     private let deepFilterURL: URL?
     private let ffmpegRunner: CommandRunner
     private let deepFilterRunner: CommandRunner
+    private let variant: DeepFilterNetVariant
 
     init(
         fileManager: FileManager = .default,
         ffmpegURL: URL? = FFmpegSpeechFormatNormalizationService.resolveFFmpegURL(),
         deepFilterURL: URL? = DeepFilterNetAudioEnhancementService.resolveDeepFilterURL(),
+        variant: DeepFilterNetVariant = .direct,
         ffmpegRunner: @escaping CommandRunner = DeepFilterNetAudioEnhancementService.defaultRunner,
         deepFilterRunner: @escaping CommandRunner = DeepFilterNetAudioEnhancementService.defaultRunner
     ) {
         self.fileManager = fileManager
         self.ffmpegURL = ffmpegURL
         self.deepFilterURL = deepFilterURL
+        self.variant = variant
+        self.outputSuffix = variant.outputSuffix
         self.ffmpegRunner = ffmpegRunner
         self.deepFilterRunner = deepFilterRunner
     }
 
-    static func available(
+    static func availableVariants(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         fileManager: FileManager = .default
-    ) -> DeepFilterNetAudioEnhancementService? {
+    ) -> [any ComparisonEnhancementService] {
         guard let ffmpegURL = FFmpegSpeechFormatNormalizationService.resolveFFmpegURL(environment: environment, fileManager: fileManager),
               let deepFilterURL = resolveDeepFilterURL(environment: environment, fileManager: fileManager) else {
-            return nil
+            return []
         }
 
-        return DeepFilterNetAudioEnhancementService(
-            ffmpegURL: ffmpegURL,
-            deepFilterURL: deepFilterURL
-        )
+        return [
+            DeepFilterNetAudioEnhancementService(
+                ffmpegURL: ffmpegURL,
+                deepFilterURL: deepFilterURL,
+                variant: .direct
+            ),
+            DeepFilterNetAudioEnhancementService(
+                ffmpegURL: ffmpegURL,
+                deepFilterURL: deepFilterURL,
+                variant: .hybrid
+            ),
+        ]
     }
 
     func enhance(
@@ -107,7 +148,7 @@ actor DeepFilterNetAudioEnhancementService: ComparisonEnhancementService {
             try? fileManager.removeItem(at: workingDirectory)
         }
 
-        try await ffmpegRunner(ffmpegURL, Self.preprocessArguments(input: input, output: repairedInputURL))
+        try await ffmpegRunner(ffmpegURL, Self.preprocessArguments(input: input, output: repairedInputURL, variant: variant))
         try await deepFilterRunner(deepFilterURL, Self.deepFilterArguments(input: repairedInputURL, outputDirectory: deepFilterOutputDirectory))
 
         guard let enhancedWAV = Self.locateDeepFilterOutput(
@@ -120,7 +161,7 @@ actor DeepFilterNetAudioEnhancementService: ComparisonEnhancementService {
             )
         }
 
-        try await ffmpegRunner(ffmpegURL, Self.postprocessArguments(input: enhancedWAV, output: output))
+        try await ffmpegRunner(ffmpegURL, Self.postprocessArguments(input: enhancedWAV, output: output, variant: variant))
     }
 
     static func resolveDeepFilterURL(
@@ -154,19 +195,14 @@ actor DeepFilterNetAudioEnhancementService: ComparisonEnhancementService {
         return nil
     }
 
-    private static func preprocessArguments(input: URL, output: URL) -> [String] {
-        let filterGraph = [
-            "adeclick=window=20:overlap=75:arorder=2:threshold=3:burst=4:method=save",
-            "adeclip=window=55:overlap=75:arorder=8:threshold=8:hsize=1200:method=save",
-        ].joined(separator: ",")
-
+    private static func preprocessArguments(input: URL, output: URL, variant: DeepFilterNetVariant) -> [String] {
         return [
             "-hide_banner",
             "-loglevel", "error",
             "-y",
             "-i", input.path,
             "-vn",
-            "-af", filterGraph,
+            "-af", variant.preprocessFilterGraph,
             "-ac", "1",
             "-ar", "48000",
             "-c:a", "pcm_s16le",
@@ -182,20 +218,14 @@ actor DeepFilterNetAudioEnhancementService: ComparisonEnhancementService {
         ]
     }
 
-    private static func postprocessArguments(input: URL, output: URL) -> [String] {
-        let filterGraph = [
-            "highpass=f=80",
-            "lowpass=f=7800",
-            "speechnorm=e=4.0:r=0.0001:l=1",
-        ].joined(separator: ",")
-
+    private static func postprocessArguments(input: URL, output: URL, variant: DeepFilterNetVariant) -> [String] {
         return [
             "-hide_banner",
             "-loglevel", "error",
             "-y",
             "-i", input.path,
             "-vn",
-            "-af", filterGraph,
+            "-af", variant.postprocessFilterGraph,
             "-ac", "1",
             "-ar", "16000",
             "-c:a", "aac",
@@ -290,10 +320,10 @@ actor FFmpegAudioEnhancementService: AudioEnhancementService {
             try fileManager.removeItem(at: output)
         }
 
-        try await runner(ffmpegURL, input, output, filterGraph(for: intensity))
+        try await runner(ffmpegURL, input, output, Self.filterGraph(for: intensity))
     }
 
-    private func filterGraph(for intensity: Intensity) -> String {
+    static func filterGraph(for intensity: Intensity) -> String {
         let profile = profile(for: intensity)
 
         // Repair transient defects first so later denoise/gating stages do not smear pops or clipped peaks.
@@ -308,7 +338,7 @@ actor FFmpegAudioEnhancementService: AudioEnhancementService {
         ].joined(separator: ",")
     }
 
-    private func profile(for intensity: Intensity) -> EnhancementProfile {
+    private static func profile(for intensity: Intensity) -> EnhancementProfile {
         switch intensity.band {
         case .minimal:
             return EnhancementProfile(

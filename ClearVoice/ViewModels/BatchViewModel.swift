@@ -103,8 +103,10 @@ final class BatchViewModel: ObservableObject {
                         self.statusText = "Processing finished with \(failureCount) failed and \(skippedCount) skipped. See the file rows below for details."
                     }
                 } else {
-                    if self.services.comparisonEnhancement != nil {
-                        self.statusText = "Enhancement complete. Each file folder now contains four FFmpeg variants plus one DeepFilterNet comparison file."
+                    if self.services.comparisonEnhancements.count >= 2 {
+                        self.statusText = "Enhancement complete. Each file folder now contains four FFmpeg variants plus DeepFilterNet and Hybrid comparison files."
+                    } else if self.services.comparisonEnhancements.count == 1 {
+                        self.statusText = "Enhancement complete. Each file folder now contains four FFmpeg variants plus one comparison file."
                     } else {
                         self.statusText = "Enhancement complete. Each file folder now contains four locally enhanced audio variants."
                     }

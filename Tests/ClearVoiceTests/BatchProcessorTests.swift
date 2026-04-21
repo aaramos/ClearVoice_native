@@ -83,7 +83,10 @@ struct BatchProcessorTests {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
-            comparisonEnhancement: StubComparisonEnhancementService(),
+            comparisonEnhancements: [
+                StubComparisonEnhancementService(outputSuffix: "DFN"),
+                StubComparisonEnhancementService(outputSuffix: "HYBRID"),
+            ],
             speechPipeline: FailingIfCalledSpeechPipelineService(),
             export: DefaultExportService()
         )
@@ -100,6 +103,7 @@ struct BatchProcessorTests {
 
         #expect(item.stage == .complete)
         #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_HYBRID.m4a").path))
     }
 
     @Test
@@ -237,7 +241,11 @@ private actor FailingIfCalledSpeechPipelineService: SpeechPipelineService {
 }
 
 private actor StubComparisonEnhancementService: ComparisonEnhancementService {
-    let outputSuffix = "DFN"
+    let outputSuffix: String
+
+    init(outputSuffix: String) {
+        self.outputSuffix = outputSuffix
+    }
 
     func enhance(input: URL, output: URL) async throws {
         try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)

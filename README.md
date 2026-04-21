@@ -24,6 +24,7 @@ Temporary evaluation mode on this branch:
   - `<name>_MAX.m4a`
 - When the `deep-filter` binary is installed locally, each folder also gets:
   - `<name>_DFN.m4a`
+  - `<name>_HYBRID.m4a`
 
 ## Current Product Shape
 
