@@ -17,12 +17,7 @@ This branch, `local-offline-v2`, is the local-first refactor. The primary workfl
 Temporary evaluation mode on this branch:
 
 - Transcription and translation are currently disabled so audio enhancement can be evaluated in isolation
-- Each per-file output folder now contains four enhanced variants:
-  - `<name>_MIN.m4a`
-  - `<name>_BALANCED.m4a`
-  - `<name>_STRONG.m4a`
-  - `<name>_MAX.m4a`
-- When the `deep-filter` binary is installed locally, each folder also gets:
+- Each per-file output folder now contains two enhanced variants:
   - `<name>_DFN.m4a`
   - `<name>_HYBRID.m4a`
 
@@ -42,7 +37,7 @@ Install FFmpeg:
 brew install ffmpeg
 ```
 
-Optional DeepFilterNet comparison binary:
+DeepFilterNet binary required for the current enhancement-only evaluation mode:
 
 ```sh
 curl -fsSL https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-aarch64-apple-darwin -o /opt/homebrew/bin/deep-filter

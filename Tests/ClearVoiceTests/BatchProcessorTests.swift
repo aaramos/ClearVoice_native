@@ -6,9 +6,10 @@ struct BatchProcessorTests {
     @Test
     func processorNeverExceedsConfiguredConcurrency() async throws {
         let harness = try BatchProcessorHarness(fileCount: 5)
-        let enhancement = TrackingEnhancementService(delayMilliseconds: 200)
+        let enhancement = TrackingComparisonEnhancementService(outputSuffix: "DFN", delayMilliseconds: 200)
         let services = ServiceBundle(
-            audioEnhancement: enhancement,
+            audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancements: [enhancement],
             speechPipeline: StubSpeechPipelineService(),
             export: DefaultExportService()
         )
@@ -31,7 +32,8 @@ struct BatchProcessorTests {
     func processorIsolatesFailuresToTheImpactedFile() async throws {
         let harness = try BatchProcessorHarness(fileCount: 4)
         let services = ServiceBundle(
-            audioEnhancement: SelectiveFailureEnhancementService(failingBasename: "sample_2"),
+            audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancements: [SelectiveFailureComparisonEnhancementService(outputSuffix: "DFN", failingBasename: "sample_2")],
             speechPipeline: FailingIfCalledSpeechPipelineService(),
             export: DefaultExportService()
         )
@@ -51,10 +53,14 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func enhancementOnlyWritesAllVariantsAndSkipsTranscriptExport() async throws {
+    func enhancementOnlyWritesConfiguredVariantsAndSkipsTranscriptExport() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancements: [
+                StubComparisonEnhancementService(outputSuffix: "DFN"),
+                StubComparisonEnhancementService(outputSuffix: "HYBRID"),
+            ],
             speechPipeline: FailingIfCalledSpeechPipelineService(),
             summaryPlaceholder: "Placeholder summary.",
             export: DefaultExportService()
@@ -71,10 +77,10 @@ struct BatchProcessorTests {
         let outputFolder = try #require(item.outputFolderURL)
 
         #expect(item.stage == .complete)
-        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MIN.m4a").path))
-        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_BALANCED.m4a").path))
-        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_STRONG.m4a").path))
-        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MAX.m4a").path))
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_HYBRID.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MIN.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MAX.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
     }
 
@@ -111,6 +117,10 @@ struct BatchProcessorTests {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancements: [
+                StubComparisonEnhancementService(outputSuffix: "DFN"),
+                StubComparisonEnhancementService(outputSuffix: "HYBRID"),
+            ],
             speechPipeline: FailingIfCalledSpeechPipelineService(),
             export: DefaultExportService()
         )
@@ -194,16 +204,18 @@ private actor ItemRecorder {
     }
 }
 
-private actor TrackingEnhancementService: AudioEnhancementService {
+private actor TrackingComparisonEnhancementService: ComparisonEnhancementService {
+    let outputSuffix: String
     private let delayMilliseconds: UInt64
     private var activeCount = 0
     private(set) var maxActiveCount = 0
 
-    init(delayMilliseconds: UInt64) {
+    init(outputSuffix: String, delayMilliseconds: UInt64) {
+        self.outputSuffix = outputSuffix
         self.delayMilliseconds = delayMilliseconds
     }
 
-    func enhance(input: URL, output: URL, intensity: Intensity) async throws {
+    func enhance(input: URL, output: URL) async throws {
         activeCount += 1
         maxActiveCount = max(maxActiveCount, activeCount)
         defer { activeCount -= 1 }
@@ -215,14 +227,16 @@ private actor TrackingEnhancementService: AudioEnhancementService {
     }
 }
 
-private actor SelectiveFailureEnhancementService: AudioEnhancementService {
+private actor SelectiveFailureComparisonEnhancementService: ComparisonEnhancementService {
+    let outputSuffix: String
     let failingBasename: String
 
-    init(failingBasename: String) {
+    init(outputSuffix: String, failingBasename: String) {
+        self.outputSuffix = outputSuffix
         self.failingBasename = failingBasename
     }
 
-    func enhance(input: URL, output: URL, intensity: Intensity) async throws {
+    func enhance(input: URL, output: URL) async throws {
         if output.lastPathComponent.hasPrefix("\(failingBasename)_") {
             throw ProcessingError.enhancementFailed("Stubbed enhancement failure")
         }

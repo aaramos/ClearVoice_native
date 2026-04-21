@@ -104,11 +104,11 @@ final class BatchViewModel: ObservableObject {
                     }
                 } else {
                     if self.services.comparisonEnhancements.count >= 2 {
-                        self.statusText = "Enhancement complete. Each file folder now contains four FFmpeg variants plus DeepFilterNet and Hybrid comparison files."
+                        self.statusText = "Enhancement complete. Each file folder now contains the DeepFilterNet and Hybrid outputs."
                     } else if self.services.comparisonEnhancements.count == 1 {
-                        self.statusText = "Enhancement complete. Each file folder now contains four FFmpeg variants plus one comparison file."
+                        self.statusText = "Enhancement complete. Each file folder now contains one enhancement output."
                     } else {
-                        self.statusText = "Enhancement complete. Each file folder now contains four locally enhanced audio variants."
+                        self.statusText = "Enhancement finished, but ClearVoice could not create any enhancement outputs."
                     }
                 }
             }

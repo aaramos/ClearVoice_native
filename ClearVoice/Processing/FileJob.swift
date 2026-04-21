@@ -5,13 +5,6 @@ struct FileJob: Sendable {
     let resolver: OutputPathResolver
     let services: ServiceBundle
 
-    private static let enhancementBands: [Intensity.Band] = [
-        .minimal,
-        .balanced,
-        .strong,
-        .maximum,
-    ]
-
     func run(
         item: AudioFileItem,
         update: @escaping @Sendable (AudioFileItem) async -> Void
@@ -39,7 +32,14 @@ struct FileJob: Sendable {
 
             let normalized = try await services.formatNormalizationService.normalize(item.sourceURL)
             let normalizedURL = normalized.url
-            let totalOutputs = Self.enhancementBands.count + services.comparisonEnhancements.count
+
+            guard !services.comparisonEnhancements.isEmpty else {
+                throw ProcessingError.enhancementFailed(
+                    "ClearVoice couldn’t create the selected enhancement outputs because DeepFilterNet is unavailable on this Mac."
+                )
+            }
+
+            let totalOutputs = services.comparisonEnhancements.count
 
             defer {
                 if normalized.requiresCleanup {
@@ -47,28 +47,12 @@ struct FileJob: Sendable {
                 }
             }
 
-            for (index, band) in Self.enhancementBands.enumerated() {
-                let outputURL = item.outputFolderURL!.appendingPathComponent(
-                    "\(item.basename)_\(Self.outputSuffix(for: band)).\(AudioFormatSupport.cleanExportExtension)"
-                )
-
-                let progress = Double(index) / Double(totalOutputs)
-                item.stage = .cleaning(progress: progress)
-                await update(item)
-
-                try await services.audioEnhancement.enhance(
-                    input: normalizedURL,
-                    output: outputURL,
-                    intensity: Intensity(band: band)
-                )
-            }
-
             for (offset, comparisonEnhancement) in services.comparisonEnhancements.enumerated() {
                 let outputURL = item.outputFolderURL!.appendingPathComponent(
                     "\(item.basename)_\(comparisonEnhancement.outputSuffix).\(AudioFormatSupport.cleanExportExtension)"
                 )
 
-                let progress = Double(Self.enhancementBands.count + offset) / Double(totalOutputs)
+                let progress = Double(offset) / Double(totalOutputs)
                 item.stage = .cleaning(progress: progress)
                 await update(item)
 
@@ -118,18 +102,5 @@ struct FileJob: Sendable {
         }
 
         return .exportFailed(error.localizedDescription)
-    }
-
-    private static func outputSuffix(for band: Intensity.Band) -> String {
-        switch band {
-        case .minimal:
-            return "MIN"
-        case .balanced:
-            return "BALANCED"
-        case .strong:
-            return "STRONG"
-        case .maximum:
-            return "MAX"
-        }
     }
 }

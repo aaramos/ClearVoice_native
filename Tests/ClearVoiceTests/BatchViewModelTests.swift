@@ -18,6 +18,10 @@ struct BatchViewModelTests {
         let viewModel = BatchViewModel(
             services: ServiceBundle(
                 audioEnhancement: StubAudioEnhancementService(),
+                comparisonEnhancements: [
+                    LocalStubComparisonEnhancementService(outputSuffix: "DFN"),
+                    LocalStubComparisonEnhancementService(outputSuffix: "HYBRID"),
+                ],
                 speechPipeline: FailingIfCalledSpeechPipelineService(),
                 export: DefaultExportService()
             )
@@ -41,7 +45,7 @@ struct BatchViewModelTests {
         }
 
         #expect(viewModel.languageSelectionPrompt == nil)
-        #expect(viewModel.statusText.contains("four locally enhanced audio variants"))
+        #expect(viewModel.statusText.contains("DeepFilterNet and Hybrid outputs"))
     }
 }
 
@@ -49,5 +53,19 @@ private actor FailingIfCalledSpeechPipelineService: SpeechPipelineService {
     func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
         Issue.record("Speech pipeline should not be called in enhancement-only mode.")
         throw ProcessingError.transcriptionFailed("Speech pipeline should not be called.")
+    }
+}
+
+private actor LocalStubComparisonEnhancementService: ComparisonEnhancementService {
+    let outputSuffix: String
+
+    init(outputSuffix: String) {
+        self.outputSuffix = outputSuffix
+    }
+
+    func enhance(input: URL, output: URL) async throws {
+        try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(at: output)
+        try Data("comparison".utf8).write(to: output)
     }
 }
