@@ -49,7 +49,7 @@ struct BatchViewModelTests {
         }
 
         #expect(viewModel.languageSelectionPrompt == nil)
-        #expect(viewModel.statusText.contains("HYBRID"))
+        #expect(viewModel.statusText.contains("Hybrid"))
         #expect(viewModel.statusText.contains("Marathi transcript"))
     }
 }

@@ -7,6 +7,7 @@ final class BatchViewModel: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var didFinish = false
     @Published private(set) var languageSelectionPrompt: String?
+    @Published private(set) var runStartedAt: Date?
 
     private let services: ServiceBundle
     private var configuration: BatchConfiguration?
@@ -54,6 +55,17 @@ final class BatchViewModel: ObservableObject {
         }.count
     }
 
+    var overallProgressFraction: Double {
+        guard !files.isEmpty else {
+            return 0
+        }
+
+        let total = files.reduce(0.0) { partial, file in
+            partial + progressFraction(for: file.stage)
+        }
+        return min(max(total / Double(files.count), 0), 1)
+    }
+
     var outputFolderURL: URL? {
         configuration?.outputFolder
     }
@@ -79,12 +91,14 @@ final class BatchViewModel: ObservableObject {
         statusText = "Starting batch processing."
         didFinish = false
         languageSelectionPrompt = nil
+        runStartedAt = nil
     }
 
     func startIfNeeded() {
         guard !isRunning, !didFinish, !files.isEmpty, let configuration else { return }
 
         isRunning = true
+        runStartedAt = Date()
         runTask = Task { [files, services] in
             let resolver = try? OutputPathResolver(outputRoot: configuration.outputFolder)
 
@@ -147,6 +161,7 @@ final class BatchViewModel: ObservableObject {
         languageSelectionPrompt = nil
         configuration = nil
         processor = nil
+        runStartedAt = nil
     }
 
     private func apply(_ updatedItem: AudioFileItem) {
@@ -165,6 +180,33 @@ final class BatchViewModel: ObservableObject {
             }
 
             return error.requiresManualLanguageSelection
+        }
+    }
+
+    private func progressFraction(for stage: ProcessingStage) -> Double {
+        switch stage {
+        case .pending:
+            return 0
+        case .analyzing:
+            return 0.08
+        case .analyzingFormat:
+            return 0.14
+        case .normalizingFormat:
+            return 0.24
+        case .cleaning(let progress):
+            return 0.24 + (0.34 * progress)
+        case .optimizingForUpload:
+            return 0.62
+        case .transcribing(let progress):
+            return 0.62 + (0.22 * progress)
+        case .translating:
+            return 0.86
+        case .summarizing:
+            return 0.92
+        case .exporting:
+            return 0.96
+        case .complete, .failed, .skipped:
+            return 1
         }
     }
 }

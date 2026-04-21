@@ -11,98 +11,115 @@ struct ReviewView: View {
     private let archiveExporter = BatchArchiveExporter()
 
     var body: some View {
-        StepCard(
-            title: "Results",
-            detail: "Review the generated files for this batch, preview the Marathi transcript when available, and export the full output folder as a ZIP."
-        ) {
-            VStack(alignment: .leading, spacing: 18) {
-                summaryCard
+        VStack(spacing: 24) {
+            VStack(spacing: 10) {
+                Text("Results")
+                    .font(.system(size: 22, weight: .semibold))
 
-                if let archiveMessage {
-                    Text(archiveMessage)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        ForEach(viewModel.files) { file in
-                            resultCard(for: file)
-                        }
-                    }
-                }
-
-                HStack {
-                    if let outputFolderURL = viewModel.outputFolderURL {
-                        Button("Reveal Batch Folder") {
-                            revealInFinder(outputFolderURL)
-                        }
-                    }
-
-                    Spacer()
-
-                    Button(isExportingArchive ? "Exporting ZIP…" : "Export All ZIP") {
-                        exportAll()
-                    }
-                    .disabled(isExportingArchive || viewModel.outputFolderURL == nil)
-
-                    Button("New Batch", action: onStartNewBatch)
-                        .keyboardShortcut(.defaultAction)
-                }
+                Text(resultsSubtitle)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
-        }
-    }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 16)
 
-    private var summaryCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Batch Summary")
-                .font(.headline)
-
-            HStack(spacing: 12) {
-                summaryMetric(label: "Complete", value: "\(viewModel.completedCount)")
-                Divider()
-                summaryMetric(label: "Failed", value: "\(viewModel.failedCount)")
-                Divider()
-                summaryMetric(label: "Skipped", value: "\(viewModel.skippedCount)")
-                Divider()
-                summaryMetric(label: "Enhancement", value: viewModel.selectedEnhancementMethod?.title ?? "—")
-            }
-
-            if let outputFolderURL = viewModel.outputFolderURL {
-                Text(outputFolderURL.path(percentEncoded: false))
+            if let archiveMessage {
+                Text(archiveMessage)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-        }
-        .cardStyle()
-    }
 
-    private func resultCard(for file: AudioFileItem) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(file.sourceURL.lastPathComponent)
-                        .font(.headline)
-
-                    if let durationSeconds = file.durationSeconds {
-                        Text(DurationFormatter.formattedDuration(seconds: durationSeconds))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            ScrollView {
+                VStack(spacing: 18) {
+                    ForEach(viewModel.files) { file in
+                        resultRow(for: file)
                     }
                 }
+            }
+
+            HStack {
+                Button(isExportingArchive ? "Exporting…" : "Export All") {
+                    exportAll()
+                }
+                .buttonStyle(SecondaryActionButtonStyle())
+                .disabled(isExportingArchive || viewModel.outputFolderURL == nil)
 
                 Spacer()
 
-                Text(resultBadgeTitle(for: file.stage))
-                    .font(.caption.weight(.semibold))
+                Button("Done", action: onStartNewBatch)
+                    .buttonStyle(PrimaryActionButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+    }
+
+    private var resultsSubtitle: String {
+        if viewModel.transcriptionEnabled {
+            return "All processing is complete. Review your enhanced audio and Marathi transcripts below."
+        }
+
+        return "All processing is complete. Review your enhanced audio files below."
+    }
+
+    private func resultRow(for file: AudioFileItem) -> some View {
+        HStack(alignment: .top, spacing: 22) {
+            mediaCard(for: file)
+                .frame(maxWidth: .infinity)
+
+            transcriptCard(for: file)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func mediaCard(for file: AudioFileItem) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: iconName(for: file.sourceURL))
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+
+                Text(file.sourceURL.lastPathComponent)
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(1)
+
+                Text("Enhanced: \(viewModel.selectedEnhancementMethod?.title ?? "—")")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.blue)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 5)
                     .background(
                         Capsule()
-                            .fill(resultBadgeColor(for: file.stage).opacity(0.12))
+                            .fill(Color.blue.opacity(0.08))
                     )
-                    .foregroundStyle(resultBadgeColor(for: file.stage))
+
+                Spacer()
+            }
+
+            if let processedAudioURL = processedAudioURL(for: file) {
+                AudioPreviewPlayerView(fileURL: processedAudioURL)
+            }
+
+            HStack(spacing: 10) {
+                Button("Copy") {
+                    copyTranscript(for: file)
+                }
+                .buttonStyle(SecondaryActionButtonStyle())
+                .disabled(transcriptPreviewText(for: file) == nil)
+
+                if let processedAudioURL = processedAudioURL(for: file) {
+                    Button("Download") {
+                        revealInFinder(processedAudioURL)
+                    }
+                    .buttonStyle(SecondaryActionButtonStyle())
+                }
+
+                if let folderURL = file.outputFolderURL {
+                    Button("Open Folder") {
+                        revealInFinder(folderURL)
+                    }
+                    .buttonStyle(SecondaryActionButtonStyle())
+                }
             }
 
             if let detail = resultDetail(for: file) {
@@ -111,93 +128,65 @@ struct ReviewView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            HStack {
-                if let processedAudioURL = processedAudioURL(for: file) {
-                    Button("Open Audio") {
-                        NSWorkspace.shared.open(processedAudioURL)
-                    }
-                }
-
-                if let transcriptURL = transcriptURL(for: file), viewModel.transcriptionEnabled {
-                    Button("Open Transcript") {
-                        NSWorkspace.shared.open(transcriptURL)
-                    }
-                }
-
-                if let folderURL = file.outputFolderURL {
-                    Button("Reveal Folder") {
-                        revealInFinder(folderURL)
-                    }
-                }
-
-                Spacer()
-            }
-
-            if viewModel.transcriptionEnabled {
-                transcriptPreview(for: file)
-            } else {
-                Text("Transcription was turned off for this batch.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
         }
-        .cardStyle()
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+        )
     }
 
     @ViewBuilder
-    private func transcriptPreview(for file: AudioFileItem) -> some View {
-        if let preview = transcriptPreviewText(for: file) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Marathi Transcript")
-                    .font(.subheadline.weight(.semibold))
-                Text(preview)
-                    .font(.body)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
+    private func transcriptCard(for file: AudioFileItem) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text(viewModel.transcriptionEnabled ? "Marathi Transcript" : "Transcript")
+                    .font(.title3.weight(.medium))
+
+                Spacer()
+
+                if let transcriptURL = transcriptURL(for: file), viewModel.transcriptionEnabled {
+                    Button("Download .txt") {
+                        revealInFinder(transcriptURL)
+                    }
+                    .buttonStyle(SecondaryActionButtonStyle())
+                }
             }
-        } else if case .complete = file.stage {
-            Text("No transcript preview is available for this file yet.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-    }
 
-    private func summaryMetric(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title3.weight(.semibold))
+            if let preview = transcriptPreviewText(for: file), viewModel.transcriptionEnabled {
+                ScrollView {
+                    Text(preview)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(minHeight: 210)
+            } else if viewModel.transcriptionEnabled {
+                Text("No transcript is available for this file.")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .frame(minHeight: 210)
+            } else {
+                Text("Transcription was turned off for this batch.")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .frame(minHeight: 210)
+            }
         }
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func resultBadgeTitle(for stage: ProcessingStage) -> String {
-        switch stage {
-        case .complete:
-            return "Ready"
-        case .failed:
-            return "Failed"
-        case .skipped:
-            return "Skipped"
-        default:
-            return "In Progress"
-        }
-    }
-
-    private func resultBadgeColor(for stage: ProcessingStage) -> Color {
-        switch stage {
-        case .complete:
-            return .green
-        case .failed:
-            return .red
-        case .skipped:
-            return .orange
-        default:
-            return .secondary
-        }
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+        )
     }
 
     private func resultDetail(for file: AudioFileItem) -> String? {
@@ -218,15 +207,12 @@ struct ReviewView: View {
         case .skipped(let reason):
             switch reason {
             case .outputFolderExists(let folderURL):
-                return "Skipped because \(folderURL.lastPathComponent) already existed in the Desktop output folder."
+                return "Skipped because \(folderURL.lastPathComponent) already existed in the batch output folder."
             }
         case .complete:
-            if viewModel.transcriptionEnabled {
-                return "Processed audio and Marathi transcript are ready in this file folder."
-            }
-            return "Processed audio is ready in this file folder."
-        default:
             return nil
+        default:
+            return "This file is still processing."
         }
     }
 
@@ -256,12 +242,13 @@ struct ReviewView: View {
             return nil
         }
 
-        let limit = 1_200
-        guard transcript.count > limit else {
-            return transcript
-        }
+        return transcript
+    }
 
-        return String(transcript.prefix(limit)) + "\n…"
+    private func copyTranscript(for file: AudioFileItem) {
+        guard let transcript = transcriptPreviewText(for: file) else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(transcript, forType: .string)
     }
 
     private func revealInFinder(_ url: URL) {
@@ -285,7 +272,7 @@ struct ReviewView: View {
 
                 await MainActor.run {
                     isExportingArchive = false
-                    archiveMessage = "Exported \(archiveURL.lastPathComponent) next to the batch folder on the Desktop."
+                    archiveMessage = "Exported \(archiveURL.lastPathComponent) next to the batch folder."
                     revealInFinder(archiveURL)
                 }
             } catch {
@@ -296,16 +283,15 @@ struct ReviewView: View {
             }
         }
     }
-}
 
-private extension View {
-    func cardStyle() -> some View {
-        self
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
+    private func iconName(for url: URL) -> String {
+        switch url.pathExtension.lowercased() {
+        case "wav", "flac":
+            return "waveform"
+        case "mp3", "aac", "m4a", "wma":
+            return "music.note"
+        default:
+            return "waveform.circle"
+        }
     }
 }

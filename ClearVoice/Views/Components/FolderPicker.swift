@@ -11,46 +11,46 @@ struct FolderPicker: View {
     @State private var isDropTargeted = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.headline)
-                    Text(subtitle)
-                        .font(.subheadline)
+        Button(action: chooseFolder) {
+            VStack(spacing: 12) {
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 42))
+                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+
+                Text(title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.primary)
+
+                Text(subtitle)
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+
+                if let selection {
+                    Text(selection.lastPathComponent)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(buttonTitle)
+                        .font(.footnote.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
-
-                Spacer()
-
-                Button(buttonTitle, action: chooseFolder)
             }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(selection?.path(percentEncoded: false) ?? "No folder selected")
-                    .font(.body)
-                    .textSelection(.enabled)
-                    .foregroundStyle(selection == nil ? .secondary : .primary)
-
-                Text("Drag and drop a folder here or use the picker.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
-            .padding()
+            .frame(maxWidth: .infinity, minHeight: 178)
+            .padding(.horizontal, 24)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isDropTargeted ? Color.accentColor.opacity(0.14) : Color(nsColor: .controlBackgroundColor))
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.white)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(
-                        isDropTargeted ? Color.accentColor : Color(nsColor: .separatorColor),
-                        style: StrokeStyle(lineWidth: 1, dash: isDropTargeted ? [] : [6, 5])
+                        isDropTargeted ? Color.blue.opacity(0.7) : Color(nsColor: .separatorColor).opacity(0.45),
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 5])
                     )
             )
-            .onDrop(of: [UTType.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
         }
+        .buttonStyle(.plain)
+        .onDrop(of: [UTType.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
     }
 
     private func chooseFolder() {

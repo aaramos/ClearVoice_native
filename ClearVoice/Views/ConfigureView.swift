@@ -6,125 +6,139 @@ struct ConfigureView: View {
     let onStart: () -> Void
 
     var body: some View {
-        StepCard(
-            title: "Configure",
-            detail: "Choose how ClearVoice should enhance the audio, whether to transcribe it, and how many files to process at once."
-        ) {
-            VStack(alignment: .leading, spacing: 20) {
-                currentPlanCard
-                enhancementCard
-                processingOptionsCard
-                speedCard
+        VStack(spacing: 28) {
+            VStack(spacing: 10) {
+                Text("How should we process the audio files?")
+                    .font(.system(size: 22, weight: .semibold))
 
-                Text(viewModel.helperText)
+                Text("Select one enhancement method, decide whether to transcribe the results, and choose how many files to process at once.")
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 620)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 18)
+
+            HStack(spacing: 22) {
+                enhancementCard(for: .dfn)
+                enhancementCard(for: .hybrid)
+            }
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
+
+            VStack(alignment: .leading, spacing: 16) {
+                Toggle("Enable Transcription", isOn: $viewModel.transcriptionEnabled)
+                    .toggleStyle(.checkbox)
+                    .font(.title3)
+
+                Text("Transcription writes a Marathi transcript for each processed file. English translation stays off for this pass.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Processing Speed:")
+                        .font(.title3.weight(.medium))
+
+                    HStack(spacing: 10) {
+                        ForEach(1...5, id: \.self) { value in
+                            Button {
+                                viewModel.maxConcurrency = value
+                            } label: {
+                                Text("\(value)")
+                                    .font(.headline.weight(.medium))
+                                    .frame(width: 42, height: 34)
+                            }
+                            .buttonStyle(.plain)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(viewModel.maxConcurrency == value ? Color.orange.opacity(0.12) : Color(nsColor: .controlBackgroundColor))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(
+                                        viewModel.maxConcurrency == value ? Color.orange.opacity(0.8) : Color(nsColor: .separatorColor).opacity(0.5),
+                                        lineWidth: 1
+                                    )
+                            )
+                            .foregroundStyle(viewModel.maxConcurrency == value ? Color.orange : .primary)
+                        }
+                    }
+
+                    Text("Choose how many files to process at once. Start with 2 unless the machine is clearly keeping up.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: 560, alignment: .leading)
+            .padding(.horizontal, 30)
+            .padding(.vertical, 24)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+            )
+
+            Spacer(minLength: 0)
+
+            HStack {
+                Button("Back", action: onBack)
+                    .buttonStyle(SecondaryActionButtonStyle())
 
                 Spacer()
 
-                HStack {
-                    Button("Back", action: onBack)
-                    Spacer()
-                    Button("Next", action: onStart)
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(!viewModel.canStart)
-                }
+                Button("Next", action: onStart)
+                    .buttonStyle(PrimaryActionButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!viewModel.canStart)
             }
+            .padding(.top, 6)
         }
     }
 
-    private var currentPlanCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Current Plan")
-                .font(.headline)
+    private func enhancementCard(for method: EnhancementMethod) -> some View {
+        Button {
+            viewModel.enhancementMethod = method
+        } label: {
+            VStack(spacing: 14) {
+                Image(systemName: method == .dfn ? "waveform.badge.magnifyingglass" : "waveform.path.ecg.rectangle")
+                    .font(.system(size: 44))
+                    .foregroundStyle(method == .dfn ? Color.purple.opacity(0.7) : Color.blue.opacity(0.9))
 
-            HStack(spacing: 12) {
-                summaryMetric(label: "Source", value: "Marathi")
-                Divider()
-                summaryMetric(label: "Enhancement", value: viewModel.enhancementMethod.title)
-                Divider()
-                summaryMetric(label: "Transcription", value: viewModel.transcriptionEnabled ? "On" : "Off")
-            }
-        }
-        .cardStyle()
-    }
-
-    private var enhancementCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Enhancement Method")
-                .font(.headline)
-
-            Picker("Enhancement Method", selection: $viewModel.enhancementMethod) {
-                ForEach(EnhancementMethod.allCases) { method in
+                VStack(spacing: 4) {
                     Text(method.title)
-                        .tag(method)
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(.primary)
+
+                    Text(method == .dfn ? "Deep Filter Net (DFN)" : "FFMPEG + Deep Filter Net")
+                        .font(.title3)
+                        .foregroundStyle(.primary)
+
+                    Text(method.detail)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 220)
                 }
             }
-            .pickerStyle(.segmented)
-
-            Text(viewModel.enhancementMethod.detail)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .cardStyle()
-    }
-
-    private var processingOptionsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Processing Options")
-                .font(.headline)
-
-            Toggle("Transcribe audio", isOn: $viewModel.transcriptionEnabled)
-
-            Text("Transcription writes a Marathi transcript into each file’s output folder. Translation stays off in this UI pass.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .cardStyle()
-    }
-
-    private var speedCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Processing Speed")
-                .font(.headline)
-
-            Stepper(value: $viewModel.maxConcurrency, in: 1...5) {
-                HStack {
-                    Text("Files at once")
-                    Spacer()
-                    Text("\(viewModel.maxConcurrency)")
-                        .monospacedDigit()
-                }
-            }
-
-            Text(viewModel.advancedSummary)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .cardStyle()
-    }
-
-    private func summaryMetric(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title3.weight(.semibold))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private extension View {
-    func cardStyle() -> some View {
-        self
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 208)
+            .padding(.horizontal, 24)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(viewModel.enhancementMethod == method ? Color.orange.opacity(0.08) : Color.white)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        viewModel.enhancementMethod == method ? Color.orange.opacity(0.85) : Color(nsColor: .separatorColor).opacity(0.45),
+                        lineWidth: 1.5
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 }

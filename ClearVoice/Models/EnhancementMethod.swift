@@ -13,7 +13,7 @@ enum EnhancementMethod: String, CaseIterable, Equatable, Sendable, Identifiable 
         case .dfn:
             return "DFN"
         case .hybrid:
-            return "HYBRID"
+            return "Hybrid"
         }
     }
 
