@@ -13,7 +13,11 @@ struct ExportServiceTests {
             basename: "meeting01",
             summary: "Concise summary in English.",
             translated: "This is the translated transcript.",
-            original: "यह मूल प्रतिलेख है।"
+            original: Transcript(
+                text: "यह मूल प्रतिलेख है।",
+                detectedLanguage: "hi",
+                confidence: 0.88
+            )
         )
 
         let exportedURL = harness.outputFolder.appendingPathComponent("meeting01_transcript.txt")
@@ -51,7 +55,11 @@ struct ExportServiceTests {
             basename: "meeting02",
             summary: nil,
             translated: "Translated text only.",
-            original: "Original text only."
+            original: Transcript(
+                text: "Original text only.",
+                detectedLanguage: "en",
+                confidence: 1
+            )
         )
 
         let exportedURL = harness.outputFolder.appendingPathComponent("meeting02_transcript.txt")
@@ -59,6 +67,37 @@ struct ExportServiceTests {
 
         #expect(!transcript.contains("SUMMARY"))
         #expect(transcript.hasPrefix("TRANSLATED TRANSCRIPT\nTranslated text only.\n\nORIGINAL TRANSCRIPT\nOriginal text only.\n"))
+    }
+
+    @Test
+    func transcriptExportOmitsTranslatedSectionWhenTranslationIsNil() async throws {
+        let harness = try ExportHarness()
+        let service = DefaultExportService()
+
+        try await service.exportTranscript(
+            to: harness.outputFolder,
+            basename: "meeting03",
+            summary: nil,
+            translated: nil,
+            original: Transcript(
+                text: "नमस्कार",
+                detectedLanguage: "mr",
+                confidence: 0.9,
+                segments: [
+                    TranscriptSegment(
+                        text: "नमस्कार",
+                        startMilliseconds: 0,
+                        endMilliseconds: 1500
+                    )
+                ]
+            )
+        )
+
+        let exportedURL = harness.outputFolder.appendingPathComponent("meeting03_transcript.txt")
+        let transcript = try String(contentsOf: exportedURL, encoding: .utf8)
+
+        #expect(!transcript.contains("TRANSLATED TRANSCRIPT"))
+        #expect(transcript.hasPrefix("ORIGINAL TRANSCRIPT\n[00:00:00.000 --> 00:00:01.500]   नमस्कार\n"))
     }
 }
 

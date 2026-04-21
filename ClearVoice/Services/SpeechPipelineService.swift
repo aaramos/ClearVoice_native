@@ -2,7 +2,7 @@ import Foundation
 
 struct SpeechPipelineOutput: Equatable, Sendable {
     let transcript: Transcript
-    let englishTranslation: String
+    let englishTranslation: String?
 }
 
 protocol SpeechPipelineService: Sendable {
@@ -20,8 +20,7 @@ actor StubSpeechPipelineService: SpeechPipelineService {
         language: LanguageSelection
     ) async throws -> SpeechPipelineOutput {
         let transcript = try await StubTranscriptionService().transcribe(audio: audio, language: language)
-        let english = "[translated to English] \(transcript.text)"
-        return SpeechPipelineOutput(transcript: transcript, englishTranslation: english)
+        return SpeechPipelineOutput(transcript: transcript, englishTranslation: nil)
     }
 }
 
@@ -50,6 +49,25 @@ actor ComposedSpeechPipelineService: SpeechPipelineService {
         return SpeechPipelineOutput(
             transcript: transcript,
             englishTranslation: englishTranslation
+        )
+    }
+}
+
+actor TranscriptionOnlySpeechPipelineService: SpeechPipelineService {
+    private let transcription: any TranscriptionService
+
+    init(transcription: any TranscriptionService) {
+        self.transcription = transcription
+    }
+
+    func process(
+        audio: URL,
+        language: LanguageSelection
+    ) async throws -> SpeechPipelineOutput {
+        let transcript = try await transcription.transcribe(audio: audio, language: language)
+        return SpeechPipelineOutput(
+            transcript: transcript,
+            englishTranslation: nil
         )
     }
 }

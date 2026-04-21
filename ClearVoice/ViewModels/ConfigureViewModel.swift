@@ -25,10 +25,10 @@ final class ConfigureViewModel: ObservableObject {
 
     var helperText: String {
         if inputLanguage == .autoDetect {
-            return "ClearVoice will clean the audio locally, detect the spoken language, write the source transcript, and produce an English translation. If language detection fails, rerun the batch after choosing the source language manually."
+            return "ClearVoice will clean the audio locally, use the Hybrid output for Marathi transcription, and write a timestamped Marathi transcript. If it can’t detect the spoken language, retry by choosing the source language manually. Translation remains off while we validate transcription quality."
         }
 
-        return "ClearVoice will clean the audio locally, transcribe in \(inputLanguage.displayName), and produce an English translation."
+        return "ClearVoice will clean the audio locally and write a timestamped transcript in \(inputLanguage.displayName). Translation remains off while we validate transcription quality."
     }
 
     var intensityDescription: String {

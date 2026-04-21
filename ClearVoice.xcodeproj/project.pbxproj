@@ -35,6 +35,7 @@
 		4968128705DC916BE6725794 /* CloudAudioPreparationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F77D009697AE0EA38BD9E2C /* CloudAudioPreparationService.swift */; };
 		49BC8506D176FC9551B9710D /* Intensity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9E06D40AE18B2F40D49F84 /* Intensity.swift */; };
 		4ACD2B1B5B70D3D257045D8F /* BatchProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB3CD5822A810F0828426BCA /* BatchProcessor.swift */; };
+		4CCDD4350747D1F5A3F97601 /* WhisperCppTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A54CF7CCC3E60E93262ED73 /* WhisperCppTranscriptionService.swift */; };
 		4CF5F64902E327B108AD0043 /* OllamaCloudChatClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 862D40FBD96CBCB604A32069 /* OllamaCloudChatClient.swift */; };
 		4D926E4C557990899B4ABC3B /* AppLaunchViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA5985DF411F60FD9E6492A /* AppLaunchViewModelTests.swift */; };
 		516EF1A69216CCC943AE4A2C /* ProcessingStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 587B7C6CCF3EEC897DCDE2C6 /* ProcessingStage.swift */; };
@@ -70,6 +71,7 @@
 		B920F21E58178A83332722D3 /* OutputPathResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FF57A3BC9624FF1E9D95137 /* OutputPathResolverTests.swift */; };
 		BC2C13D13A89CD264E7F1E86 /* CloudHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CF56AFAA8C2A27C605CCC59 /* CloudHTTPClient.swift */; };
 		BC35A9262B7BD8984AFBBF7A /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4914971065BFD2A2065106C /* AppViewModel.swift */; };
+		BF0EB737E0B1739368E935E0 /* WhisperCppTranscriptionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42C6919CA482528BC296019 /* WhisperCppTranscriptionServiceTests.swift */; };
 		BFAD56D4A7FCDEDAE1772FA4 /* SpeechPipelineService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0437F09721BB01F3BA36C56 /* SpeechPipelineService.swift */; };
 		C1725BE752D1CB14FDE8F619 /* ProcessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E63BC6AA9746C9D41E4D736 /* ProcessView.swift */; };
 		C178D1F30A38D5FFD4C59873 /* OpenAIWhisperTranscriptionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77DB12F4BEDBC998314BE481 /* OpenAIWhisperTranscriptionServiceTests.swift */; };
@@ -122,6 +124,7 @@
 		200419689ADD25B8D3A322B6 /* GeminiDeveloperClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiDeveloperClient.swift; sourceTree = "<group>"; };
 		24EF938074D6A941D7991843 /* BatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchViewModel.swift; sourceTree = "<group>"; };
 		26652822EE948564B94803B1 /* LaunchFailureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchFailureView.swift; sourceTree = "<group>"; };
+		2A54CF7CCC3E60E93262ED73 /* WhisperCppTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperCppTranscriptionService.swift; sourceTree = "<group>"; };
 		2A6EC8F7D8DFE366C4C88EAB /* GeminiTranslationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiTranslationServiceTests.swift; sourceTree = "<group>"; };
 		2AF3F0F3698806630049279B /* TranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionService.swift; sourceTree = "<group>"; };
 		2B2993C11FAAE4D5980D7B79 /* ExportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportServiceTests.swift; sourceTree = "<group>"; };
@@ -170,6 +173,7 @@
 		99AD87617DF52A527033A909 /* ImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModel.swift; sourceTree = "<group>"; };
 		9F77D009697AE0EA38BD9E2C /* CloudAudioPreparationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAudioPreparationService.swift; sourceTree = "<group>"; };
 		A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModelTests.swift; sourceTree = "<group>"; };
+		A42C6919CA482528BC296019 /* WhisperCppTranscriptionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperCppTranscriptionServiceTests.swift; sourceTree = "<group>"; };
 		B1DD772F95F8578DECF42B59 /* TranscriptionPreparationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionPreparationServiceTests.swift; sourceTree = "<group>"; };
 		B30A1BBCCE880E29B1400AEF /* ConfigureViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureViewModelTests.swift; sourceTree = "<group>"; };
 		B673AE012DCC37DF7828412E /* ProcessingModeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingModeStore.swift; sourceTree = "<group>"; };
@@ -312,6 +316,7 @@
 				60CE2E0843CCB62F64905868 /* TranscriptionPreparationService.swift */,
 				2AF3F0F3698806630049279B /* TranscriptionService.swift */,
 				DE60BB0CABCB686CDAEA8B77 /* TranslationService.swift */,
+				2A54CF7CCC3E60E93262ED73 /* WhisperCppTranscriptionService.swift */,
 				6215F15EF2B465980A77DA90 /* WhisperKitSpeechPipelineService.swift */,
 			);
 			path = Services;
@@ -356,6 +361,7 @@
 				6FF57A3BC9624FF1E9D95137 /* OutputPathResolverTests.swift */,
 				5384A0B1E598FA4740CB944E /* ProcessingModeConfigurationTests.swift */,
 				B1DD772F95F8578DECF42B59 /* TranscriptionPreparationServiceTests.swift */,
+				A42C6919CA482528BC296019 /* WhisperCppTranscriptionServiceTests.swift */,
 				010032A2C4061BEF0A3A388F /* WhisperKitSpeechPipelineServiceTests.swift */,
 				3F9DED54E0BE8C2904846CC0 /* Fixtures */,
 				682A8A4588633BD77B2CCC64 /* Support */,
@@ -536,6 +542,7 @@
 				B920F21E58178A83332722D3 /* OutputPathResolverTests.swift in Sources */,
 				CBA28ACF204F51547F744C6B /* ProcessingModeConfigurationTests.swift in Sources */,
 				40C658B62958D90B690282B0 /* TranscriptionPreparationServiceTests.swift in Sources */,
+				BF0EB737E0B1739368E935E0 /* WhisperCppTranscriptionServiceTests.swift in Sources */,
 				88E621738E3F99C049F01215 /* WhisperKitSpeechPipelineServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -601,6 +608,7 @@
 				D4583E56167D3F1F53653B5C /* TranscriptionPreparationService.swift in Sources */,
 				280F6C517E89247653DB90EA /* TranscriptionService.swift in Sources */,
 				D2B288C380ECED72B6B9F239 /* TranslationService.swift in Sources */,
+				4CCDD4350747D1F5A3F97601 /* WhisperCppTranscriptionService.swift in Sources */,
 				390D3EF9D59547F85F19359C /* WhisperKitSpeechPipelineService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

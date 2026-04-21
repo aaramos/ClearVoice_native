@@ -104,11 +104,11 @@ final class BatchViewModel: ObservableObject {
                     }
                 } else {
                     if self.services.comparisonEnhancements.count >= 2 {
-                        self.statusText = "Enhancement complete. Each file folder now contains the DeepFilterNet and Hybrid outputs."
+                        self.statusText = "Processing complete. Each file folder now contains the DeepFilterNet output, Hybrid output, and Marathi transcript."
                     } else if self.services.comparisonEnhancements.count == 1 {
-                        self.statusText = "Enhancement complete. Each file folder now contains one enhancement output."
+                        self.statusText = "Processing complete. Each file folder now contains one enhancement output and a Marathi transcript."
                     } else {
-                        self.statusText = "Enhancement finished, but ClearVoice could not create any enhancement outputs."
+                        self.statusText = "Processing finished, but ClearVoice could not create any enhancement outputs."
                     }
                 }
             }

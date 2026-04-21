@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct BatchViewModelTests {
     @Test
-    func enhancementOnlyRunsFinishWithoutLanguagePrompt() async throws {
+    func processingRunsFinishWithoutLanguagePrompt() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         let sourceFolder = root.appendingPathComponent("source", isDirectory: true)
         let outputFolder = root.appendingPathComponent("output", isDirectory: true)
@@ -22,7 +22,7 @@ struct BatchViewModelTests {
                     LocalStubComparisonEnhancementService(outputSuffix: "DFN"),
                     LocalStubComparisonEnhancementService(outputSuffix: "HYBRID"),
                 ],
-                speechPipeline: FailingIfCalledSpeechPipelineService(),
+                speechPipeline: LocalStubSpeechPipelineService(),
                 export: DefaultExportService()
             )
         )
@@ -45,14 +45,27 @@ struct BatchViewModelTests {
         }
 
         #expect(viewModel.languageSelectionPrompt == nil)
-        #expect(viewModel.statusText.contains("DeepFilterNet and Hybrid outputs"))
+        #expect(viewModel.statusText.contains("Marathi transcript"))
     }
 }
 
-private actor FailingIfCalledSpeechPipelineService: SpeechPipelineService {
+private actor LocalStubSpeechPipelineService: SpeechPipelineService {
     func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
-        Issue.record("Speech pipeline should not be called in enhancement-only mode.")
-        throw ProcessingError.transcriptionFailed("Speech pipeline should not be called.")
+        SpeechPipelineOutput(
+            transcript: Transcript(
+                text: "नमस्कार! तुमचं नाव काय आहे?",
+                detectedLanguage: "mr",
+                confidence: 0.91,
+                segments: [
+                    TranscriptSegment(
+                        text: "नमस्कार! तुमचं नाव काय आहे?",
+                        startMilliseconds: 0,
+                        endMilliseconds: 2000
+                    )
+                ]
+            ),
+            englishTranslation: nil
+        )
     }
 }
 

@@ -66,9 +66,10 @@ struct ServiceBundle: Sendable {
             comparisonEnhancements: DeepFilterNetAudioEnhancementService.availableVariants(),
             formatNormalizationService: FFmpegSpeechFormatNormalizationService(),
             transcriptionPreparationService: FFmpegTranscriptionPreparationService(),
-            speechPipeline: WhisperKitSpeechPipelineService(
-                modelDirectory: modelDirectory,
-                translationService: translationService
+            speechPipeline: TranscriptionOnlySpeechPipelineService(
+                transcription: WhisperCppTranscriptionService(
+                    modelDirectory: modelDirectory?.appendingPathComponent("whisper.cpp", isDirectory: true)
+                )
             ),
             export: DefaultExportService()
         )

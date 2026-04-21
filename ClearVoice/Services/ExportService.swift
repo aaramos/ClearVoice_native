@@ -6,8 +6,8 @@ protocol ExportService: Sendable {
         to folderURL: URL,
         basename: String,
         summary: String?,
-        translated: String,
-        original: String
+        translated: String?,
+        original: Transcript
     ) async throws
     func writeErrorLog(
         to folderURL: URL,
@@ -32,8 +32,8 @@ actor DefaultExportService: ExportService {
         to folderURL: URL,
         basename: String,
         summary: String?,
-        translated: String,
-        original: String
+        translated: String?,
+        original: Transcript
     ) async throws {
         try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
 
@@ -84,8 +84,8 @@ actor DefaultExportService: ExportService {
 
     private func transcriptContents(
         summary: String?,
-        translated: String,
-        original: String
+        translated: String?,
+        original: Transcript
     ) -> String {
         var sections: [String] = []
 
@@ -97,12 +97,17 @@ actor DefaultExportService: ExportService {
             ])
         }
 
+        if let translated {
+            sections.append(contentsOf: [
+                "TRANSLATED TRANSCRIPT",
+                translated,
+                "",
+            ])
+        }
+
         sections.append(contentsOf: [
-            "TRANSLATED TRANSCRIPT",
-            translated,
-            "",
             "ORIGINAL TRANSCRIPT",
-            original,
+            original.exportText,
         ])
 
         return sections.joined(separator: "\n") + "\n"

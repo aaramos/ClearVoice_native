@@ -34,7 +34,7 @@ struct BatchProcessorTests {
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
             comparisonEnhancements: [SelectiveFailureComparisonEnhancementService(outputSuffix: "DFN", failingBasename: "sample_2")],
-            speechPipeline: FailingIfCalledSpeechPipelineService(),
+            speechPipeline: StubSpeechPipelineService(),
             export: DefaultExportService()
         )
         let processor = try harness.makeProcessor(services: services, maxConcurrency: 3)
@@ -53,9 +53,10 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func enhancementOnlyWritesConfiguredVariantsAndSkipsTranscriptExport() async throws {
+    func processingWritesConfiguredVariantsAndExportsTranscript() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let transcriptionPrep = TrackingTranscriptionPreparationService()
+        let speechPipeline = TrackingSpeechPipelineService()
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
             comparisonEnhancements: [
@@ -63,7 +64,7 @@ struct BatchProcessorTests {
                 StubComparisonEnhancementService(outputSuffix: "HYBRID"),
             ],
             transcriptionPreparationService: transcriptionPrep,
-            speechPipeline: FailingIfCalledSpeechPipelineService(),
+            speechPipeline: speechPipeline,
             summaryPlaceholder: "Placeholder summary.",
             export: DefaultExportService()
         )
@@ -83,7 +84,7 @@ struct BatchProcessorTests {
         #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_HYBRID.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MIN.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MAX.m4a").path))
-        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
 
         let preparedInputs = await transcriptionPrep.preparedInputs
         #expect(preparedInputs.count == 1)
@@ -92,10 +93,14 @@ struct BatchProcessorTests {
         let preparedOutput = try #require(preparedInputs.first?.prepared)
         #expect(preparedOutput.pathExtension == "wav")
         #expect(!FileManager.default.fileExists(atPath: preparedOutput.path))
+
+        let pipelineInputs = await speechPipeline.audioInputs
+        #expect(pipelineInputs == [preparedOutput.lastPathComponent])
+        #expect(item.originalTranscript?.contains("नमस्कार") == true)
     }
 
     @Test
-    func enhancementOnlyWritesDeepFilterVariantWhenConfigured() async throws {
+    func processingWritesDeepFilterVariantWhenConfigured() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
@@ -103,7 +108,7 @@ struct BatchProcessorTests {
                 StubComparisonEnhancementService(outputSuffix: "DFN"),
                 StubComparisonEnhancementService(outputSuffix: "HYBRID"),
             ],
-            speechPipeline: FailingIfCalledSpeechPipelineService(),
+            speechPipeline: StubSpeechPipelineService(),
             export: DefaultExportService()
         )
         let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
@@ -123,7 +128,7 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func speechPipelineIsNotInvokedDuringEnhancementOnlyRuns() async throws {
+    func speechPipelineFailureFailsTheImpactedFile() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
@@ -131,7 +136,7 @@ struct BatchProcessorTests {
                 StubComparisonEnhancementService(outputSuffix: "DFN"),
                 StubComparisonEnhancementService(outputSuffix: "HYBRID"),
             ],
-            speechPipeline: FailingIfCalledSpeechPipelineService(),
+            speechPipeline: FailingSpeechPipelineService(),
             export: DefaultExportService()
         )
         let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
@@ -144,7 +149,7 @@ struct BatchProcessorTests {
         let latestItems = await recorder.itemsByBasename()
         let item = try #require(latestItems["sample_1"])
 
-        #expect(item.stage == .complete)
+        #expect(item.stage == .failed(error: .transcriptionFailed("Stubbed speech pipeline failure")))
     }
 }
 
@@ -257,10 +262,32 @@ private actor SelectiveFailureComparisonEnhancementService: ComparisonEnhancemen
     }
 }
 
-private actor FailingIfCalledSpeechPipelineService: SpeechPipelineService {
+private actor TrackingSpeechPipelineService: SpeechPipelineService {
+    private(set) var audioInputs: [String] = []
+
     func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
-        Issue.record("Speech pipeline should not be called in enhancement-only mode.")
-        throw ProcessingError.transcriptionFailed("Speech pipeline should not be called.")
+        audioInputs.append(audio.lastPathComponent)
+        return SpeechPipelineOutput(
+            transcript: Transcript(
+                text: "नमस्कार! तुमचं नाव काय आहे?",
+                detectedLanguage: "mr",
+                confidence: 0.92,
+                segments: [
+                    TranscriptSegment(
+                        text: "नमस्कार! तुमचं नाव काय आहे?",
+                        startMilliseconds: 0,
+                        endMilliseconds: 2500
+                    )
+                ]
+            ),
+            englishTranslation: nil
+        )
+    }
+}
+
+private actor FailingSpeechPipelineService: SpeechPipelineService {
+    func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
+        throw ProcessingError.transcriptionFailed("Stubbed speech pipeline failure")
     }
 }
 

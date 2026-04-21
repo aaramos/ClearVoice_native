@@ -96,7 +96,7 @@ struct ConfigureView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text("English translation is fixed in this version so we can stabilize the local pipeline first.")
+            Text("English translation is temporarily disabled while we validate local Marathi transcription.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

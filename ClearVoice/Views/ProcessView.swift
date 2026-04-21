@@ -8,7 +8,7 @@ struct ProcessView: View {
     var body: some View {
         StepCard(
             title: "Process",
-            detail: "ClearVoice is temporarily running in enhancement-only mode: each file gets a DeepFilterNet output and a Hybrid output."
+            detail: "ClearVoice now exports DeepFilterNet and Hybrid enhancement files, then transcribes the Hybrid output locally into Marathi."
         ) {
             VStack(alignment: .leading, spacing: 18) {
                 Text(viewModel.statusText)
