@@ -23,6 +23,14 @@ struct WhisperCppTranscriptionServiceTests {
             runner: { _, arguments, _ in
                 #expect(arguments.contains("-oj"))
                 #expect(!arguments.contains("-ojf"))
+                #expect(arguments.contains("--max-context"))
+                #expect(try argumentValue(after: "--max-context", in: arguments) == "0")
+                #expect(try argumentValue(after: "--temperature", in: arguments) == "0.0")
+                #expect(try argumentValue(after: "--temperature-inc", in: arguments) == "0.2")
+                #expect(try argumentValue(after: "--entropy-thold", in: arguments) == "2.4")
+                #expect(try argumentValue(after: "--logprob-thold", in: arguments) == "-1.0")
+                #expect(try argumentValue(after: "--no-speech-thold", in: arguments) == "0.6")
+                #expect(!arguments.contains("--vad"))
 
                 let outputPrefixArgument = try argumentValue(after: "-of", in: arguments)
                 let outputPrefix = try #require(outputPrefixArgument)
@@ -114,6 +122,48 @@ struct WhisperCppTranscriptionServiceTests {
         #expect(transcript.text == "फॉलबॅक यशस्वी झाला")
         let attemptedModels = await runner.attemptedModels
         #expect(attemptedModels == ["ggml-large-v3-turbo.bin", "ggml-large-v3.bin"])
+    }
+
+    @Test
+    func transcribeAddsVADFlagsWhenModelIsAvailable() async throws {
+        let harness = try WhisperCppHarness()
+        let vadModelURL = harness.modelDirectory.appendingPathComponent("ggml-silero-v6.2.0.bin")
+        try Data().write(to: vadModelURL)
+
+        let service = WhisperCppTranscriptionService(
+            executableURL: harness.executableURL,
+            modelDirectory: harness.modelDirectory,
+            runner: { _, arguments, _ in
+                #expect(arguments.contains("--vad"))
+                #expect(try argumentValue(after: "--vad-model", in: arguments) == vadModelURL.path)
+                #expect(try argumentValue(after: "--vad-threshold", in: arguments) == "0.5")
+                #expect(try argumentValue(after: "--vad-min-speech-duration-ms", in: arguments) == "250")
+                #expect(try argumentValue(after: "--vad-min-silence-duration-ms", in: arguments) == "500")
+
+                let outputPrefixArgument = try argumentValue(after: "-of", in: arguments)
+                let outputPrefix = try #require(outputPrefixArgument)
+                let jsonURL = URL(fileURLWithPath: outputPrefix).appendingPathExtension("json")
+                let json = """
+                {
+                  "transcription": [
+                    {
+                      "text": "वाड सक्रिय आहे",
+                      "offsets": { "from": 0, "to": 1800 }
+                    }
+                  ]
+                }
+                """
+                let data = try #require(json.data(using: .utf8))
+                try data.write(to: jsonURL)
+            }
+        )
+
+        let transcript = try await service.transcribe(
+            audio: harness.audioURL,
+            language: .specific("mr")
+        )
+
+        #expect(transcript.text == "वाड सक्रिय आहे")
     }
 
     @Test

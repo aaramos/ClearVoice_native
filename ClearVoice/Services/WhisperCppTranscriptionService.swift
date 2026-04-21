@@ -9,6 +9,8 @@ actor WhisperCppTranscriptionService: TranscriptionService {
     private let modelDirectory: URL
     private let primaryModelName: String
     private let fallbackModelName: String
+    private let decodeProfile: DecodeProfile
+    private let vadModelNameCandidates: [String]
     private let threads: Int
     private let runner: Runner
     private let logger = Logger(subsystem: "com.clearvoice.app", category: "whisper.cpp")
@@ -19,6 +21,11 @@ actor WhisperCppTranscriptionService: TranscriptionService {
         modelDirectory: URL? = nil,
         primaryModelName: String = "ggml-large-v3-turbo.bin",
         fallbackModelName: String = "ggml-large-v3.bin",
+        decodeProfile: DecodeProfile = .longFormNoisy,
+        vadModelNameCandidates: [String] = [
+            "ggml-silero-v6.2.0.bin",
+            "ggml-silero-v5.1.2.bin",
+        ],
         threads: Int = WhisperCppTranscriptionService.defaultThreadCount(),
         runner: @escaping Runner = WhisperCppTranscriptionService.defaultRunner
     ) {
@@ -27,6 +34,8 @@ actor WhisperCppTranscriptionService: TranscriptionService {
         self.modelDirectory = modelDirectory ?? Self.defaultModelDirectory()
         self.primaryModelName = primaryModelName
         self.fallbackModelName = fallbackModelName
+        self.decodeProfile = decodeProfile
+        self.vadModelNameCandidates = vadModelNameCandidates
         self.threads = threads
         self.runner = runner
     }
@@ -93,16 +102,18 @@ actor WhisperCppTranscriptionService: TranscriptionService {
             try? fileManager.removeItem(at: jsonURL)
         }
 
+        let vadModelURL = resolveVADModelURL()
+        let arguments = makeArguments(
+            modelURL: modelURL,
+            audioURL: audio,
+            languageCode: languageCode,
+            outputPrefix: outputPrefix,
+            vadModelURL: vadModelURL
+        )
+
         try await runner(
             executableURL,
-            [
-                "-m", modelURL.path,
-                "-f", audio.path,
-                "-l", languageCode,
-                "-t", String(threads),
-                "-oj",
-                "-of", outputPrefix.path,
-            ],
+            arguments,
             runtimeEnvironment(for: executableURL)
         )
 
@@ -185,6 +196,41 @@ actor WhisperCppTranscriptionService: TranscriptionService {
 
         let average = probabilities.reduce(0, +) / Double(probabilities.count)
         return min(max(average, 0), 1)
+    }
+
+    private func makeArguments(
+        modelURL: URL,
+        audioURL: URL,
+        languageCode: String,
+        outputPrefix: URL,
+        vadModelURL: URL?
+    ) -> [String] {
+        var arguments: [String] = [
+            "-m", modelURL.path,
+            "-f", audioURL.path,
+            "-l", languageCode,
+            "-t", String(threads),
+            "-oj",
+            "-of", outputPrefix.path,
+        ]
+
+        arguments.append(contentsOf: decodeProfile.arguments(vadModelURL: vadModelURL))
+        return arguments
+    }
+
+    private func resolveVADModelURL() -> URL? {
+        for candidate in vadModelNameCandidates {
+            let url = modelDirectory.appendingPathComponent(candidate)
+            if fileManager.fileExists(atPath: url.path) {
+                return url
+            }
+        }
+
+        if decodeProfile.enableVAD {
+            logger.debug("No local whisper VAD model found in \(self.modelDirectory.path, privacy: .public); continuing without VAD")
+        }
+
+        return nil
     }
 
     private func runtimeEnvironment(for executableURL: URL) -> [String: String] {
@@ -307,6 +353,70 @@ actor WhisperCppTranscriptionService: TranscriptionService {
             }
 
             throw ProcessingError.transcriptionFailed("ClearVoice couldn’t transcribe this file with whisper.cpp.")
+        }
+    }
+}
+
+extension WhisperCppTranscriptionService {
+    struct DecodeProfile: Sendable {
+        let maxContextTokens: Int?
+        let temperature: Double
+        let temperatureIncrement: Double
+        let entropyThreshold: Double
+        let logprobThreshold: Double
+        let noSpeechThreshold: Double
+        let enableVAD: Bool
+        let vadThreshold: Double
+        let vadMinSpeechDurationMS: Int
+        let vadMinSilenceDurationMS: Int
+
+        static let longFormNoisy = DecodeProfile(
+            maxContextTokens: 0,
+            temperature: 0.0,
+            temperatureIncrement: 0.2,
+            entropyThreshold: 2.4,
+            logprobThreshold: -1.0,
+            noSpeechThreshold: 0.6,
+            enableVAD: true,
+            vadThreshold: 0.5,
+            vadMinSpeechDurationMS: 250,
+            vadMinSilenceDurationMS: 500
+        )
+
+        func arguments(vadModelURL: URL?) -> [String] {
+            var arguments: [String] = []
+
+            if let maxContextTokens {
+                arguments.append(contentsOf: ["--max-context", String(maxContextTokens)])
+            }
+
+            arguments.append(contentsOf: [
+                "--temperature", Self.format(temperature),
+                "--temperature-inc", Self.format(temperatureIncrement),
+                "--entropy-thold", Self.format(entropyThreshold),
+                "--logprob-thold", Self.format(logprobThreshold),
+                "--no-speech-thold", Self.format(noSpeechThreshold),
+            ])
+
+            if enableVAD, let vadModelURL {
+                arguments.append(contentsOf: [
+                    "--vad",
+                    "--vad-model", vadModelURL.path,
+                    "--vad-threshold", Self.format(vadThreshold),
+                    "--vad-min-speech-duration-ms", String(vadMinSpeechDurationMS),
+                    "--vad-min-silence-duration-ms", String(vadMinSilenceDurationMS),
+                ])
+            }
+
+            return arguments
+        }
+
+        private static func format(_ value: Double) -> String {
+            if value.rounded() == value {
+                return String(format: "%.1f", value)
+            }
+
+            return String(value)
         }
     }
 }
