@@ -5,6 +5,13 @@ struct ConfigureView: View {
     let onBack: () -> Void
     let onStart: () -> Void
 
+    private var concurrencyBinding: Binding<Double> {
+        Binding(
+            get: { Double(viewModel.maxConcurrency) },
+            set: { viewModel.maxConcurrency = Int($0.rounded()) }
+        )
+    }
+
     var body: some View {
         VStack(spacing: 28) {
             VStack(spacing: 10) {
@@ -27,42 +34,42 @@ struct ConfigureView: View {
             .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 16) {
-                Text("This build focuses only on audio enhancement. Transcription and translation are temporarily unavailable while we stabilize the speech pipeline.")
+                Text("This build exports enhanced audio only. ClearVoice will skip transcription and translation so we can focus on the cleanup quality of each file.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
                 Divider()
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Processing Speed:")
-                        .font(.title3.weight(.medium))
+                    HStack {
+                        Text("Processing Speed")
+                            .font(.title3.weight(.medium))
 
-                    HStack(spacing: 10) {
-                        ForEach(1...5, id: \.self) { value in
-                            Button {
-                                viewModel.maxConcurrency = value
-                            } label: {
-                                Text("\(value)")
-                                    .font(.headline.weight(.medium))
-                                    .frame(width: 42, height: 34)
-                            }
-                            .buttonStyle(.plain)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(viewModel.maxConcurrency == value ? Color.orange.opacity(0.12) : Color(nsColor: .controlBackgroundColor))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .stroke(
-                                        viewModel.maxConcurrency == value ? Color.orange.opacity(0.8) : Color(nsColor: .separatorColor).opacity(0.5),
-                                        lineWidth: 1
-                                    )
-                            )
-                            .foregroundStyle(viewModel.maxConcurrency == value ? Color.orange : .primary)
-                        }
+                        Spacer()
+
+                        Text("\(viewModel.maxConcurrency) files")
+                            .font(.headline.monospacedDigit())
+                            .foregroundStyle(.secondary)
                     }
 
-                    Text("Choose how many files to process at once. Start with 2 unless the machine is clearly keeping up.")
+                    HStack(spacing: 14) {
+                        Text("Fewer")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(.secondary)
+
+                        Slider(value: concurrencyBinding, in: 1...10, step: 1)
+                            .tint(Color.orange)
+
+                        Text("More")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text(viewModel.advancedSummary)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    Text("Slide left for lighter processing or right to push this Mac harder.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

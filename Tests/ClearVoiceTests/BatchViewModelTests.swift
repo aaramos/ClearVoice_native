@@ -22,7 +22,6 @@ struct BatchViewModelTests {
                     LocalStubComparisonEnhancementService(outputSuffix: "DFN"),
                     LocalStubComparisonEnhancementService(outputSuffix: "HYBRID"),
                 ],
-                speechPipeline: LocalStubSpeechPipelineService(),
                 export: DefaultExportService()
             )
         )
@@ -30,9 +29,6 @@ struct BatchViewModelTests {
             sourceFolder: sourceFolder,
             outputFolder: outputFolder,
             enhancementMethod: .hybrid,
-            transcriptionEnabled: false,
-            inputLanguage: .auto,
-            outputLanguage: "en",
             maxConcurrency: 1,
             recursiveScan: true,
             preserveChannels: false
@@ -48,29 +44,9 @@ struct BatchViewModelTests {
             await Task.yield()
         }
 
-        #expect(viewModel.languageSelectionPrompt == nil)
         #expect(viewModel.statusText.contains("Hybrid"))
         #expect(viewModel.statusText.contains("audio output"))
-    }
-}
-
-private actor LocalStubSpeechPipelineService: SpeechPipelineService {
-    func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
-        SpeechPipelineOutput(
-            transcript: Transcript(
-                text: "नमस्कार! तुमचं नाव काय आहे?",
-                detectedLanguage: "mr",
-                confidence: 0.91,
-                segments: [
-                    TranscriptSegment(
-                        text: "नमस्कार! तुमचं नाव काय आहे?",
-                        startMilliseconds: 0,
-                        endMilliseconds: 2000
-                    )
-                ]
-            ),
-            englishTranslation: nil
-        )
+        #expect(viewModel.runFinishedAt != nil)
     }
 }
 

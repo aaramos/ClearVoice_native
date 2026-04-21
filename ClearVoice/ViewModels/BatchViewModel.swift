@@ -6,16 +6,25 @@ final class BatchViewModel: ObservableObject {
     @Published private(set) var statusText = "Choose folders and start a batch to see processing progress."
     @Published private(set) var isRunning = false
     @Published private(set) var didFinish = false
-    @Published private(set) var languageSelectionPrompt: String?
     @Published private(set) var runStartedAt: Date?
+    @Published private(set) var runFinishedAt: Date?
+    @Published private(set) var resultsBrowserURL: URL?
+    @Published private(set) var resultsPageFileURL: URL?
+    @Published private(set) var resultsBrowserError: String?
+    @Published private(set) var isPreparingResultsBrowser = false
 
     private let services: ServiceBundle
+    private let resultsCoordinator: BatchResultsCoordinator
     private var configuration: BatchConfiguration?
     private var runTask: Task<Void, Never>?
     private var processor: BatchProcessor?
 
-    init(services: ServiceBundle = .stub) {
+    init(
+        services: ServiceBundle = .stub,
+        resultsCoordinator: BatchResultsCoordinator = .shared
+    ) {
         self.services = services
+        self.resultsCoordinator = resultsCoordinator
     }
 
     var completedCount: Int {
@@ -25,7 +34,7 @@ final class BatchViewModel: ObservableObject {
     var processingCount: Int {
         files.filter {
             switch $0.stage {
-            case .analyzing, .analyzingFormat, .normalizingFormat, .cleaning, .optimizingForUpload, .transcribing, .translating, .summarizing, .exporting:
+            case .analyzing, .analyzingFormat, .normalizingFormat, .cleaning, .exporting:
                 return true
             default:
                 return false
@@ -74,10 +83,6 @@ final class BatchViewModel: ObservableObject {
         configuration?.enhancementMethod
     }
 
-    var transcriptionEnabled: Bool {
-        false
-    }
-
     func configureRun(files sourceFiles: [ScannedAudioFile], configuration: BatchConfiguration) {
         self.configuration = configuration
         self.files = sourceFiles.map {
@@ -90,8 +95,12 @@ final class BatchViewModel: ObservableObject {
         }
         statusText = "Starting batch processing."
         didFinish = false
-        languageSelectionPrompt = nil
         runStartedAt = nil
+        runFinishedAt = nil
+        resultsBrowserURL = nil
+        resultsPageFileURL = nil
+        resultsBrowserError = nil
+        isPreparingResultsBrowser = false
     }
 
     func startIfNeeded() {
@@ -130,6 +139,7 @@ final class BatchViewModel: ObservableObject {
                 self.processor = nil
                 self.isRunning = false
                 self.didFinish = true
+                self.runFinishedAt = Date()
                 let failureCount = self.failedCount
                 let skippedCount = self.skippedCount
 
@@ -149,10 +159,49 @@ final class BatchViewModel: ObservableObject {
         statusText = "Choose folders and start a batch to see processing progress."
         isRunning = false
         didFinish = false
-        languageSelectionPrompt = nil
         configuration = nil
         processor = nil
         runStartedAt = nil
+        runFinishedAt = nil
+        resultsBrowserURL = nil
+        resultsPageFileURL = nil
+        resultsBrowserError = nil
+        isPreparingResultsBrowser = false
+    }
+
+    func prepareResultsBrowserIfNeeded() async {
+        guard !isPreparingResultsBrowser else { return }
+        guard let configuration, let outputFolderURL else { return }
+
+        if resultsBrowserURL != nil {
+            openResultsInBrowser()
+            return
+        }
+
+        isPreparingResultsBrowser = true
+        resultsBrowserError = nil
+
+        do {
+            let presentation = try await resultsCoordinator.preparePresentation(
+                outputFolderURL: outputFolderURL,
+                files: files,
+                enhancementMethod: configuration.enhancementMethod
+            )
+            resultsPageFileURL = presentation.pageFileURL
+            resultsBrowserURL = presentation.browserURL
+            openResultsInBrowser()
+        } catch {
+            resultsBrowserError = error.localizedDescription
+        }
+
+        isPreparingResultsBrowser = false
+    }
+
+    func openResultsInBrowser() {
+        guard let resultsBrowserURL else { return }
+        if !resultsCoordinator.openBrowser(at: resultsBrowserURL) {
+            resultsBrowserError = "ClearVoice couldn’t open the local results page in your browser."
+        }
     }
 
     private func apply(_ updatedItem: AudioFileItem) {
@@ -174,15 +223,7 @@ final class BatchViewModel: ObservableObject {
         case .normalizingFormat:
             return 0.24
         case .cleaning(let progress):
-            return 0.24 + (0.34 * progress)
-        case .optimizingForUpload:
-            return 0.62
-        case .transcribing(let progress):
-            return 0.62 + (0.22 * progress)
-        case .translating:
-            return 0.86
-        case .summarizing:
-            return 0.92
+            return 0.24 + (0.68 * progress)
         case .exporting:
             return 0.96
         case .complete, .failed, .skipped:

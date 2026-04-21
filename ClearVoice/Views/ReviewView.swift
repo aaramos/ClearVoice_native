@@ -13,7 +13,7 @@ struct ReviewView: View {
     var body: some View {
         VStack(spacing: 24) {
             VStack(spacing: 10) {
-                Text("Results")
+                Text("Results Opened In Browser")
                     .font(.system(size: 22, weight: .semibold))
 
                 Text(resultsSubtitle)
@@ -23,19 +23,13 @@ struct ReviewView: View {
             .frame(maxWidth: .infinity)
             .padding(.top, 16)
 
+            browserStatusCard
+
             if let archiveMessage {
                 Text(archiveMessage)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            ScrollView {
-                VStack(spacing: 18) {
-                    ForEach(viewModel.files) { file in
-                        resultRow(for: file)
-                    }
-                }
             }
 
             HStack {
@@ -52,67 +46,66 @@ struct ReviewView: View {
                     .keyboardShortcut(.defaultAction)
             }
         }
+        .task {
+            await viewModel.prepareResultsBrowserIfNeeded()
+        }
     }
 
     private var resultsSubtitle: String {
-        "All processing is complete. Review your enhanced audio files below."
+        "ClearVoice writes an index page directly into the batch output folder and opens that local file in your browser so you can review and share the results outside the app."
     }
 
-    private func resultRow(for file: AudioFileItem) -> some View {
-        mediaCard(for: file)
-    }
-
-    private func mediaCard(for file: AudioFileItem) -> some View {
+    private var browserStatusCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Image(systemName: iconName(for: file.sourceURL))
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-
-                Text(file.sourceURL.lastPathComponent)
-                    .font(.title3.weight(.semibold))
-                    .lineLimit(1)
-
-                Text("Enhanced: \(viewModel.selectedEnhancementMethod?.title ?? "—")")
-                    .font(.subheadline.weight(.medium))
+            if viewModel.isPreparingResultsBrowser {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Preparing the results page and opening your browser…")
+                        .foregroundStyle(.secondary)
+                }
+            } else if let resultsBrowserURL = viewModel.resultsBrowserURL {
+                Label("Results page is ready", systemImage: "globe")
+                    .font(.headline)
                     .foregroundStyle(Color.blue)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule()
-                            .fill(Color.blue.opacity(0.08))
-                    )
 
-                Spacer()
-            }
+                Link(destination: resultsBrowserURL) {
+                    Text(resultsBrowserURL.absoluteString)
+                        .font(.footnote.monospaced())
+                        .textSelection(.enabled)
+                }
 
-            if let processedAudioURL = processedAudioURL(for: file) {
-                AudioPreviewPlayerView(fileURL: processedAudioURL)
+                if let resultsPageFileURL = viewModel.resultsPageFileURL {
+                    Text("Saved page: \(resultsPageFileURL.path)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            } else if let resultsBrowserError = viewModel.resultsBrowserError {
+                Label(resultsBrowserError, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Open the batch in your browser to review the processed audio outside the app.")
+                    .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 10) {
-                if let processedAudioURL = processedAudioURL(for: file) {
-                    Button("Reveal Audio") {
-                        revealInFinder(processedAudioURL)
+                Button("Open Browser Again") {
+                    viewModel.openResultsInBrowser()
+                }
+                .buttonStyle(SecondaryActionButtonStyle())
+                .disabled(viewModel.resultsBrowserURL == nil)
+
+                if let outputFolderURL = viewModel.outputFolderURL {
+                    Button("Reveal Batch Folder") {
+                        revealInFinder(outputFolderURL)
                     }
                     .buttonStyle(SecondaryActionButtonStyle())
                 }
-
-                if let folderURL = file.outputFolderURL {
-                    Button("Open Folder") {
-                        revealInFinder(folderURL)
-                    }
-                    .buttonStyle(SecondaryActionButtonStyle())
-                }
-            }
-
-            if let detail = resultDetail(for: file) {
-                Text(detail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -122,45 +115,6 @@ struct ReviewView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
         )
-    }
-
-    private func resultDetail(for file: AudioFileItem) -> String? {
-        switch file.stage {
-        case .failed(let error):
-            switch error {
-            case .audioUnreadable:
-                return "ClearVoice couldn’t read this source file."
-            case .enhancementFailed(let message),
-                    .transcriptionFailed(let message),
-                    .translationFailed(let message),
-                    .summarizationFailed(let message),
-                    .exportFailed(let message):
-                return message
-            case .cancelled:
-                return "Processing stopped before the file finished."
-            }
-        case .skipped(let reason):
-            switch reason {
-            case .outputFolderExists(let folderURL):
-                return "Skipped because \(folderURL.lastPathComponent) already existed in the batch output folder."
-            }
-        case .complete:
-            return nil
-        default:
-            return "This file is still processing."
-        }
-    }
-
-    private func processedAudioURL(for file: AudioFileItem) -> URL? {
-        guard
-            let folderURL = file.outputFolderURL,
-            let enhancementMethod = viewModel.selectedEnhancementMethod
-        else {
-            return nil
-        }
-
-        let url = folderURL.appendingPathComponent("\(file.basename)_\(enhancementMethod.outputSuffix).m4a")
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     private func revealInFinder(_ url: URL) {
@@ -193,17 +147,6 @@ struct ReviewView: View {
                     archiveMessage = error.localizedDescription
                 }
             }
-        }
-    }
-
-    private func iconName(for url: URL) -> String {
-        switch url.pathExtension.lowercased() {
-        case "wav", "flac":
-            return "waveform"
-        case "mp3", "aac", "m4a", "wma":
-            return "music.note"
-        default:
-            return "waveform.circle"
         }
     }
 }

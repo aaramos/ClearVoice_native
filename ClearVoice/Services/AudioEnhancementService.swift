@@ -170,6 +170,13 @@ actor DeepFilterNetAudioEnhancementService: ComparisonEnhancementService {
     ) -> URL? {
         var candidates: [String] = []
 
+        let managedDeepFilterPath = ManagedToolPaths.binaryURL(
+            for: .deepFilter,
+            environment: environment,
+            fileManager: fileManager
+        ).path
+        candidates.append(managedDeepFilterPath)
+
         if let explicitPath = environment["DEEP_FILTER_PATH"], !explicitPath.isEmpty {
             candidates.append(explicitPath)
         }

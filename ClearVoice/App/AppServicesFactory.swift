@@ -26,4 +26,11 @@ struct LaunchRequirementsError: Error, Equatable {
             message: "ClearVoice hit an unexpected startup error: \(detail)"
         )
     }
+
+    static func dependencyInstallFailed(_ detail: String) -> LaunchRequirementsError {
+        LaunchRequirementsError(
+            title: "Couldn’t Finish Setup",
+            message: "ClearVoice couldn’t finish preparing the required audio tools: \(detail)"
+        )
+    }
 }

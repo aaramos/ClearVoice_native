@@ -6,10 +6,6 @@ enum ProcessingStage: Equatable, Sendable {
     case analyzingFormat
     case normalizingFormat
     case cleaning(progress: Double)
-    case optimizingForUpload
-    case transcribing(progress: Double)
-    case translating
-    case summarizing
     case exporting
     case complete
     case failed(error: ProcessingError)
@@ -28,4 +24,21 @@ enum ProcessingError: Error, Equatable, Sendable {
     case summarizationFailed(String)
     case exportFailed(String)
     case cancelled
+}
+
+extension ProcessingError {
+    var displayMessage: String {
+        switch self {
+        case .audioUnreadable:
+            return "ClearVoice couldn’t read this audio file."
+        case .enhancementFailed(let message),
+                .transcriptionFailed(let message),
+                .translationFailed(let message),
+                .summarizationFailed(let message),
+                .exportFailed(let message):
+            return message
+        case .cancelled:
+            return "Processing stopped before this file finished."
+        }
+    }
 }

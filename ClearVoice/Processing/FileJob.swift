@@ -10,6 +10,7 @@ struct FileJob: Sendable {
         update: @escaping @Sendable (AudioFileItem) async -> Void
     ) async -> AudioFileItem {
         var item = item
+        let fileManager = FileManager.default
 
         switch await resolver.resolve(basename: item.basename) {
         case .skip(let reason):
@@ -21,6 +22,14 @@ struct FileJob: Sendable {
         }
 
         do {
+            if let outputFolderURL = item.outputFolderURL {
+                try copySourceFileIfNeeded(
+                    from: item.sourceURL,
+                    into: outputFolderURL,
+                    fileManager: fileManager
+                )
+            }
+
             item.stage = .analyzing
             await update(item)
 
@@ -47,7 +56,7 @@ struct FileJob: Sendable {
 
             defer {
                 if normalized.requiresCleanup {
-                    try? FileManager.default.removeItem(at: normalizedURL)
+                    try? fileManager.removeItem(at: normalizedURL)
                 }
             }
 
@@ -95,19 +104,21 @@ struct FileJob: Sendable {
     }
 
     private func wrappedProcessingError(for error: Error) -> ProcessingError {
-        if let transcriptionError = error as? TranscriptionError {
-            switch transcriptionError {
-            case .languageNotSupported:
-                return .transcriptionFailed("ClearVoice couldn’t transcribe this language with the local speech model.")
-            case .languageDetectionFailed:
-                return .transcriptionFailed("ClearVoice couldn’t detect the spoken language. Choose the source language manually and try again.")
-            case .modelDownloading:
-                return .transcriptionFailed("ClearVoice is still downloading the local speech model for this language.")
-            case .modelNotInstalled:
-                return .transcriptionFailed("ClearVoice needs the local speech model for this language before it can continue.")
-            }
+        return .exportFailed(error.localizedDescription)
+    }
+
+    private func copySourceFileIfNeeded(
+        from sourceURL: URL,
+        into outputFolderURL: URL,
+        fileManager: FileManager
+    ) throws {
+        try fileManager.createDirectory(at: outputFolderURL, withIntermediateDirectories: true)
+
+        let destinationURL = outputFolderURL.appendingPathComponent(sourceURL.lastPathComponent)
+        guard !fileManager.fileExists(atPath: destinationURL.path) else {
+            return
         }
 
-        return .exportFailed(error.localizedDescription)
+        try fileManager.copyItem(at: sourceURL, to: destinationURL)
     }
 }

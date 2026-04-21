@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import ClearVoice
 
@@ -7,15 +8,15 @@ struct AppServicesFactoryTests {
     func makeAppViewModelBuildsLocalFirstWorkflow() {
         let viewModel = AppServicesFactory.makeAppViewModel()
 
-        #expect(viewModel.configureViewModel.maxConcurrency == 2)
+        #expect(viewModel.configureViewModel.maxConcurrency == ConfigureViewModel.recommendedConcurrency(for: ProcessInfo.processInfo.activeProcessorCount))
         #expect(viewModel.configureViewModel.enhancementMethod == .hybrid)
     }
 
     @Test
-    func makeServiceBundleProvidesPlaceholderSummary() {
+    func makeServiceBundleProvidesEnhancementServices() {
         let services = AppServicesFactory.makeServiceBundle()
 
-        #expect(!services.summaryPlaceholder.isEmpty)
+        #expect(!services.comparisonEnhancements.isEmpty)
     }
 
     @Test

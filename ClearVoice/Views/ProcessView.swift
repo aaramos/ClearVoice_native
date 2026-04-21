@@ -27,7 +27,7 @@ struct ProcessView: View {
 
                 Spacer()
 
-                Button("Show Results", action: onShowResults)
+                Button("Open Results", action: onShowResults)
                     .buttonStyle(PrimaryActionButtonStyle())
                     .disabled(!viewModel.didFinish)
             }
@@ -50,23 +50,7 @@ struct ProcessView: View {
 
             Divider()
 
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                HStack(spacing: 12) {
-                    Text("Elapsed: \(elapsedLabel(at: context.date))")
-                        .font(.title3.monospacedDigit())
-                        .foregroundStyle(.secondary)
-
-                    ProgressView(value: viewModel.overallProgressFraction)
-                        .tint(Color.blue)
-
-                    Text("\(Int(viewModel.overallProgressFraction * 100))%")
-                        .font(.headline.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .frame(width: 48, alignment: .trailing)
-                }
-                .padding(.horizontal, 22)
-                .padding(.vertical, 18)
-            }
+            elapsedFooter
         }
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -121,6 +105,35 @@ struct ProcessView: View {
         .padding(.vertical, 18)
     }
 
+    @ViewBuilder
+    private var elapsedFooter: some View {
+        if let runFinishedAt = viewModel.runFinishedAt {
+            footerRow(at: runFinishedAt)
+        } else {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                footerRow(at: context.date)
+            }
+        }
+    }
+
+    private func footerRow(at date: Date) -> some View {
+        HStack(spacing: 12) {
+            Text("Elapsed: \(elapsedLabel(at: date))")
+                .font(.title3.monospacedDigit())
+                .foregroundStyle(.secondary)
+
+            ProgressView(value: viewModel.overallProgressFraction)
+                .tint(Color.blue)
+
+            Text("\(Int(viewModel.overallProgressFraction * 100))%")
+                .font(.headline.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 48, alignment: .trailing)
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 18)
+    }
+
     private func elapsedLabel(at date: Date) -> String {
         guard let runStartedAt = viewModel.runStartedAt else {
             return "00:00"
@@ -164,8 +177,6 @@ struct ProcessView: View {
             return 0.24
         case .cleaning(let progress):
             return 0.24 + (0.70 * progress)
-        case .optimizingForUpload, .transcribing, .translating, .summarizing:
-            return 0.94
         case .exporting:
             return 0.98
         case .complete, .failed, .skipped:
@@ -182,8 +193,6 @@ struct ProcessView: View {
         case .normalizingFormat:
             return "Normalizing"
         case .cleaning:
-            return "Enhancing"
-        case .optimizingForUpload, .transcribing, .translating, .summarizing:
             return "Enhancing"
         case .exporting:
             return "Exporting"
@@ -212,18 +221,7 @@ struct ProcessView: View {
     private func stageDetail(for stage: ProcessingStage) -> String? {
         switch stage {
         case .failed(let error):
-            switch error {
-            case .audioUnreadable:
-                return "ClearVoice couldn’t read this audio file."
-            case .enhancementFailed(let message),
-                    .transcriptionFailed(let message),
-                    .translationFailed(let message),
-                    .summarizationFailed(let message),
-                    .exportFailed(let message):
-                return message
-            case .cancelled:
-                return "Processing stopped before this file finished."
-            }
+            return error.displayMessage
         case .skipped(let reason):
             switch reason {
             case .outputFolderExists(let url):

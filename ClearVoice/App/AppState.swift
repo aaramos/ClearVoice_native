@@ -22,11 +22,11 @@ enum AppState: Int, CaseIterable, Equatable {
         case .importing:
             "Drop a source folder and review the files that are ready to process."
         case .configuring:
-            "Choose the enhancement method, decide whether to transcribe, and set concurrency."
+            "Choose the enhancement method and set concurrency for the batch."
         case .processing:
             "Track the batch run without changing the underlying settings."
         case .review:
-            "Inspect the processed files, preview transcripts, and export the full batch."
+            "Open a browser-based results page for the completed batch and share the output more easily."
         }
     }
 

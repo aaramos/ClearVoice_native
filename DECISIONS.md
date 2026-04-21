@@ -4,7 +4,7 @@ This file records implementation choices that were left to engineering discretio
 
 ## 2026-04-19
 
-- Project root: the active native repo now lives at `/Users/adrian/Apps/Projects/ClearVoice_native`.
+- Project root: the active native repo lives in the current local checkout of `ClearVoice_native`.
 - Project generation: using `xcodegen` to generate and version a native `.xcodeproj` from `project.yml` instead of hand-editing Xcode project files.
 - Bundle identifier: `com.clearvoice.ClearVoice`.
 - Target layout: app target `ClearVoice`, test target `ClearVoiceTests`.

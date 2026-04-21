@@ -5,18 +5,11 @@ import Testing
 struct ConfigureViewModelTests {
     @Test
     func defaultsMatchLocalFirstWorkflow() {
-        let viewModel = ConfigureViewModel()
+        let viewModel = ConfigureViewModel(processorCount: 12)
 
         #expect(viewModel.enhancementMethod == .hybrid)
-        #expect(viewModel.maxConcurrency == 2)
+        #expect(viewModel.maxConcurrency == 5)
         #expect(viewModel.canStart)
-    }
-
-    @Test
-    func marathiIsAlwaysSelectedForThisPass() {
-        let viewModel = ConfigureViewModel()
-
-        #expect(viewModel.selectedInputLanguage == .specific("mr"))
     }
 
     @Test
@@ -25,5 +18,12 @@ struct ConfigureViewModelTests {
 
         #expect(viewModel.helperText.contains("cleaned audio"))
         #expect(!viewModel.helperText.contains("transcript"))
+    }
+
+    @Test
+    func slowerMachinesStartWithLowerRecommendation() {
+        let viewModel = ConfigureViewModel(processorCount: 4)
+
+        #expect(viewModel.maxConcurrency == 2)
     }
 }

@@ -47,6 +47,13 @@ actor FFmpegSpeechFormatNormalizationService: FormatNormalizationService {
     ) -> URL? {
         var candidates: [String] = []
 
+        let managedFFmpegPath = ManagedToolPaths.binaryURL(
+            for: .ffmpeg,
+            environment: environment,
+            fileManager: fileManager
+        ).path
+        candidates.append(managedFFmpegPath)
+
         if let explicitPath = environment["FFMPEG_PATH"], !explicitPath.isEmpty {
             candidates.append(explicitPath)
         }
