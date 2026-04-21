@@ -1,8 +1,0 @@
-SUMMARY
-Concise summary in English.
-
-TRANSLATED TRANSCRIPT
-This is the translated transcript.
-
-ORIGINAL TRANSCRIPT
-यह मूल प्रतिलेख है।

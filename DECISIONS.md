@@ -62,7 +62,8 @@ The notes below are cumulative. Older sections capture earlier experiments and b
 ## 2026-04-21
 
 - Mainline promotion: the `local-offline-v2` work is now the product direction that should live on `main`.
-- Shipped feature scope: the live app is enhancement-only for now; transcription and translation remain in the repo for future evaluation, not as active user-facing workflow.
+- Repository split: dormant transcription, translation, and evaluation-harness code has been moved off `main` and preserved on the dedicated branch `transcription-translation-rnd`.
+- Shipped feature scope: the live app is enhancement-only for now; `main` contains only the code required for that shipped workflow.
 - Runtime dependency setup: first-run onboarding now checks, downloads, verifies, and manages `FFmpeg` and `DeepFilterNet` inside `~/Library/Application Support/ClearVoice/Tools`.
 - Results review surface: step 4 now opens a generated local `index.html` page directly from disk instead of rendering an embedded review surface or running a local web server.
 - Distribution artifact: the repo now includes a reproducible `script/build_dmg.sh` flow for packaging a shareable `.dmg` from the current macOS app bundle.

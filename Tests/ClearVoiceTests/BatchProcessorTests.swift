@@ -51,7 +51,7 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func processingWritesConfiguredVariantWithoutTranscript() async throws {
+    func processingWritesConfiguredVariantWithoutExtraTextArtifacts() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .hybrid)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),

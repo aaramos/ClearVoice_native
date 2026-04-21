@@ -2,7 +2,7 @@
 
 This document captures the intended future UX direction for ClearVoice after transcription and translation return.
 
-The live app currently ships as an enhancement-and-review product with browser-based results, bundled dependency setup, user-selectable `DFN` / `HYBRID` enhancement, and no active transcription or translation flow. The roadmap below is retained as a future-facing reference for a later local text-processing release.
+The live app currently ships as an enhancement-and-review product with browser-based results, bundled dependency setup, user-selectable `DFN` / `HYBRID` enhancement, and no active transcription or translation flow. The roadmap below is retained as a future-facing reference for a later local text-processing release, and the experimental implementation work for that future path now lives on `transcription-translation-rnd`.
 
 ## Product Decisions Locked For This Future UX
 

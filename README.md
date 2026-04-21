@@ -74,4 +74,4 @@ Build a distributable DMG:
 ## Known Scope
 
 - The live app is currently focused on audio enhancement and review.
-- Transcription and translation code still exists in the repo for future experimentation, but those features are not part of the shipped product flow right now.
+- Transcription and translation experimentation has been moved off `main` onto the dedicated branch `transcription-translation-rnd`.

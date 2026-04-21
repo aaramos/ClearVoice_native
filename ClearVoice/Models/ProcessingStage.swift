@@ -19,9 +19,6 @@ enum SkipReason: Equatable, Sendable {
 enum ProcessingError: Error, Equatable, Sendable {
     case audioUnreadable
     case enhancementFailed(String)
-    case transcriptionFailed(String)
-    case translationFailed(String)
-    case summarizationFailed(String)
     case exportFailed(String)
     case cancelled
 }
@@ -32,9 +29,6 @@ extension ProcessingError {
         case .audioUnreadable:
             return "ClearVoice couldn’t read this audio file."
         case .enhancementFailed(let message),
-                .transcriptionFailed(let message),
-                .translationFailed(let message),
-                .summarizationFailed(let message),
                 .exportFailed(let message):
             return message
         case .cancelled:

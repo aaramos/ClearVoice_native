@@ -2,6 +2,8 @@
 
 This backlog tracks future work from the current shipped enhancement-only release. Items below are not part of the live product flow today unless they are explicitly described as already shipped elsewhere in the repo docs.
 
+Prototype transcription and translation implementations now live on the dedicated branch `transcription-translation-rnd` instead of `main`.
+
 ## Local-First Product Work
 
 - Phase 2 transcription: integrate `whisper.cpp` as the primary local Marathi transcription engine, consuming the `HYBRID` enhancement output via a temporary `16 kHz` mono PCM WAV input and keeping the active model resident in memory instead of reloading per file.

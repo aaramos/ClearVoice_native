@@ -2,10 +2,6 @@ name: ClearVoice
 options:
   createIntermediateGroups: true
   minimumXcodeGenVersion: 2.45.4
-packages:
-  ArgmaxOSS:
-    url: https://github.com/argmaxinc/argmax-oss-swift.git
-    from: 0.9.0
 settings:
   base:
     CURRENT_PROJECT_VERSION: 1
@@ -18,9 +14,6 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: ClearVoice
-    dependencies:
-      - package: ArgmaxOSS
-        product: WhisperKit
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.clearvoice.ClearVoice

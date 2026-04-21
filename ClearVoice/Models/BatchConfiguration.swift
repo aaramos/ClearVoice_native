@@ -8,8 +8,3 @@ struct BatchConfiguration: Equatable, Sendable {
     let recursiveScan: Bool
     let preserveChannels: Bool
 }
-
-enum LanguageSelection: Equatable, Sendable {
-    case auto
-    case specific(String)
-}
