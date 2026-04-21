@@ -11,7 +11,7 @@ struct ConfigureView: View {
                 Text("How should we process the audio files?")
                     .font(.system(size: 22, weight: .semibold))
 
-                Text("Select one enhancement method, decide whether to transcribe the results, and choose how many files to process at once.")
+                Text("Select one enhancement method and choose how many files to process at once.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 620)
@@ -27,11 +27,7 @@ struct ConfigureView: View {
             .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 16) {
-                Toggle("Enable Transcription", isOn: $viewModel.transcriptionEnabled)
-                    .toggleStyle(.checkbox)
-                    .font(.title3)
-
-                Text("Transcription writes a Marathi transcript for each processed file. English translation stays off for this pass.")
+                Text("This build focuses only on audio enhancement. Transcription and translation are temporarily unavailable while we stabilize the speech pipeline.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 

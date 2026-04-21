@@ -63,10 +63,6 @@ struct ServiceBundle: Sendable {
     static func live(
         modelDirectory: URL? = nil
     ) -> ServiceBundle {
-        let translationService: (any TranslationService)? = LocalNLLBTranslationService.isRuntimeAvailable()
-            ? LocalNLLBTranslationService()
-            : nil
-
         return ServiceBundle(
             audioEnhancement: FFmpegAudioEnhancementService(),
             comparisonEnhancements: DeepFilterNetAudioEnhancementService.availableVariants(),
@@ -77,7 +73,7 @@ struct ServiceBundle: Sendable {
                     modelDirectory: modelDirectory?.appendingPathComponent("whisper.cpp", isDirectory: true)
                 )
             ),
-            translation: translationService,
+            translation: nil,
             export: DefaultExportService()
         )
     }

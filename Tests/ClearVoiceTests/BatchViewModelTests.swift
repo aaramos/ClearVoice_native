@@ -30,7 +30,7 @@ struct BatchViewModelTests {
             sourceFolder: sourceFolder,
             outputFolder: outputFolder,
             enhancementMethod: .hybrid,
-            transcriptionEnabled: true,
+            transcriptionEnabled: false,
             inputLanguage: .auto,
             outputLanguage: "en",
             maxConcurrency: 1,
@@ -50,7 +50,7 @@ struct BatchViewModelTests {
 
         #expect(viewModel.languageSelectionPrompt == nil)
         #expect(viewModel.statusText.contains("Hybrid"))
-        #expect(viewModel.statusText.contains("Marathi transcript"))
+        #expect(viewModel.statusText.contains("audio output"))
     }
 }
 

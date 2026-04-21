@@ -55,21 +55,11 @@ struct ReviewView: View {
     }
 
     private var resultsSubtitle: String {
-        if viewModel.transcriptionEnabled {
-            return "All processing is complete. Review your enhanced audio and Marathi transcripts below."
-        }
-
-        return "All processing is complete. Review your enhanced audio files below."
+        "All processing is complete. Review your enhanced audio files below."
     }
 
     private func resultRow(for file: AudioFileItem) -> some View {
-        HStack(alignment: .top, spacing: 22) {
-            mediaCard(for: file)
-                .frame(maxWidth: .infinity)
-
-            transcriptCard(for: file)
-                .frame(maxWidth: .infinity)
-        }
+        mediaCard(for: file)
     }
 
     private func mediaCard(for file: AudioFileItem) -> some View {
@@ -101,14 +91,8 @@ struct ReviewView: View {
             }
 
             HStack(spacing: 10) {
-                Button("Copy") {
-                    copyTranscript(for: file)
-                }
-                .buttonStyle(SecondaryActionButtonStyle())
-                .disabled(transcriptPreviewText(for: file) == nil)
-
                 if let processedAudioURL = processedAudioURL(for: file) {
-                    Button("Download") {
+                    Button("Reveal Audio") {
                         revealInFinder(processedAudioURL)
                     }
                     .buttonStyle(SecondaryActionButtonStyle())
@@ -130,55 +114,6 @@ struct ReviewView: View {
             }
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
-        )
-    }
-
-    @ViewBuilder
-    private func transcriptCard(for file: AudioFileItem) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text(viewModel.transcriptionEnabled ? "Marathi Transcript" : "Transcript")
-                    .font(.title3.weight(.medium))
-
-                Spacer()
-
-                if let transcriptURL = transcriptURL(for: file), viewModel.transcriptionEnabled {
-                    Button("Download .txt") {
-                        revealInFinder(transcriptURL)
-                    }
-                    .buttonStyle(SecondaryActionButtonStyle())
-                }
-            }
-
-            if let preview = transcriptPreviewText(for: file), viewModel.transcriptionEnabled {
-                ScrollView {
-                    Text(preview)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(minHeight: 210)
-            } else if viewModel.transcriptionEnabled {
-                Text("No transcript is available for this file.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .frame(minHeight: 210)
-            } else {
-                Text("Transcription was turned off for this batch.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .frame(minHeight: 210)
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.white)
@@ -226,29 +161,6 @@ struct ReviewView: View {
 
         let url = folderURL.appendingPathComponent("\(file.basename)_\(enhancementMethod.outputSuffix).m4a")
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
-    }
-
-    private func transcriptURL(for file: AudioFileItem) -> URL? {
-        guard let folderURL = file.outputFolderURL else {
-            return nil
-        }
-
-        let url = folderURL.appendingPathComponent("\(file.basename)_transcript.txt")
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
-    }
-
-    private func transcriptPreviewText(for file: AudioFileItem) -> String? {
-        guard let transcript = file.originalTranscript?.trimmingCharacters(in: .whitespacesAndNewlines), !transcript.isEmpty else {
-            return nil
-        }
-
-        return transcript
-    }
-
-    private func copyTranscript(for file: AudioFileItem) {
-        guard let transcript = transcriptPreviewText(for: file) else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(transcript, forType: .string)
     }
 
     private func revealInFinder(_ url: URL) {

@@ -8,7 +8,6 @@ struct ConfigureViewModelTests {
         let viewModel = ConfigureViewModel()
 
         #expect(viewModel.enhancementMethod == .hybrid)
-        #expect(viewModel.transcriptionEnabled)
         #expect(viewModel.maxConcurrency == 2)
         #expect(viewModel.canStart)
     }
@@ -21,12 +20,10 @@ struct ConfigureViewModelTests {
     }
 
     @Test
-    func helperTextReflectsTranscriptionToggle() {
+    func helperTextDescribesEnhancementOnlyWorkflow() {
         let viewModel = ConfigureViewModel()
 
-        #expect(viewModel.helperText.contains("Marathi"))
-
-        viewModel.transcriptionEnabled = false
-        #expect(viewModel.helperText.contains("only export the processed audio"))
+        #expect(viewModel.helperText.contains("cleaned audio"))
+        #expect(!viewModel.helperText.contains("transcript"))
     }
 }

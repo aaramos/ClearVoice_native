@@ -11,37 +11,12 @@ struct ProcessView: View {
                 Text("Processing Status")
                     .font(.system(size: 22, weight: .semibold))
 
-                Text("Processing files. This may take a while. Please keep this window open.")
+                Text("Enhancing files and exporting cleaned audio. This may take a while. Please keep this window open.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 16)
-
-            if let languageSelectionPrompt = viewModel.languageSelectionPrompt {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                        .padding(.top, 2)
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(languageSelectionPrompt)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Button("Choose Source Language", action: onBack)
-                            .buttonStyle(SecondaryActionButtonStyle())
-                            .disabled(viewModel.isRunning)
-                    }
-
-                    Spacer()
-                }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.orange.opacity(0.10))
-                )
-            }
 
             statusBoard
 
@@ -170,7 +145,7 @@ struct ProcessView: View {
 
     private func isProgressStage(_ stage: ProcessingStage) -> Bool {
         switch stage {
-        case .analyzing, .analyzingFormat, .normalizingFormat, .cleaning, .optimizingForUpload, .transcribing, .exporting:
+        case .analyzing, .analyzingFormat, .normalizingFormat, .cleaning, .exporting:
             return true
         default:
             return false
@@ -188,17 +163,11 @@ struct ProcessView: View {
         case .normalizingFormat:
             return 0.24
         case .cleaning(let progress):
-            return 0.24 + (0.36 * progress)
-        case .optimizingForUpload:
-            return 0.62
-        case .transcribing(let progress):
-            return 0.62 + (0.24 * progress)
-        case .translating:
-            return 0.86
-        case .summarizing:
-            return 0.92
+            return 0.24 + (0.70 * progress)
+        case .optimizingForUpload, .transcribing, .translating, .summarizing:
+            return 0.94
         case .exporting:
-            return 0.97
+            return 0.98
         case .complete, .failed, .skipped:
             return 1
         }
@@ -214,14 +183,8 @@ struct ProcessView: View {
             return "Normalizing"
         case .cleaning:
             return "Enhancing"
-        case .optimizingForUpload:
-            return "Preparing transcript"
-        case .transcribing:
-            return "Transcribing"
-        case .translating:
-            return "Translating"
-        case .summarizing:
-            return "Summarizing"
+        case .optimizingForUpload, .transcribing, .translating, .summarizing:
+            return "Enhancing"
         case .exporting:
             return "Exporting"
         case .complete:

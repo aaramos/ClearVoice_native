@@ -93,7 +93,7 @@ final class AppViewModel: ObservableObject {
             sourceFolder: sourceFolder,
             outputFolder: outputFolder,
             enhancementMethod: configureViewModel.enhancementMethod,
-            transcriptionEnabled: configureViewModel.transcriptionEnabled,
+            transcriptionEnabled: false,
             inputLanguage: configureViewModel.selectedInputLanguage,
             outputLanguage: Language.english.id,
             maxConcurrency: configureViewModel.maxConcurrency,
@@ -102,7 +102,7 @@ final class AppViewModel: ObservableObject {
             processingMode: ProcessingModeConfiguration(
                 transcription: .local,
                 translation: .local,
-                summarizationEnabled: true
+                summarizationEnabled: false
             )
         )
     }

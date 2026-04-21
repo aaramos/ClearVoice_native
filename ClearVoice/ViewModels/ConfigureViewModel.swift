@@ -3,7 +3,6 @@ import Foundation
 @MainActor
 final class ConfigureViewModel: ObservableObject {
     @Published var enhancementMethod: EnhancementMethod = .hybrid
-    @Published var transcriptionEnabled = true
     @Published var maxConcurrency = 2
 
     var canStart: Bool {
@@ -15,11 +14,7 @@ final class ConfigureViewModel: ObservableObject {
     }
 
     var helperText: String {
-        if transcriptionEnabled {
-            return "ClearVoice will process each file with the selected enhancement method, transcribe the result in Marathi, and write one transcript file per source folder."
-        }
-
-        return "ClearVoice will only export the processed audio file for each source. Leave transcription off if you only want audio cleanup."
+        "ClearVoice will process each file with the selected enhancement method and export one cleaned audio file per source folder."
     }
 
     var advancedSummary: String {
@@ -32,7 +27,6 @@ final class ConfigureViewModel: ObservableObject {
 
     func reset() {
         enhancementMethod = .hybrid
-        transcriptionEnabled = true
         maxConcurrency = 2
     }
 }

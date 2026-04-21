@@ -9,7 +9,6 @@ struct AppServicesFactoryTests {
 
         #expect(viewModel.configureViewModel.maxConcurrency == 2)
         #expect(viewModel.configureViewModel.enhancementMethod == .hybrid)
-        #expect(viewModel.configureViewModel.transcriptionEnabled)
     }
 
     @Test

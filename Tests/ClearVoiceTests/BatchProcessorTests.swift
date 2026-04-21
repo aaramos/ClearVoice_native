@@ -53,18 +53,15 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func processingWritesConfiguredVariantsAndExportsTranscript() async throws {
+    func processingWritesConfiguredVariantWithoutTranscript() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .hybrid)
-        let transcriptionPrep = TrackingTranscriptionPreparationService()
-        let speechPipeline = TrackingSpeechPipelineService()
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
             comparisonEnhancements: [
                 StubComparisonEnhancementService(outputSuffix: "DFN"),
                 StubComparisonEnhancementService(outputSuffix: "HYBRID"),
             ],
-            transcriptionPreparationService: transcriptionPrep,
-            speechPipeline: speechPipeline,
+            speechPipeline: StubSpeechPipelineService(),
             summaryPlaceholder: "Placeholder summary.",
             export: DefaultExportService()
         )
@@ -84,19 +81,8 @@ struct BatchProcessorTests {
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MIN.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MAX.m4a").path))
-        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
-
-        let preparedInputs = await transcriptionPrep.preparedInputs
-        #expect(preparedInputs.count == 1)
-        #expect(preparedInputs.first?.source.lastPathComponent == "sample_1.wav")
-
-        let preparedOutput = try #require(preparedInputs.first?.prepared)
-        #expect(preparedOutput.pathExtension == "wav")
-        #expect(!FileManager.default.fileExists(atPath: preparedOutput.path))
-
-        let pipelineInputs = await speechPipeline.audioInputs
-        #expect(pipelineInputs == [preparedOutput.lastPathComponent])
-        #expect(item.originalTranscript?.contains("नमस्कार") == true)
+        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
+        #expect(item.originalTranscript == nil)
     }
 
     @Test
@@ -128,7 +114,7 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func transcriptionCanBeDisabledPerBatch() async throws {
+    func enhancementOnlyBatchDoesNotAttemptSpeechPipeline() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .dfn, transcriptionEnabled: false)
         let transcriptionPrep = TrackingTranscriptionPreparationService()
         let speechPipeline = TrackingSpeechPipelineService()
@@ -163,7 +149,7 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func speechPipelineFailureFailsTheImpactedFile() async throws {
+    func speechPipelineFailureDoesNotBlockEnhancementOnlyBatch() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .dfn)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
@@ -184,63 +170,7 @@ struct BatchProcessorTests {
         let latestItems = await recorder.itemsByBasename()
         let item = try #require(latestItems["sample_1"])
 
-        #expect(item.stage == .failed(error: .transcriptionFailed("Stubbed speech pipeline failure")))
-    }
-
-    @Test
-    func translationWaitsUntilAllFilesFinishTranscribing() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 3, enhancementMethod: .dfn)
-        let coordinator = TranslationPhaseCoordinator(totalFiles: harness.items.count)
-        let services = ServiceBundle(
-            audioEnhancement: StubAudioEnhancementService(),
-            comparisonEnhancements: [
-                StubComparisonEnhancementService(outputSuffix: "DFN"),
-                StubComparisonEnhancementService(outputSuffix: "HYBRID"),
-            ],
-            speechPipeline: CoordinatedSpeechPipelineService(coordinator: coordinator),
-            translation: CoordinatedTranslationService(coordinator: coordinator),
-            export: DefaultExportService()
-        )
-        let processor = try harness.makeProcessor(services: services, maxConcurrency: 3)
-        let recorder = ItemRecorder()
-
-        await processor.run(files: harness.items) { item in
-            await recorder.record(item)
-        }
-
-        #expect(await coordinator.translationStartedBeforeAllTranscriptions == false)
-        #expect(await coordinator.translationInvocationCount == harness.items.count)
-    }
-
-    @Test
-    func translationReexportsTranscriptWithEnglishSection() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .dfn)
-        let services = ServiceBundle(
-            audioEnhancement: StubAudioEnhancementService(),
-            comparisonEnhancements: [
-                StubComparisonEnhancementService(outputSuffix: "DFN"),
-                StubComparisonEnhancementService(outputSuffix: "HYBRID"),
-            ],
-            speechPipeline: TrackingSpeechPipelineService(),
-            translation: PrefixTranslationService(),
-            export: DefaultExportService()
-        )
-        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
-        let recorder = ItemRecorder()
-
-        await processor.run(files: harness.items) { item in
-            await recorder.record(item)
-        }
-
-        let latestItems = await recorder.itemsByBasename()
-        let item = try #require(latestItems["sample_1"])
-        let outputFolder = try #require(item.outputFolderURL)
-        let transcriptURL = outputFolder.appendingPathComponent("sample_1_transcript.txt")
-        let transcriptContents = try String(contentsOf: transcriptURL, encoding: .utf8)
-
-        #expect(item.translatedTranscript?.contains("EN:") == true)
-        #expect(transcriptContents.contains("TRANSLATED TRANSCRIPT"))
-        #expect(transcriptContents.contains("EN: नमस्कार! तुमचं नाव काय आहे?"))
+        #expect(item.stage == .complete)
     }
 }
 
@@ -255,7 +185,7 @@ private struct BatchProcessorHarness {
     init(
         fileCount: Int,
         enhancementMethod: EnhancementMethod = .hybrid,
-        transcriptionEnabled: Bool = true
+        transcriptionEnabled: Bool = false
     ) throws {
         let fileManager = FileManager.default
         root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)

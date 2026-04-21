@@ -75,7 +75,7 @@ final class BatchViewModel: ObservableObject {
     }
 
     var transcriptionEnabled: Bool {
-        configuration?.transcriptionEnabled ?? true
+        false
     }
 
     func configureRun(files sourceFiles: [ScannedAudioFile], configuration: BatchConfiguration) {
@@ -134,18 +134,9 @@ final class BatchViewModel: ObservableObject {
                 let skippedCount = self.skippedCount
 
                 if failureCount > 0 || skippedCount > 0 {
-                    if self.hasLanguageSelectionFailure {
-                        self.languageSelectionPrompt = "ClearVoice couldn’t detect the spoken language for one or more files. Go back, choose the source language manually, and run the batch again."
-                        self.statusText = "Processing stopped because ClearVoice needs a manually selected source language for one or more files."
-                    } else {
-                        self.statusText = "Processing finished with \(failureCount) failed and \(skippedCount) skipped. See the file rows below for details."
-                    }
+                    self.statusText = "Processing finished with \(failureCount) failed and \(skippedCount) skipped. See the file rows below for details."
                 } else {
-                    if configuration.transcriptionEnabled {
-                        self.statusText = "Processing complete. Each file folder now contains the \(configuration.enhancementMethod.title) audio output and a Marathi transcript."
-                    } else {
-                        self.statusText = "Processing complete. Each file folder now contains the \(configuration.enhancementMethod.title) audio output."
-                    }
+                    self.statusText = "Processing complete. Each file folder now contains the \(configuration.enhancementMethod.title) audio output."
                 }
             }
         }
@@ -172,17 +163,6 @@ final class BatchViewModel: ObservableObject {
             statusText = "\(completedCount) complete • \(processingCount) processing • \(pendingCount) pending"
         }
     }
-
-    private var hasLanguageSelectionFailure: Bool {
-        files.contains { item in
-            guard case .failed(let error) = item.stage else {
-                return false
-            }
-
-            return error.requiresManualLanguageSelection
-        }
-    }
-
     private func progressFraction(for stage: ProcessingStage) -> Double {
         switch stage {
         case .pending:
@@ -208,15 +188,5 @@ final class BatchViewModel: ObservableObject {
         case .complete, .failed, .skipped:
             return 1
         }
-    }
-}
-
-private extension ProcessingError {
-    var requiresManualLanguageSelection: Bool {
-        guard case .transcriptionFailed(let message) = self else {
-            return false
-        }
-
-        return message.localizedCaseInsensitiveContains("choose the source language manually")
     }
 }

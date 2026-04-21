@@ -69,45 +69,6 @@ struct FileJob: Sendable {
             item.stage = .cleaning(progress: 1.0)
             await update(item)
 
-            guard config.transcriptionEnabled else {
-                item.stage = .complete
-                await update(item)
-                return item
-            }
-
-            let preparedTranscriptionInput = try await services.transcriptionPreparationService.prepare(normalizedURL)
-            defer {
-                if preparedTranscriptionInput.requiresCleanup {
-                    try? FileManager.default.removeItem(at: preparedTranscriptionInput.url)
-                }
-            }
-
-            item.stage = .transcribing(progress: 0.0)
-            await update(item)
-
-            let speechOutput = try await services.speechPipeline.process(
-                audio: preparedTranscriptionInput.url,
-                language: config.inputLanguage
-            )
-            item.transcript = speechOutput.transcript
-            item.detectedLanguage = speechOutput.transcript.detectedLanguage
-            item.originalTranscript = speechOutput.transcript.exportText
-            item.translatedTranscript = speechOutput.englishTranslation
-
-            item.stage = .transcribing(progress: 1.0)
-            await update(item)
-
-            item.stage = .exporting
-            await update(item)
-
-            try await services.export.exportTranscript(
-                to: item.outputFolderURL ?? config.outputFolder,
-                basename: item.basename,
-                summary: nil,
-                translated: speechOutput.englishTranslation,
-                original: speechOutput.transcript
-            )
-
             item.stage = .complete
             await update(item)
             return item
