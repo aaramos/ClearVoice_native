@@ -377,7 +377,7 @@ extension WhisperCppTranscriptionService {
             entropyThreshold: 2.4,
             logprobThreshold: -1.0,
             noSpeechThreshold: 0.6,
-            enableVAD: true,
+            enableVAD: false,
             vadThreshold: 0.5,
             vadMinSpeechDurationMS: 250,
             vadMinSilenceDurationMS: 500

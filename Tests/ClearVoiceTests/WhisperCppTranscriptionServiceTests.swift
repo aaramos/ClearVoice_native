@@ -133,6 +133,18 @@ struct WhisperCppTranscriptionServiceTests {
         let service = WhisperCppTranscriptionService(
             executableURL: harness.executableURL,
             modelDirectory: harness.modelDirectory,
+            decodeProfile: .init(
+                maxContextTokens: 0,
+                temperature: 0.0,
+                temperatureIncrement: 0.2,
+                entropyThreshold: 2.4,
+                logprobThreshold: -1.0,
+                noSpeechThreshold: 0.6,
+                enableVAD: true,
+                vadThreshold: 0.5,
+                vadMinSpeechDurationMS: 250,
+                vadMinSilenceDurationMS: 500
+            ),
             runner: { _, arguments, _ in
                 #expect(arguments.contains("--vad"))
                 #expect(try argumentValue(after: "--vad-model", in: arguments) == vadModelURL.path)
