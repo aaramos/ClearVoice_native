@@ -5,15 +5,15 @@ import Testing
 @MainActor
 struct ImportViewModelTests {
     @Test
-    func outputInsideSourceIsRejected() async throws {
+    func sourceSelectionGeneratesDesktopOutputPreview() async throws {
         let folders = try NestedTemporaryFolders()
         let viewModel = ImportViewModel(fileScanner: MockScanner(result: .empty))
 
-        viewModel.selectOutputFolder(folders.outputInsideSource)
         viewModel.selectSourceFolder(folders.source)
         await viewModel.waitForScheduledScan()
 
-        #expect(viewModel.validationMessages.contains("Output folder can’t be inside the source folder."))
+        #expect(viewModel.outputFolderURL != nil)
+        #expect(viewModel.plannedOutputFolderDisplayPath.contains("output_"))
         #expect(!viewModel.canProceed)
     }
 
@@ -21,13 +21,12 @@ struct ImportViewModelTests {
     func supportedFilesEnableProgress() async throws {
         let folders = try NestedTemporaryFolders()
         let result = ScanResult(
-            supported: [folders.source.appendingPathComponent("speech.wav")],
+            supported: [ScannedAudioFile(url: folders.source.appendingPathComponent("speech.wav"), durationSeconds: 600)],
             skipped: [],
             totalDurationSeconds: 600
         )
         let viewModel = ImportViewModel(fileScanner: MockScanner(result: result))
 
-        viewModel.selectOutputFolder(folders.outputSibling)
         viewModel.selectSourceFolder(folders.source)
         await viewModel.waitForScheduledScan()
 
@@ -44,7 +43,6 @@ struct ImportViewModelTests {
 
         let viewModel = ImportViewModel(fileScanner: LocalFileScanner())
 
-        viewModel.selectOutputFolder(folders.outputSibling)
         viewModel.selectSourceFolder(folders.source)
         await viewModel.waitForScheduledScan()
 
@@ -57,18 +55,13 @@ struct ImportViewModelTests {
 private struct NestedTemporaryFolders {
     let root: URL
     let source: URL
-    let outputInsideSource: URL
-    let outputSibling: URL
 
     init() throws {
         let fileManager = FileManager.default
         root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         source = root.appendingPathComponent("source", isDirectory: true)
-        outputInsideSource = source.appendingPathComponent("output", isDirectory: true)
-        outputSibling = root.appendingPathComponent("output", isDirectory: true)
 
-        try fileManager.createDirectory(at: outputInsideSource, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: outputSibling, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: source, withIntermediateDirectories: true)
     }
 }
 

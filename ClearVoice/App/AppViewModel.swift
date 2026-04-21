@@ -70,12 +70,14 @@ final class AppViewModel: ObservableObject {
         }
     }
 
-    func revealReviewPlaceholder() {
+    func showResults() {
         state = .review
     }
 
     func startNewBatch() {
         batchViewModel.reset()
+        configureViewModel.reset()
+        importViewModel.reset()
         state = .importing
     }
 
@@ -90,7 +92,8 @@ final class AppViewModel: ObservableObject {
         return BatchConfiguration(
             sourceFolder: sourceFolder,
             outputFolder: outputFolder,
-            intensity: configureViewModel.intensity,
+            enhancementMethod: configureViewModel.enhancementMethod,
+            transcriptionEnabled: configureViewModel.transcriptionEnabled,
             inputLanguage: configureViewModel.selectedInputLanguage,
             outputLanguage: Language.english.id,
             maxConcurrency: configureViewModel.maxConcurrency,

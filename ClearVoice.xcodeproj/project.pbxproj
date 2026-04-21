@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		004D6185722608AF89615B15 /* GeminiTranslationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6EC8F7D8DFE366C4C88EAB /* GeminiTranslationServiceTests.swift */; };
+		02E1EC644FC0B28DD556B35E /* BatchArchiveExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D1CFDD4A47FBFF1419032CB /* BatchArchiveExporter.swift */; };
 		06DAB6EF3579DB0EE3864740 /* ImportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */; };
 		09FD40E09511ADDEA6482D71 /* GeminiDeveloperClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200419689ADD25B8D3A322B6 /* GeminiDeveloperClient.swift */; };
 		0A08C236EE874072268D7812 /* GeminiTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31693940DE68799C042FCFEF /* GeminiTranslationService.swift */; };
@@ -82,6 +83,7 @@
 		CCB04EADA2E0BBC3F513D372 /* OllamaSummarizationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 954587F6F34F64D9BB314C33 /* OllamaSummarizationServiceTests.swift */; };
 		CFB75C3C651A79AF4C60A16B /* AppServicesFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED48A3E190E36337DC085D4C /* AppServicesFactory.swift */; };
 		D092E9DE4AF0C9DE25817FA6 /* OllamaTranslationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 032C700F9E4D341DD7A42297 /* OllamaTranslationServiceTests.swift */; };
+		D22B770E7755DD46FDDE76F5 /* EnhancementMethod.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184EE511CA4CDD254B345DAC /* EnhancementMethod.swift */; };
 		D2B288C380ECED72B6B9F239 /* TranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE60BB0CABCB686CDAEA8B77 /* TranslationService.swift */; };
 		D428DB3A412B6F5CCF0AC485 /* FormatNormalizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A40F91D1DB9DDDB2EBACCBD /* FormatNormalizationService.swift */; };
 		D4583E56167D3F1F53653B5C /* TranscriptionPreparationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60CE2E0843CCB62F64905868 /* TranscriptionPreparationService.swift */; };
@@ -117,6 +119,7 @@
 		11FEC578ED93B5F0868AD7A0 /* GeminiTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiTranscriptionService.swift; sourceTree = "<group>"; };
 		12ACB3CB20B537F3E00AC2D8 /* FileScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileScanner.swift; sourceTree = "<group>"; };
 		12B03C482C841A67900D536A /* Transcript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcript.swift; sourceTree = "<group>"; };
+		184EE511CA4CDD254B345DAC /* EnhancementMethod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancementMethod.swift; sourceTree = "<group>"; };
 		1A3E12D92C399BC28C348C79 /* LocalSpeechTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSpeechTranscriptionService.swift; sourceTree = "<group>"; };
 		1CD4905653A8BF9C2301A81B /* LocalOllamaTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalOllamaTranslationService.swift; sourceTree = "<group>"; };
 		1D7B230E0827D1E2D0501223 /* ConfigureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureView.swift; sourceTree = "<group>"; };
@@ -136,6 +139,7 @@
 		37DC09E9B76B136331E6713F /* OutputPathResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputPathResolver.swift; sourceTree = "<group>"; };
 		39B6A4B0275AAD073851A186 /* AudioFileItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFileItem.swift; sourceTree = "<group>"; };
 		3AD479F07A42B13CE1AC9CDF /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		3D1CFDD4A47FBFF1419032CB /* BatchArchiveExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchArchiveExporter.swift; sourceTree = "<group>"; };
 		3D68D1974A34483B1C493602 /* BatchViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchViewModelTests.swift; sourceTree = "<group>"; };
 		4320471F12A0B0165CC84591 /* BatchProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchProcessorTests.swift; sourceTree = "<group>"; };
 		440946C4DE068ECD7CF851BD /* OpenAIWhisperTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIWhisperTranscriptionService.swift; sourceTree = "<group>"; };
@@ -327,6 +331,7 @@
 			children = (
 				39B6A4B0275AAD073851A186 /* AudioFileItem.swift */,
 				60972E7BE4D5CD8C99228DEF /* BatchConfiguration.swift */,
+				184EE511CA4CDD254B345DAC /* EnhancementMethod.swift */,
 				2F9E06D40AE18B2F40D49F84 /* Intensity.swift */,
 				47EC80885BB7EFB443B5BD7E /* Language.swift */,
 				F5E890D9278926E1A17723EF /* ProcessingModeConfiguration.swift */,
@@ -392,6 +397,7 @@
 			isa = PBXGroup;
 			children = (
 				D3CB4CD0FF165ECDAEB70963 /* AsyncSemaphore.swift */,
+				3D1CFDD4A47FBFF1419032CB /* BatchArchiveExporter.swift */,
 				7CF56AFAA8C2A27C605CCC59 /* CloudHTTPClient.swift */,
 				E5162558A53088EBB62A27A3 /* DurationFormatter.swift */,
 				85CC307672CEE6D064AF50F7 /* MultipartFormData.swift */,
@@ -561,6 +567,7 @@
 				668AECC3C2C427005A2D47D7 /* AsyncSemaphore.swift in Sources */,
 				64562F213E8F3A379EF2B4D5 /* AudioEnhancementService.swift in Sources */,
 				0FC915BA0DF238ED05E67A57 /* AudioFileItem.swift in Sources */,
+				02E1EC644FC0B28DD556B35E /* BatchArchiveExporter.swift in Sources */,
 				F405A347E022FC45C42AC05A /* BatchConfiguration.swift in Sources */,
 				4ACD2B1B5B70D3D257045D8F /* BatchProcessor.swift in Sources */,
 				A160357627795E7BECFB89A4 /* BatchViewModel.swift in Sources */,
@@ -570,6 +577,7 @@
 				4947D97A1D5E432CC6382EF8 /* ConfigureView.swift in Sources */,
 				684E70B1DDFE8B2F862A49D9 /* ConfigureViewModel.swift in Sources */,
 				795F1DBAAB4F1CFBB4625D37 /* DurationFormatter.swift in Sources */,
+				D22B770E7755DD46FDDE76F5 /* EnhancementMethod.swift in Sources */,
 				16B374167A25635BB42C08B2 /* ExportService.swift in Sources */,
 				6EC60D605F59B02448541D7F /* FileJob.swift in Sources */,
 				6AA113EA69772CADC5AB3C4B /* FileScanner.swift in Sources */,

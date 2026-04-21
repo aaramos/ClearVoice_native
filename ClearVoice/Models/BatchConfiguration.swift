@@ -3,7 +3,8 @@ import Foundation
 struct BatchConfiguration: Equatable, Sendable {
     let sourceFolder: URL
     let outputFolder: URL
-    let intensity: Intensity
+    let enhancementMethod: EnhancementMethod
+    let transcriptionEnabled: Bool
     let inputLanguage: LanguageSelection
     let outputLanguage: String
     let maxConcurrency: Int

@@ -8,7 +8,8 @@ struct AppServicesFactoryTests {
         let viewModel = AppServicesFactory.makeAppViewModel()
 
         #expect(viewModel.configureViewModel.maxConcurrency == 2)
-        #expect(viewModel.configureViewModel.outputLanguage == .english)
+        #expect(viewModel.configureViewModel.enhancementMethod == .hybrid)
+        #expect(viewModel.configureViewModel.transcriptionEnabled)
     }
 
     @Test

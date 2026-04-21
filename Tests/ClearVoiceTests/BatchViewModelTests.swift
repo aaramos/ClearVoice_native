@@ -29,7 +29,8 @@ struct BatchViewModelTests {
         let configuration = BatchConfiguration(
             sourceFolder: sourceFolder,
             outputFolder: outputFolder,
-            intensity: .balanced,
+            enhancementMethod: .hybrid,
+            transcriptionEnabled: true,
             inputLanguage: .auto,
             outputLanguage: "en",
             maxConcurrency: 1,
@@ -37,7 +38,10 @@ struct BatchViewModelTests {
             preserveChannels: false
         )
 
-        viewModel.configureRun(files: [sourceURL], configuration: configuration)
+        viewModel.configureRun(
+            files: [ScannedAudioFile(url: sourceURL, durationSeconds: 0)],
+            configuration: configuration
+        )
         viewModel.startIfNeeded()
 
         while !viewModel.didFinish {
@@ -45,6 +49,7 @@ struct BatchViewModelTests {
         }
 
         #expect(viewModel.languageSelectionPrompt == nil)
+        #expect(viewModel.statusText.contains("HYBRID"))
         #expect(viewModel.statusText.contains("Marathi transcript"))
     }
 }

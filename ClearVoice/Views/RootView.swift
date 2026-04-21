@@ -50,10 +50,13 @@ struct RootView: View {
             ProcessView(
                 viewModel: viewModel.batchViewModel,
                 onBack: viewModel.goBack,
-                onCompletePlaceholder: viewModel.revealReviewPlaceholder
+                onShowResults: viewModel.showResults
             )
         case .review:
-            ReviewView(onStartNewBatch: viewModel.startNewBatch)
+            ReviewView(
+                viewModel: viewModel.batchViewModel,
+                onStartNewBatch: viewModel.startNewBatch
+            )
         }
     }
 

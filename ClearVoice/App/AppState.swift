@@ -13,20 +13,20 @@ enum AppState: Int, CaseIterable, Equatable {
         case .processing:
             "Process"
         case .review:
-            "Review"
+            "Results"
         }
     }
 
     var description: String {
         switch self {
         case .importing:
-            "Choose the source and output folders before processing begins."
+            "Drop a source folder and review the files that are ready to process."
         case .configuring:
-            "Set intensity and languages, then lock the batch configuration."
+            "Choose the enhancement method, decide whether to transcribe, and set concurrency."
         case .processing:
             "Track the batch run without changing the underlying settings."
         case .review:
-            "Inspect outputs and copy or reveal exported results."
+            "Inspect the processed files, preview transcripts, and export the full batch."
         }
     }
 

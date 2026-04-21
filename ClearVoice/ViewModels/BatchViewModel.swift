@@ -36,13 +36,43 @@ final class BatchViewModel: ObservableObject {
         files.filter { $0.stage == .pending }.count
     }
 
-    func configureRun(files sourceFiles: [URL], configuration: BatchConfiguration) {
+    var failedCount: Int {
+        files.filter {
+            if case .failed = $0.stage {
+                return true
+            }
+            return false
+        }.count
+    }
+
+    var skippedCount: Int {
+        files.filter {
+            if case .skipped = $0.stage {
+                return true
+            }
+            return false
+        }.count
+    }
+
+    var outputFolderURL: URL? {
+        configuration?.outputFolder
+    }
+
+    var selectedEnhancementMethod: EnhancementMethod? {
+        configuration?.enhancementMethod
+    }
+
+    var transcriptionEnabled: Bool {
+        configuration?.transcriptionEnabled ?? true
+    }
+
+    func configureRun(files sourceFiles: [ScannedAudioFile], configuration: BatchConfiguration) {
         self.configuration = configuration
         self.files = sourceFiles.map {
             AudioFileItem(
                 id: UUID(),
-                sourceURL: $0,
-                durationSeconds: nil,
+                sourceURL: $0.url,
+                durationSeconds: $0.durationSeconds,
                 stage: .pending
             )
         }
@@ -86,14 +116,8 @@ final class BatchViewModel: ObservableObject {
                 self.processor = nil
                 self.isRunning = false
                 self.didFinish = true
-                let failureCount = self.files.filter {
-                    if case .failed = $0.stage { return true }
-                    return false
-                }.count
-                let skippedCount = self.files.filter {
-                    if case .skipped = $0.stage { return true }
-                    return false
-                }.count
+                let failureCount = self.failedCount
+                let skippedCount = self.skippedCount
 
                 if failureCount > 0 || skippedCount > 0 {
                     if self.hasLanguageSelectionFailure {
@@ -103,12 +127,10 @@ final class BatchViewModel: ObservableObject {
                         self.statusText = "Processing finished with \(failureCount) failed and \(skippedCount) skipped. See the file rows below for details."
                     }
                 } else {
-                    if self.services.comparisonEnhancements.count >= 2 {
-                        self.statusText = "Processing complete. Each file folder now contains the DeepFilterNet output, Hybrid output, and Marathi transcript."
-                    } else if self.services.comparisonEnhancements.count == 1 {
-                        self.statusText = "Processing complete. Each file folder now contains one enhancement output and a Marathi transcript."
+                    if configuration.transcriptionEnabled {
+                        self.statusText = "Processing complete. Each file folder now contains the \(configuration.enhancementMethod.title) audio output and a Marathi transcript."
                     } else {
-                        self.statusText = "Processing finished, but ClearVoice could not create any enhancement outputs."
+                        self.statusText = "Processing complete. Each file folder now contains the \(configuration.enhancementMethod.title) audio output."
                     }
                 }
             }

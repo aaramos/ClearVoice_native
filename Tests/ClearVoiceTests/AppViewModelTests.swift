@@ -8,7 +8,6 @@ struct AppViewModelTests {
     func forwardNavigationMovesThroughShellSteps() async throws {
         let folders = try TemporaryFolders()
         let importViewModel = ImportViewModel(fileScanner: MockFileScanner())
-        importViewModel.selectOutputFolder(folders.output)
         importViewModel.selectSourceFolder(folders.source)
         await importViewModel.waitForScheduledScan()
 
@@ -27,7 +26,6 @@ struct AppViewModelTests {
     func backNavigationReturnsToPreviousScreen() async throws {
         let folders = try TemporaryFolders()
         let importViewModel = ImportViewModel(fileScanner: MockFileScanner())
-        importViewModel.selectOutputFolder(folders.output)
         importViewModel.selectSourceFolder(folders.source)
         await importViewModel.waitForScheduledScan()
 
@@ -41,10 +39,10 @@ struct AppViewModelTests {
     }
 
     @Test
-    func reviewPlaceholderCanReturnToNewBatch() {
+    func resultsScreenCanReturnToNewBatch() {
         let viewModel = AppViewModel()
 
-        viewModel.revealReviewPlaceholder()
+        viewModel.showResults()
         #expect(viewModel.state == .review)
 
         viewModel.startNewBatch()
@@ -55,16 +53,13 @@ struct AppViewModelTests {
 private struct TemporaryFolders {
     let root: URL
     let source: URL
-    let output: URL
 
     init() throws {
         let fileManager = FileManager.default
         root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         source = root.appendingPathComponent("source", isDirectory: true)
-        output = root.appendingPathComponent("output", isDirectory: true)
 
         try fileManager.createDirectory(at: source, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: output, withIntermediateDirectories: true)
     }
 }
 
@@ -72,7 +67,7 @@ private actor MockFileScanner: FileScanner {
     func scan(folder: URL, recursive: Bool) async throws -> ScanResult {
         let file = folder.appendingPathComponent("sample.m4a")
         return ScanResult(
-            supported: [file],
+            supported: [ScannedAudioFile(url: file, durationSeconds: 1260)],
             skipped: [folder.appendingPathComponent("notes.txt")],
             totalDurationSeconds: 1260
         )

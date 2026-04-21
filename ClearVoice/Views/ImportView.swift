@@ -7,60 +7,27 @@ struct ImportView: View {
     var body: some View {
         StepCard(
             title: "Import",
-            detail: "Choose a source folder and an output folder. ClearVoice scans supported audio before you move on."
+            detail: "Choose the source folder once. ClearVoice scans supported audio, shows what is ready, and creates a new Desktop output folder for this batch automatically."
         ) {
             VStack(alignment: .leading, spacing: 18) {
                 FolderPicker(
                     title: "Source Folder",
-                    subtitle: "Select the folder that contains your audio recordings.",
+                    subtitle: "Select the folder that contains the Marathi recordings you want to process.",
                     selection: viewModel.sourceFolderURL,
-                    buttonTitle: "Choose Source"
+                    buttonTitle: "Choose Source Folder"
                 ) { url in
                     viewModel.selectSourceFolder(url)
                 }
 
-                FolderPicker(
-                    title: "Output Folder",
-                    subtitle: "Select an existing folder where ClearVoice should create per-file subfolders later.",
-                    selection: viewModel.outputFolderURL,
-                    buttonTitle: "Choose Output"
-                ) { url in
-                    viewModel.selectOutputFolder(url)
-                }
-
                 summaryCard
+                outputPreviewCard
 
                 if !viewModel.validationMessages.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Before You Continue")
-                            .font(.headline)
-
-                        ForEach(viewModel.validationMessages, id: \.self) { message in
-                            Label(message, systemImage: "exclamationmark.circle")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color(nsColor: .controlBackgroundColor))
-                    )
+                    validationCard
                 }
 
                 if !viewModel.scanResult.supported.isEmpty || !viewModel.scanResult.skipped.isEmpty {
-                    DisclosureGroup("View Files") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            if !viewModel.scanResult.supported.isEmpty {
-                                fileList(title: "Supported", urls: viewModel.scanResult.supported)
-                            }
-
-                            if !viewModel.scanResult.skipped.isEmpty {
-                                fileList(title: "Skipped", urls: viewModel.scanResult.skipped)
-                            }
-                        }
-                        .padding(.top, 12)
-                    }
+                    fileTableCard
                 }
 
                 Spacer()
@@ -92,7 +59,7 @@ struct ImportView: View {
                     .foregroundStyle(.secondary)
             } else {
                 HStack {
-                    summaryMetric(label: "Files", value: "\(viewModel.supportedFileCount)")
+                    summaryMetric(label: "Ready", value: "\(viewModel.supportedFileCount)")
                     Divider()
                     summaryMetric(label: "Skipped", value: "\(viewModel.skippedFileCount)")
                     Divider()
@@ -100,12 +67,94 @@ struct ImportView: View {
                 }
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
+        .cardStyle()
+    }
+
+    private var outputPreviewCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Output Location")
+                .font(.headline)
+
+            if viewModel.plannedOutputFolderDisplayPath.isEmpty {
+                Text("Choose a source folder to preview the Desktop output folder.")
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(viewModel.plannedOutputFolderDisplayPath)
+                    .textSelection(.enabled)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .cardStyle()
+    }
+
+    private var validationCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Before You Continue")
+                .font(.headline)
+
+            ForEach(viewModel.validationMessages, id: \.self) { message in
+                Label(message, systemImage: "exclamationmark.circle")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .cardStyle()
+    }
+
+    private var fileTableCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Files")
+                .font(.headline)
+
+            fileHeader
+
+            ForEach(viewModel.readyFiles, id: \.url.path) { file in
+                fileRow(
+                    name: file.url.lastPathComponent,
+                    status: "Ready",
+                    duration: DurationFormatter.formattedDuration(seconds: file.durationSeconds)
+                )
+            }
+
+            ForEach(viewModel.scanResult.skipped, id: \.path) { url in
+                fileRow(
+                    name: url.lastPathComponent,
+                    status: "Skipped",
+                    duration: "—"
+                )
+            }
+        }
+        .cardStyle()
+    }
+
+    private var fileHeader: some View {
+        HStack {
+            Text("File Name")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("Status")
+                .frame(width: 80, alignment: .leading)
+            Text("Duration")
+                .frame(width: 80, alignment: .trailing)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+    }
+
+    private func fileRow(name: String, status: String, duration: String) -> some View {
+        HStack {
+            Text(name)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(status)
+                .foregroundStyle(status == "Ready" ? .primary : .secondary)
+                .frame(width: 80, alignment: .leading)
+
+            Text(duration)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: 80, alignment: .trailing)
+        }
+        .padding(.vertical, 4)
     }
 
     private func summaryMetric(label: String, value: String) -> some View {
@@ -118,26 +167,16 @@ struct ImportView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
 
-    private func fileList(title: String, urls: [URL]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
-
-            ForEach(urls, id: \.path) { url in
-                HStack(alignment: .top) {
-                    Image(systemName: "waveform")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 16)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(url.lastPathComponent)
-                        Text(url.deletingLastPathComponent().path(percentEncoded: false))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-            }
-        }
+private extension View {
+    func cardStyle() -> some View {
+        self
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
     }
 }

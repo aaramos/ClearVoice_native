@@ -4,18 +4,17 @@ struct ConfigureView: View {
     @ObservedObject var viewModel: ConfigureViewModel
     let onBack: () -> Void
     let onStart: () -> Void
-    @State private var showsAdvanced = true
 
     var body: some View {
         StepCard(
             title: "Configure",
-            detail: "Choose how aggressively ClearVoice should clean the audio, which language to transcribe, and how many local jobs to run at once."
+            detail: "Choose how ClearVoice should enhance the audio, whether to transcribe it, and how many files to process at once."
         ) {
             VStack(alignment: .leading, spacing: 20) {
-                summaryCard
-                audioSettingsCard
-                languageSettingsCard
-                advancedSettingsCard
+                currentPlanCard
+                enhancementCard
+                processingOptionsCard
+                speedCard
 
                 Text(viewModel.helperText)
                     .foregroundStyle(.secondary)
@@ -26,7 +25,7 @@ struct ConfigureView: View {
                 HStack {
                     Button("Back", action: onBack)
                     Spacer()
-                    Button("Start Processing", action: onStart)
+                    Button("Next", action: onStart)
                         .keyboardShortcut(.defaultAction)
                         .disabled(!viewModel.canStart)
                 }
@@ -34,69 +33,50 @@ struct ConfigureView: View {
         }
     }
 
-    private var summaryCard: some View {
+    private var currentPlanCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Current Plan")
                 .font(.headline)
 
             HStack(spacing: 12) {
-                summaryMetric(
-                    label: "Intensity",
-                    value: viewModel.intensity.band.rawValue.capitalized
-                )
+                summaryMetric(label: "Source", value: "Marathi")
                 Divider()
-                summaryMetric(
-                    label: "Source",
-                    value: viewModel.inputLanguage.displayName
-                )
+                summaryMetric(label: "Enhancement", value: viewModel.enhancementMethod.title)
                 Divider()
-                summaryMetric(
-                    label: "Output",
-                    value: viewModel.outputLanguage.displayName
-                )
+                summaryMetric(label: "Transcription", value: viewModel.transcriptionEnabled ? "On" : "Off")
             }
         }
         .cardStyle()
     }
 
-    private var audioSettingsCard: some View {
+    private var enhancementCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Audio Cleanup")
+            Text("Enhancement Method")
                 .font(.headline)
 
-            Picker("Intensity", selection: intensityBandBinding) {
-                ForEach(Intensity.Band.allCases, id: \.self) { band in
-                    Text(band.rawValue.capitalized)
-                        .tag(band)
+            Picker("Enhancement Method", selection: $viewModel.enhancementMethod) {
+                ForEach(EnhancementMethod.allCases) { method in
+                    Text(method.title)
+                        .tag(method)
                 }
             }
             .pickerStyle(.segmented)
 
-            Text(viewModel.intensityDescription)
+            Text(viewModel.enhancementMethod.detail)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .cardStyle()
     }
 
-    private var languageSettingsCard: some View {
+    private var processingOptionsCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Language Workflow")
+            Text("Processing Options")
                 .font(.headline)
 
-            Picker("Input Language", selection: inputLanguageBinding) {
-                ForEach(viewModel.inputLanguageOptions) { language in
-                    Text(language.displayName)
-                        .tag(language.id)
-                }
-            }
+            Toggle("Transcribe audio", isOn: $viewModel.transcriptionEnabled)
 
-            LabeledContent("Output Language") {
-                Text(viewModel.outputLanguage.displayName)
-                    .foregroundStyle(.secondary)
-            }
-
-            Text("English translation is temporarily disabled while we validate local Marathi transcription.")
+            Text("Transcription writes a Marathi transcript into each file’s output folder. Translation stays off in this UI pass.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -104,21 +84,23 @@ struct ConfigureView: View {
         .cardStyle()
     }
 
-    private var advancedSettingsCard: some View {
-        DisclosureGroup("Advanced", isExpanded: $showsAdvanced) {
-            VStack(alignment: .leading, spacing: 14) {
-                Stepper(value: $viewModel.maxConcurrency, in: 1...5) {
-                    LabeledContent("Parallel Files") {
-                        Text("\(viewModel.maxConcurrency)")
-                            .monospacedDigit()
-                    }
-                }
+    private var speedCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Processing Speed")
+                .font(.headline)
 
-                Text(viewModel.advancedSummary)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            Stepper(value: $viewModel.maxConcurrency, in: 1...5) {
+                HStack {
+                    Text("Files at once")
+                    Spacer()
+                    Text("\(viewModel.maxConcurrency)")
+                        .monospacedDigit()
+                }
             }
-            .padding(.top, 12)
+
+            Text(viewModel.advancedSummary)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .cardStyle()
     }
@@ -131,20 +113,7 @@ struct ConfigureView: View {
             Text(value)
                 .font(.title3.weight(.semibold))
         }
-    }
-
-    private var intensityBandBinding: Binding<Intensity.Band> {
-        Binding(
-            get: { viewModel.intensityBand },
-            set: { viewModel.intensityBand = $0 }
-        )
-    }
-
-    private var inputLanguageBinding: Binding<String> {
-        Binding(
-            get: { viewModel.inputLanguage.id },
-            set: { viewModel.selectInputLanguage(id: $0) }
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

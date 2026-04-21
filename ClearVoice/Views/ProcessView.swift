@@ -3,12 +3,12 @@ import SwiftUI
 struct ProcessView: View {
     @ObservedObject var viewModel: BatchViewModel
     let onBack: () -> Void
-    let onCompletePlaceholder: () -> Void
+    let onShowResults: () -> Void
 
     var body: some View {
         StepCard(
             title: "Process",
-            detail: "ClearVoice now exports DeepFilterNet and Hybrid enhancement files, then transcribes the Hybrid output locally into Marathi."
+            detail: "Track the full batch while ClearVoice enhances the audio, optionally transcribes it, and exports each file into its own output folder."
         ) {
             VStack(alignment: .leading, spacing: 18) {
                 Text(viewModel.statusText)
@@ -82,7 +82,7 @@ struct ProcessView: View {
                         .disabled(viewModel.isRunning)
                     Spacer()
                     if viewModel.didFinish {
-                        Button("Show Review Shell", action: onCompletePlaceholder)
+                        Button("Show Results", action: onShowResults)
                     }
                 }
             }

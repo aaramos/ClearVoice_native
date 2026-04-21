@@ -33,13 +33,17 @@ struct FileJob: Sendable {
             let normalized = try await services.formatNormalizationService.normalize(item.sourceURL)
             let normalizedURL = normalized.url
 
-            guard !services.comparisonEnhancements.isEmpty else {
+            let selectedEnhancements = services.comparisonEnhancements.filter {
+                $0.outputSuffix == config.enhancementMethod.outputSuffix
+            }
+
+            guard !selectedEnhancements.isEmpty else {
                 throw ProcessingError.enhancementFailed(
                     "ClearVoice couldn’t create the selected enhancement outputs because DeepFilterNet is unavailable on this Mac."
                 )
             }
 
-            let totalOutputs = services.comparisonEnhancements.count
+            let totalOutputs = selectedEnhancements.count
 
             defer {
                 if normalized.requiresCleanup {
@@ -47,7 +51,7 @@ struct FileJob: Sendable {
                 }
             }
 
-            for (offset, comparisonEnhancement) in services.comparisonEnhancements.enumerated() {
+            for (offset, comparisonEnhancement) in selectedEnhancements.enumerated() {
                 let outputURL = item.outputFolderURL!.appendingPathComponent(
                     "\(item.basename)_\(comparisonEnhancement.outputSuffix).\(AudioFormatSupport.cleanExportExtension)"
                 )
@@ -64,6 +68,12 @@ struct FileJob: Sendable {
 
             item.stage = .cleaning(progress: 1.0)
             await update(item)
+
+            guard config.transcriptionEnabled else {
+                item.stage = .complete
+                await update(item)
+                return
+            }
 
             let preparedTranscriptionInput = try await services.transcriptionPreparationService.prepare(normalizedURL)
             defer {

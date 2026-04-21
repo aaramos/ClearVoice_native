@@ -7,27 +7,26 @@ struct ConfigureViewModelTests {
     func defaultsMatchLocalFirstWorkflow() {
         let viewModel = ConfigureViewModel()
 
-        #expect(viewModel.inputLanguage == .autoDetect)
-        #expect(viewModel.outputLanguage == .english)
+        #expect(viewModel.enhancementMethod == .hybrid)
+        #expect(viewModel.transcriptionEnabled)
         #expect(viewModel.maxConcurrency == 2)
         #expect(viewModel.canStart)
     }
 
     @Test
-    func selectingInputLanguageUpdatesSelection() {
+    func marathiIsAlwaysSelectedForThisPass() {
         let viewModel = ConfigureViewModel()
 
-        viewModel.selectInputLanguage(id: Language.marathi.id)
-
-        #expect(viewModel.inputLanguage == .marathi)
         #expect(viewModel.selectedInputLanguage == .specific("mr"))
     }
 
     @Test
-    func helperTextExplainsManualRetryForAutoDetect() {
+    func helperTextReflectsTranscriptionToggle() {
         let viewModel = ConfigureViewModel()
 
-        #expect(viewModel.helperText.contains("detect the spoken language"))
-        #expect(viewModel.helperText.contains("choosing the source language manually"))
+        #expect(viewModel.helperText.contains("Marathi"))
+
+        viewModel.transcriptionEnabled = false
+        #expect(viewModel.helperText.contains("only export the processed audio"))
     }
 }

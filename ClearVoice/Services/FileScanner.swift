@@ -6,8 +6,13 @@ protocol FileScanner: Sendable {
     func scan(folder: URL, recursive: Bool) async throws -> ScanResult
 }
 
+struct ScannedAudioFile: Equatable, Sendable {
+    let url: URL
+    let durationSeconds: TimeInterval
+}
+
 struct ScanResult: Equatable, Sendable {
-    let supported: [URL]
+    let supported: [ScannedAudioFile]
     let skipped: [URL]
     let totalDurationSeconds: TimeInterval
 
@@ -23,7 +28,7 @@ actor LocalFileScanner: FileScanner {
 
     func scan(folder: URL, recursive: Bool) async throws -> ScanResult {
         let urls = try fileURLs(in: folder, recursive: recursive)
-        var supported: [URL] = []
+        var supported: [ScannedAudioFile] = []
         var skipped: [URL] = []
         var totalDurationSeconds: TimeInterval = 0
 
@@ -33,11 +38,12 @@ actor LocalFileScanner: FileScanner {
                 continue
             }
 
-            supported.append(url)
-            totalDurationSeconds += await duration(for: url)
+            let durationSeconds = await duration(for: url)
+            supported.append(ScannedAudioFile(url: url, durationSeconds: durationSeconds))
+            totalDurationSeconds += durationSeconds
         }
 
-        supported.sort(by: LocalFileScanner.audioSort(lhs:rhs:))
+        supported.sort(by: { LocalFileScanner.audioSort(lhs: $0.url, rhs: $1.url) })
         skipped.sort(by: LocalFileScanner.audioSort(lhs:rhs:))
 
         return ScanResult(

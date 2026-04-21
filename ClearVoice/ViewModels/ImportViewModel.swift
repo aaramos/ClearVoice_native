@@ -7,7 +7,6 @@ final class ImportViewModel: ObservableObject {
     @Published private(set) var scanResult: ScanResult = .empty
     @Published private(set) var validationMessages: [String] = [
         "Choose a source folder to begin.",
-        "Choose an output folder before continuing.",
     ]
     @Published private(set) var isScanning = false
     @Published private(set) var scanErrorMessage: String?
@@ -40,14 +39,29 @@ final class ImportViewModel: ObservableObject {
         DurationFormatter.formattedDuration(seconds: scanResult.totalDurationSeconds)
     }
 
-    func selectSourceFolder(_ url: URL) {
-        sourceFolderURL = standardizedDirectoryURL(url)
-        scheduleScan()
+    var readyFiles: [ScannedAudioFile] {
+        scanResult.supported
     }
 
-    func selectOutputFolder(_ url: URL) {
-        outputFolderURL = standardizedDirectoryURL(url)
-        evaluateValidation()
+    var plannedOutputFolderDisplayPath: String {
+        outputFolderURL?.path(percentEncoded: false) ?? ""
+    }
+
+    func reset() {
+        scanTask?.cancel()
+        scanTask = nil
+        sourceFolderURL = nil
+        outputFolderURL = nil
+        scanResult = .empty
+        validationMessages = ["Choose a source folder to begin."]
+        isScanning = false
+        scanErrorMessage = nil
+    }
+
+    func selectSourceFolder(_ url: URL) {
+        sourceFolderURL = standardizedDirectoryURL(url)
+        outputFolderURL = makeDesktopOutputFolderURL()
+        scheduleScan()
     }
 
     func waitForScheduledScan() async {
@@ -98,12 +112,6 @@ final class ImportViewModel: ObservableObject {
             messages.append("Choose a source folder to begin.")
         }
 
-        if let outputFolderURL {
-            messages.append(contentsOf: validationMessages(forOutputFolder: outputFolderURL))
-        } else {
-            messages.append("Choose an output folder before continuing.")
-        }
-
         if let sourceFolderURL, let outputFolderURL {
             let sourcePath = sourceFolderURL.resolvingSymlinksInPath().standardizedFileURL.path
             let outputPath = outputFolderURL.resolvingSymlinksInPath().standardizedFileURL.path
@@ -113,6 +121,8 @@ final class ImportViewModel: ObservableObject {
             } else if outputPath.hasPrefix(sourcePath + "/") {
                 messages.append("Output folder can’t be inside the source folder.")
             }
+
+            messages.append(contentsOf: validationMessages(forPlannedOutputFolder: outputFolderURL))
         }
 
         if scanErrorMessage != nil {
@@ -133,13 +143,20 @@ final class ImportViewModel: ObservableObject {
         )
     }
 
-    private func validationMessages(forOutputFolder url: URL) -> [String] {
-        directoryValidationMessages(
-            for: url,
-            readableRequirement: true,
-            writableRequirement: true,
-            missingMessage: "Output folder must exist and be readable and writable."
-        )
+    private func validationMessages(forPlannedOutputFolder url: URL) -> [String] {
+        let parentURL = url.deletingLastPathComponent()
+        let parentPath = parentURL.path(percentEncoded: false)
+        var isDirectory: ObjCBool = false
+
+        guard fileManager.fileExists(atPath: parentPath, isDirectory: &isDirectory), isDirectory.boolValue else {
+            return ["ClearVoice couldn’t access the Desktop output location."]
+        }
+
+        guard fileManager.isWritableFile(atPath: parentPath) else {
+            return ["ClearVoice needs write access to the Desktop output location."]
+        }
+
+        return []
     }
 
     private func directoryValidationMessages(
@@ -171,4 +188,18 @@ final class ImportViewModel: ObservableObject {
     private func standardizedDirectoryURL(_ url: URL) -> URL {
         url.resolvingSymlinksInPath().standardizedFileURL
     }
+
+    private func makeDesktopOutputFolderURL(now: Date = Date()) -> URL {
+        let desktopURL = fileManager.urls(for: .desktopDirectory, in: .userDomainMask).first
+            ?? fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)
+        let timestamp = Self.outputTimestampFormatter.string(from: now)
+        return desktopURL.appendingPathComponent("output_\(timestamp)", isDirectory: true)
+    }
+
+    private static let outputTimestampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        return formatter
+    }()
 }

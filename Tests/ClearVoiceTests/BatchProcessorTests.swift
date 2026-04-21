@@ -5,7 +5,7 @@ import Testing
 struct BatchProcessorTests {
     @Test
     func processorNeverExceedsConfiguredConcurrency() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 5)
+        let harness = try BatchProcessorHarness(fileCount: 5, enhancementMethod: .dfn)
         let enhancement = TrackingComparisonEnhancementService(outputSuffix: "DFN", delayMilliseconds: 200)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
@@ -30,7 +30,7 @@ struct BatchProcessorTests {
 
     @Test
     func processorIsolatesFailuresToTheImpactedFile() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 4)
+        let harness = try BatchProcessorHarness(fileCount: 4, enhancementMethod: .dfn)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
             comparisonEnhancements: [SelectiveFailureComparisonEnhancementService(outputSuffix: "DFN", failingBasename: "sample_2")],
@@ -54,7 +54,7 @@ struct BatchProcessorTests {
 
     @Test
     func processingWritesConfiguredVariantsAndExportsTranscript() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 1)
+        let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .hybrid)
         let transcriptionPrep = TrackingTranscriptionPreparationService()
         let speechPipeline = TrackingSpeechPipelineService()
         let services = ServiceBundle(
@@ -80,8 +80,8 @@ struct BatchProcessorTests {
         let outputFolder = try #require(item.outputFolderURL)
 
         #expect(item.stage == .complete)
-        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
         #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_HYBRID.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MIN.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MAX.m4a").path))
         #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
@@ -100,8 +100,8 @@ struct BatchProcessorTests {
     }
 
     @Test
-    func processingWritesDeepFilterVariantWhenConfigured() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 1)
+    func processingWritesOnlySelectedEnhancementVariant() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .dfn)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
             comparisonEnhancements: [
@@ -124,12 +124,47 @@ struct BatchProcessorTests {
 
         #expect(item.stage == .complete)
         #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
-        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_HYBRID.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_HYBRID.m4a").path))
+    }
+
+    @Test
+    func transcriptionCanBeDisabledPerBatch() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .dfn, transcriptionEnabled: false)
+        let transcriptionPrep = TrackingTranscriptionPreparationService()
+        let speechPipeline = TrackingSpeechPipelineService()
+        let services = ServiceBundle(
+            audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancements: [
+                StubComparisonEnhancementService(outputSuffix: "DFN"),
+                StubComparisonEnhancementService(outputSuffix: "HYBRID"),
+            ],
+            transcriptionPreparationService: transcriptionPrep,
+            speechPipeline: speechPipeline,
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+        let outputFolder = try #require(item.outputFolderURL)
+
+        #expect(item.stage == .complete)
+        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
+        let preparedInputs = await transcriptionPrep.preparedInputs
+        #expect(preparedInputs.isEmpty)
+        let pipelineInputs = await speechPipeline.audioInputs
+        #expect(pipelineInputs.isEmpty)
     }
 
     @Test
     func speechPipelineFailureFailsTheImpactedFile() async throws {
-        let harness = try BatchProcessorHarness(fileCount: 1)
+        let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .dfn)
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
             comparisonEnhancements: [
@@ -158,12 +193,20 @@ private struct BatchProcessorHarness {
     let sourceFolder: URL
     let outputFolder: URL
     let items: [AudioFileItem]
+    let enhancementMethod: EnhancementMethod
+    let transcriptionEnabled: Bool
 
-    init(fileCount: Int) throws {
+    init(
+        fileCount: Int,
+        enhancementMethod: EnhancementMethod = .hybrid,
+        transcriptionEnabled: Bool = true
+    ) throws {
         let fileManager = FileManager.default
         root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         sourceFolder = root.appendingPathComponent("source", isDirectory: true)
         outputFolder = root.appendingPathComponent("output", isDirectory: true)
+        self.enhancementMethod = enhancementMethod
+        self.transcriptionEnabled = transcriptionEnabled
 
         try fileManager.createDirectory(at: sourceFolder, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: outputFolder, withIntermediateDirectories: true)
@@ -191,7 +234,8 @@ private struct BatchProcessorHarness {
         let configuration = BatchConfiguration(
             sourceFolder: sourceFolder,
             outputFolder: outputFolder,
-            intensity: .balanced,
+            enhancementMethod: enhancementMethod,
+            transcriptionEnabled: transcriptionEnabled,
             inputLanguage: .specific("mr"),
             outputLanguage: "en",
             maxConcurrency: maxConcurrency,

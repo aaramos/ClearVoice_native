@@ -49,3 +49,9 @@ This file records implementation choices that were left to engineering discretio
 - Local translation sequencing: translation work should begin only after `whisper.cpp` transcription support is landed and validated on real Marathi-enhanced files.
 - Local translation engine direction: the first serious Marathi-to-English translation implementation on this branch will use `facebook/nllb-200-distilled-600M` via `CTranslate2` with `int8` conversion, operating on bounded Marathi transcript segments and writing `translation_en` onto each segment in order.
 - Translation runtime constraints: do not promise a native Swift/CoreML translation path or M4 GPU acceleration in v1; translation should be treated as a local post-transcription phase that does not co-reside with Whisper in memory during normal execution.
+- Post-translation output destination: the future updated UX should create a fresh Desktop batch folder named `output_<timestamp>` instead of asking the user to choose an output location manually.
+- Post-translation enhancement selection: the future updated UX should make enhancement a single batch-level choice between `DFN` and `HYBRID`, not a side-by-side dual-output comparison flow.
+- Post-translation source-language scope: the future updated UX should fix source language to Marathi for this release instead of exposing a language picker.
+- Post-translation export scope: `Export All ZIP` should package the entire generated batch output folder and all per-file contents.
+- Current UI pass scope: start the 4-step UX refactor before translation returns, with Marathi fixed as the source language, no translation toggle in Configure, and the Results screen focused on processed audio plus Marathi transcript preview.
+- Current UI controls: keep `Transcribe audio` as a visible toggle so the team can disable transcription quickly while audio cleanup and local ASR quality are still being validated.
