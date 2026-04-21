@@ -1,56 +1,52 @@
 # ClearVoice
 
-ClearVoice is a native macOS batch audio utility for cleaning speech recordings, writing a transcript in the spoken language, and producing an English translation for each source file.
+ClearVoice is a native macOS batch audio utility for cleaning speech recordings and exporting a shareable results package with the original source audio, the enhanced output, and a browser-friendly review page.
 
-This branch, `local-offline-v2`, is the local-first refactor. The primary workflow runs on this Mac without Gemini in the processing path.
+## Download
 
-## What This Branch Does
+- Direct download: [ClearVoice 0.1.0 DMG](https://github.com/aaramos/ClearVoice_native/releases/download/v0.1.0/ClearVoice-0.1.0.dmg)
+- Releases page: [github.com/aaramos/ClearVoice_native/releases](https://github.com/aaramos/ClearVoice_native/releases)
 
-- Accepts local audio files, including `.wma`
-- Converts source audio into a speech-processing format with FFmpeg
-- Enhances speech locally with FFmpeg click repair, declipping, broadband noise suppression, gating, and speech normalization, then exports a final clean audio file as `.m4a`
-- Runs local transcription plus English translation with WhisperKit
-- Exports one folder per source file containing:
-  - `<name>_clean.m4a`
-  - `<name>_transcript.txt`
+## Current Product
 
-Temporary evaluation mode on this branch:
+- Batch-processes local audio folders on macOS
+- Repairs and enhances speech with local FFmpeg and DeepFilterNet tooling
+- Supports `.wav`, `.mp3`, `.m4a`, `.aac`, `.flac`, and `.wma`
+- Lets the user choose the enhancement method in-app
+- Writes one output folder per source file
+- Generates a local `index.html` results page that opens in the browser
+- Lets reviewers switch between the source audio and enhanced audio at the same playback position
+- Includes a first-run setup flow that checks, downloads, and verifies required dependencies without Terminal
 
-- Transcription and translation are currently disabled so audio enhancement can be evaluated in isolation
-- Each per-file output folder now contains two enhanced variants:
-  - `<name>_DFN.m4a`
-  - `<name>_HYBRID.m4a`
+## First-Run Setup
 
-## Current Product Shape
+ClearVoice currently installs and manages these local tools:
 
-- Translation output is fixed to English for now
-- Summarization is deferred for this release
-- The transcript export currently includes a placeholder summary block so the file shape stays stable while summarization is stubbed
-- Auto language detection is supported, but if the local model cannot detect the spoken language confidently, ClearVoice tells the user to rerun after choosing the input language manually
-- Parallelism is configurable from the UI between `1` and `5` files, with a default of `2`
+- `FFmpeg`
+- `DeepFilterNet`
 
-## Local Requirements
+They are stored under:
 
-Install FFmpeg:
+- `~/Library/Application Support/ClearVoice/Tools`
 
-```sh
-brew install ffmpeg
-```
+At launch, ClearVoice:
 
-DeepFilterNet binary required for the current enhancement-only evaluation mode:
+1. explains which tools are required and why
+2. checks whether they already exist on the Mac
+3. downloads only the missing tools
+4. shows progress, status, and verification before entering the app
 
-```sh
-curl -fsSL https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-aarch64-apple-darwin -o /opt/homebrew/bin/deep-filter
-chmod +x /opt/homebrew/bin/deep-filter
-```
+## Output Structure
 
-The next transcription phase on this branch will use `whisper.cpp` with local models stored in the current user's Application Support directory:
+For each processed file, ClearVoice creates a folder inside the batch output directory containing:
 
-- `~/Library/Application Support/ClearVoice/Models`
+- the original source file
+- the enhanced output file
+- a browser-readable results index for the batch
 
-Because first-run setup UX is deferred on this branch, model provisioning is currently an engineering/setup task rather than an in-app user flow.
+The browser results page is generated locally and opened directly from disk rather than through a local web server.
 
-## Development
+## Build From Source
 
 Build and run:
 
@@ -64,12 +60,18 @@ Run tests:
 xcodebuild test -project ClearVoice.xcodeproj -scheme ClearVoice -destination 'platform=macOS'
 ```
 
-## Known Limitations
+Build a distributable DMG:
 
-- This branch is intentionally English-only for translation
-- Summarization is a placeholder, not a real model-backed feature yet
-- The next transcription phase is planned around `whisper.cpp`, not `WhisperKit`
-- The translation phase after transcription is planned around local `NLLB-200` inference through `CTranslate2`, not a native Swift/CoreML path in v1
-- First-run onboarding for local model setup is still deferred
-- The legacy Gemini, Apple Speech, and Apple Translation codepaths still exist in the repo for reference and rollback safety, but they are not part of the primary workflow on this branch
-- `.dmg` packaging is still planned for a later phase
+```sh
+./script/build_dmg.sh
+```
+
+## Distribution Notes
+
+- The current `.dmg` is packaged from the local app bundle and is intended for direct sharing.
+- Code signing and notarization are still separate follow-up work; this repo currently builds unsigned distribution artifacts.
+
+## Known Scope
+
+- The live app is currently focused on audio enhancement and review.
+- Transcription and translation code still exists in the repo for future experimentation, but those features are not part of the shipped product flow right now.

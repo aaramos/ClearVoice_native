@@ -1,12 +1,13 @@
 # ClearVoice Backlog
 
+This backlog tracks future work from the current shipped enhancement-only release. Items below are not part of the live product flow today unless they are explicitly described as already shipped elsewhere in the repo docs.
+
 ## Local-First Product Work
 
 - Phase 2 transcription: integrate `whisper.cpp` as the primary local Marathi transcription engine, consuming the `HYBRID` enhancement output via a temporary `16 kHz` mono PCM WAV input and keeping the active model resident in memory instead of reloading per file.
 - Phase 3 translation: add a local Marathi-to-English translation step after transcription using `facebook/nllb-200-distilled-600M` through `CTranslate2` with `int8` conversion, translating bounded segments in order and writing `translation_en` onto each segment.
 - Phase 3 translation runtime: replace the current placeholder batch-phase translator hook with the real `NLLB-200/CTranslate2` runtime and keep translation serialized after the full batch finishes transcription.
-- Continue the 4-step Marathi-only UX pass now: Desktop `output_<timestamp>` batch folders, single enhancement selection (`DFN` or `HYBRID`), optional transcription, live batch status, results review, and `Export All ZIP`.
-- Simplify the enhancement product surface to `DFN` only: remove `HYBRID` and any remaining enhancement-choice UI so ClearVoice has one default enhancement path while transcription and translation are re-evaluated.
+- Revisit the enhancement product surface after more listening tests and decide whether the app should stay dual-mode (`DFN` / `HYBRID`) or simplify to a single default enhancement path.
 - After translation is stable, extend that same UX with English translation controls and Results-screen transcript sections as captured in `UX_TARGET_POST_TRANSLATION.md`.
 - Add first-run onboarding for local model setup so non-technical users can download and verify required transcription and translation models without leaving the app.
 - Replace the placeholder summary block with a real local summarization path once the release-critical transcription and translation flow is stable.
@@ -15,7 +16,7 @@
 
 ## Performance And Reliability
 
-- Measure local-memory and CPU pressure across concurrency levels `1...5` on Apple Silicon machines and adjust the default if `2` proves too aggressive or too conservative.
+- Measure local-memory and CPU pressure across concurrency levels `1...10` on Apple Silicon machines and adjust the default recommendation if `5` proves too aggressive or too conservative.
 - Validate `whisper.cpp` throughput, peak memory, and thread defaults on the actual target machine class before locking the production transcription configuration.
 - Sequence transcription and translation so `whisper.cpp` and `NLLB-200` do not co-reside in memory during normal operation.
 - Decide whether legacy cloud services should stay in the repo for fallback/rollback safety or be removed once the local-first branch is proven stable.

@@ -2,6 +2,8 @@
 
 This file records implementation choices that were left to engineering discretion in the handoff package.
 
+The notes below are cumulative. Older sections capture earlier experiments and branch-specific decisions, while the newest section reflects the shipped product on `main`.
+
 ## 2026-04-19
 
 - Project root: the active native repo lives in the current local checkout of `ClearVoice_native`.
@@ -56,3 +58,11 @@ This file records implementation choices that were left to engineering discretio
 - Post-translation export scope: `Export All ZIP` should package the entire generated batch output folder and all per-file contents.
 - Current UI pass scope: start the 4-step UX refactor before translation returns, with Marathi fixed as the source language, no translation toggle in Configure, and the Results screen focused on processed audio plus Marathi transcript preview.
 - Current UI controls: keep `Transcribe audio` as a visible toggle so the team can disable transcription quickly while audio cleanup and local ASR quality are still being validated.
+
+## 2026-04-21
+
+- Mainline promotion: the `local-offline-v2` work is now the product direction that should live on `main`.
+- Shipped feature scope: the live app is enhancement-only for now; transcription and translation remain in the repo for future evaluation, not as active user-facing workflow.
+- Runtime dependency setup: first-run onboarding now checks, downloads, verifies, and manages `FFmpeg` and `DeepFilterNet` inside `~/Library/Application Support/ClearVoice/Tools`.
+- Results review surface: step 4 now opens a generated local `index.html` page directly from disk instead of rendering an embedded review surface or running a local web server.
+- Distribution artifact: the repo now includes a reproducible `script/build_dmg.sh` flow for packaging a shareable `.dmg` from the current macOS app bundle.

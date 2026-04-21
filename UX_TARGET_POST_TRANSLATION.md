@@ -1,12 +1,12 @@
 # ClearVoice UX Roadmap
 
-This document captures the intended 4-step UX direction for ClearVoice.
+This document captures the intended future UX direction for ClearVoice after transcription and translation return.
 
-The current implementation pass is Marathi-only and intentionally keeps English translation out of the UI until the local translation step is ready again. The same shell should later expand to show English translation results without changing the overall 4-step flow.
+The live app currently ships as an enhancement-and-review product with browser-based results, bundled dependency setup, user-selectable `DFN` / `HYBRID` enhancement, and no active transcription or translation flow. The roadmap below is retained as a future-facing reference for a later local text-processing release.
 
-## Product Decisions Locked For This UX
+## Product Decisions Locked For This Future UX
 
-- Source language is fixed to Marathi for this release.
+- Source language is fixed to Marathi for that future text-processing release.
 - The app does not ask the user to choose an output folder.
 - Each batch creates a new Desktop folder named `output_<timestamp>`.
 - Each processed source file gets its own subfolder inside that batch output folder.
@@ -85,13 +85,13 @@ Only one may be selected.
 - `Transcribe audio`
   - Output is Marathi transcript
 
-For the current UI pass, no English translation control is shown.
+For that future UI pass, no English translation control is shown until local translation is ready again.
 
 #### C. Processing Speed
 
 - Label: `Processing Speed`
-- Values: `1` to `5`
-- Default: `2`
+- Values: `1` to `10`
+- Default: `5`
 - Guidance text should explain that higher values are better for machines with more compute
 
 ### CTA
