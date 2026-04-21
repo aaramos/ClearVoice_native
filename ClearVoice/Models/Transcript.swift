@@ -30,9 +30,46 @@ extension Transcript {
 
         return segments
             .map { segment in
-                "[\(Self.timestampString(for: segment.startMilliseconds)) --> \(Self.timestampString(for: segment.endMilliseconds))]   \(segment.text)"
+                Self.formattedLine(
+                    text: segment.text,
+                    startMilliseconds: segment.startMilliseconds,
+                    endMilliseconds: segment.endMilliseconds
+                )
             }
             .joined(separator: "\n")
+    }
+
+    var translatedExportText: String? {
+        guard !segments.isEmpty else {
+            return nil
+        }
+
+        let translatedSegments = segments.compactMap { segment -> String? in
+            guard let translationEN = segment.translationEN?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !translationEN.isEmpty else {
+                return nil
+            }
+
+            return Self.formattedLine(
+                text: translationEN,
+                startMilliseconds: segment.startMilliseconds,
+                endMilliseconds: segment.endMilliseconds
+            )
+        }
+
+        guard translatedSegments.count == segments.count else {
+            return nil
+        }
+
+        return translatedSegments.joined(separator: "\n")
+    }
+
+    private static func formattedLine(
+        text: String,
+        startMilliseconds: Int,
+        endMilliseconds: Int
+    ) -> String {
+        "[\(timestampString(for: startMilliseconds)) --> \(timestampString(for: endMilliseconds))]   \(text)"
     }
 
     private static func timestampString(for milliseconds: Int) -> String {

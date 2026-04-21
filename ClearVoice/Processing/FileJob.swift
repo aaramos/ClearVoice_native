@@ -8,14 +8,14 @@ struct FileJob: Sendable {
     func run(
         item: AudioFileItem,
         update: @escaping @Sendable (AudioFileItem) async -> Void
-    ) async {
+    ) async -> AudioFileItem {
         var item = item
 
         switch await resolver.resolve(basename: item.basename) {
         case .skip(let reason):
             item.stage = .skipped(reason: reason)
             await update(item)
-            return
+            return item
         case .use(let folder):
             item.outputFolderURL = folder
         }
@@ -72,7 +72,7 @@ struct FileJob: Sendable {
             guard config.transcriptionEnabled else {
                 item.stage = .complete
                 await update(item)
-                return
+                return item
             }
 
             let preparedTranscriptionInput = try await services.transcriptionPreparationService.prepare(normalizedURL)
@@ -89,6 +89,7 @@ struct FileJob: Sendable {
                 audio: preparedTranscriptionInput.url,
                 language: config.inputLanguage
             )
+            item.transcript = speechOutput.transcript
             item.detectedLanguage = speechOutput.transcript.detectedLanguage
             item.originalTranscript = speechOutput.transcript.exportText
             item.translatedTranscript = speechOutput.englishTranslation
@@ -109,6 +110,7 @@ struct FileJob: Sendable {
 
             item.stage = .complete
             await update(item)
+            return item
         } catch let error as ProcessingError {
             try? await services.export.writeErrorLog(
                 to: item.outputFolderURL ?? config.outputFolder,
@@ -117,6 +119,7 @@ struct FileJob: Sendable {
             )
             item.stage = .failed(error: error)
             await update(item)
+            return item
         } catch {
             let wrappedError = wrappedProcessingError(for: error)
             try? await services.export.writeErrorLog(
@@ -126,6 +129,7 @@ struct FileJob: Sendable {
             )
             item.stage = .failed(error: wrappedError)
             await update(item)
+            return item
         }
     }
 

@@ -6,6 +6,7 @@ struct ServiceBundle: Sendable {
     let formatNormalizationService: any FormatNormalizationService
     let transcriptionPreparationService: any TranscriptionPreparationService
     let speechPipeline: any SpeechPipelineService
+    let translation: (any TranslationService)?
     let summaryPlaceholder: String
     let export: any ExportService
 
@@ -15,6 +16,7 @@ struct ServiceBundle: Sendable {
         formatNormalizationService: any FormatNormalizationService = StubFormatNormalizationService(),
         transcriptionPreparationService: any TranscriptionPreparationService = StubTranscriptionPreparationService(),
         speechPipeline: any SpeechPipelineService,
+        translation: (any TranslationService)? = nil,
         summaryPlaceholder: String = SummaryPlaceholders.pendingImplementation,
         export: any ExportService
     ) {
@@ -23,6 +25,7 @@ struct ServiceBundle: Sendable {
         self.formatNormalizationService = formatNormalizationService
         self.transcriptionPreparationService = transcriptionPreparationService
         self.speechPipeline = speechPipeline
+        self.translation = translation
         self.summaryPlaceholder = summaryPlaceholder
         self.export = export
     }
@@ -45,6 +48,7 @@ struct ServiceBundle: Sendable {
                 transcription: transcription,
                 translation: translation
             ),
+            translation: translation,
             summaryPlaceholder: summaryPlaceholder,
             export: export
         )
@@ -69,6 +73,7 @@ struct ServiceBundle: Sendable {
                     modelDirectory: modelDirectory?.appendingPathComponent("whisper.cpp", isDirectory: true)
                 )
             ),
+            translation: nil,
             export: DefaultExportService()
         )
     }

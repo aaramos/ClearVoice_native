@@ -186,6 +186,62 @@ struct BatchProcessorTests {
 
         #expect(item.stage == .failed(error: .transcriptionFailed("Stubbed speech pipeline failure")))
     }
+
+    @Test
+    func translationWaitsUntilAllFilesFinishTranscribing() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 3, enhancementMethod: .dfn)
+        let coordinator = TranslationPhaseCoordinator(totalFiles: harness.items.count)
+        let services = ServiceBundle(
+            audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancements: [
+                StubComparisonEnhancementService(outputSuffix: "DFN"),
+                StubComparisonEnhancementService(outputSuffix: "HYBRID"),
+            ],
+            speechPipeline: CoordinatedSpeechPipelineService(coordinator: coordinator),
+            translation: CoordinatedTranslationService(coordinator: coordinator),
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 3)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        #expect(await coordinator.translationStartedBeforeAllTranscriptions == false)
+        #expect(await coordinator.translationInvocationCount == harness.items.count)
+    }
+
+    @Test
+    func translationReexportsTranscriptWithEnglishSection() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 1, enhancementMethod: .dfn)
+        let services = ServiceBundle(
+            audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancements: [
+                StubComparisonEnhancementService(outputSuffix: "DFN"),
+                StubComparisonEnhancementService(outputSuffix: "HYBRID"),
+            ],
+            speechPipeline: TrackingSpeechPipelineService(),
+            translation: PrefixTranslationService(),
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        await processor.run(files: harness.items) { item in
+            await recorder.record(item)
+        }
+
+        let latestItems = await recorder.itemsByBasename()
+        let item = try #require(latestItems["sample_1"])
+        let outputFolder = try #require(item.outputFolderURL)
+        let transcriptURL = outputFolder.appendingPathComponent("sample_1_transcript.txt")
+        let transcriptContents = try String(contentsOf: transcriptURL, encoding: .utf8)
+
+        #expect(item.translatedTranscript?.contains("EN:") == true)
+        #expect(transcriptContents.contains("TRANSLATED TRANSCRIPT"))
+        #expect(transcriptContents.contains("EN: नमस्कार! तुमचं नाव काय आहे?"))
+    }
 }
 
 private struct BatchProcessorHarness {
@@ -329,6 +385,36 @@ private actor TrackingSpeechPipelineService: SpeechPipelineService {
     }
 }
 
+private actor CoordinatedSpeechPipelineService: SpeechPipelineService {
+    private let coordinator: TranslationPhaseCoordinator
+
+    init(coordinator: TranslationPhaseCoordinator) {
+        self.coordinator = coordinator
+    }
+
+    func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
+        await coordinator.transcriptionStarted()
+        try await Task.sleep(for: .milliseconds(50))
+        await coordinator.transcriptionFinished()
+
+        return SpeechPipelineOutput(
+            transcript: Transcript(
+                text: "नमस्कार! तुमचं नाव काय आहे?",
+                detectedLanguage: "mr",
+                confidence: 0.92,
+                segments: [
+                    TranscriptSegment(
+                        text: "नमस्कार! तुमचं नाव काय आहे?",
+                        startMilliseconds: 0,
+                        endMilliseconds: 2500
+                    )
+                ]
+            ),
+            englishTranslation: nil
+        )
+    }
+}
+
 private actor FailingSpeechPipelineService: SpeechPipelineService {
     func process(audio: URL, language: LanguageSelection) async throws -> SpeechPipelineOutput {
         throw ProcessingError.transcriptionFailed("Stubbed speech pipeline failure")
@@ -359,5 +445,48 @@ private actor TrackingTranscriptionPreparationService: TranscriptionPreparationS
         try Data("prepared".utf8).write(to: preparedURL)
         preparedInputs.append((sourceURL, preparedURL))
         return (preparedURL, true)
+    }
+}
+
+private actor PrefixTranslationService: TranslationService {
+    func translate(text: String, from sourceLanguage: String, to targetLanguage: String) async throws -> String {
+        "EN: \(text)"
+    }
+}
+
+private actor CoordinatedTranslationService: TranslationService {
+    private let coordinator: TranslationPhaseCoordinator
+
+    init(coordinator: TranslationPhaseCoordinator) {
+        self.coordinator = coordinator
+    }
+
+    func translate(text: String, from sourceLanguage: String, to targetLanguage: String) async throws -> String {
+        await coordinator.translationStarted()
+        return "EN: \(text)"
+    }
+}
+
+private actor TranslationPhaseCoordinator {
+    let totalFiles: Int
+    private(set) var completedTranscriptions = 0
+    private(set) var translationStartedBeforeAllTranscriptions = false
+    private(set) var translationInvocationCount = 0
+
+    init(totalFiles: Int) {
+        self.totalFiles = totalFiles
+    }
+
+    func transcriptionStarted() {}
+
+    func transcriptionFinished() {
+        completedTranscriptions += 1
+    }
+
+    func translationStarted() {
+        translationInvocationCount += 1
+        if completedTranscriptions < totalFiles {
+            translationStartedBeforeAllTranscriptions = true
+        }
     }
 }

@@ -4,6 +4,7 @@
 
 - Phase 2 transcription: integrate `whisper.cpp` as the primary local Marathi transcription engine, consuming the `HYBRID` enhancement output via a temporary `16 kHz` mono PCM WAV input and keeping the active model resident in memory instead of reloading per file.
 - Phase 3 translation: add a local Marathi-to-English translation step after transcription using `facebook/nllb-200-distilled-600M` through `CTranslate2` with `int8` conversion, translating bounded segments in order and writing `translation_en` onto each segment.
+- Phase 3 translation runtime: replace the current placeholder batch-phase translator hook with the real `NLLB-200/CTranslate2` runtime and keep translation serialized after the full batch finishes transcription.
 - Continue the 4-step Marathi-only UX pass now: Desktop `output_<timestamp>` batch folders, single enhancement selection (`DFN` or `HYBRID`), optional transcription, live batch status, results review, and `Export All ZIP`.
 - After translation is stable, extend that same UX with English translation controls and Results-screen transcript sections as captured in `UX_TARGET_POST_TRANSLATION.md`.
 - Add first-run onboarding for local model setup so non-technical users can download and verify required transcription and translation models without leaving the app.
