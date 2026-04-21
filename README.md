@@ -18,6 +18,16 @@ ClearVoice is a native macOS batch audio utility for cleaning speech recordings 
 - Lets reviewers switch between the source audio and enhanced audio at the same playback position
 - Includes a first-run setup flow that checks, downloads, and verifies required dependencies without Terminal
 
+## Tech Stack
+
+- App layer: native macOS app built in `Swift` with `SwiftUI`
+- Project tooling: `XcodeGen` generates the Xcode project from `project.yml`
+- Audio processing: local `FFmpeg` for normalization and repair plus `DeepFilterNet` for enhancement
+- Apple frameworks: `AVFoundation` for media inspection and playback, plus standard macOS file and window APIs for import, export, and setup flows
+- Results surface: generated local `HTML`, `CSS`, and `JavaScript` review page opened directly from disk in the user's browser
+- Packaging: `xcodebuild` for app builds and `hdiutil` via `./script/build_dmg.sh` for DMG creation
+- Runtime model: fully local enhancement workflow with no required cloud backend for the shipped product
+
 ## First-Run Setup
 
 ClearVoice currently installs and manages these local tools:

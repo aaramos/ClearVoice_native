@@ -57,7 +57,11 @@ struct ConfigureView: View {
                             .font(.footnote.weight(.medium))
                             .foregroundStyle(.secondary)
 
-                        Slider(value: concurrencyBinding, in: 1...10, step: 1)
+                        Slider(
+                            value: concurrencyBinding,
+                            in: Double(ConfigureViewModel.minimumConcurrency)...Double(ConfigureViewModel.maximumConcurrency),
+                            step: 1
+                        )
                             .tint(Color.orange)
 
                         Text("More")
@@ -70,6 +74,10 @@ struct ConfigureView: View {
                         .foregroundStyle(.secondary)
 
                     Text("Slide left for lighter processing or right to push this Mac harder.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    Text("Range: \(ConfigureViewModel.minimumConcurrency) to \(ConfigureViewModel.maximumConcurrency) files at once.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

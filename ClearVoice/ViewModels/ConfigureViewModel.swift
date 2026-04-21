@@ -2,18 +2,19 @@ import Foundation
 
 @MainActor
 final class ConfigureViewModel: ObservableObject {
+    static let minimumConcurrency = 1
+    static let maximumConcurrency = 20
+    static let defaultConcurrency = 5
+
     @Published var enhancementMethod: EnhancementMethod = .hybrid
     @Published var maxConcurrency: Int
 
-    private let processorCount: Int
-
-    init(processorCount: Int = ProcessInfo.processInfo.activeProcessorCount) {
-        self.processorCount = processorCount
-        self.maxConcurrency = Self.recommendedConcurrency(for: processorCount)
+    init() {
+        self.maxConcurrency = Self.defaultConcurrency
     }
 
     static func recommendedConcurrency(for processorCount: Int) -> Int {
-        min(5, max(1, processorCount / 2))
+        defaultConcurrency
     }
 
     var canStart: Bool {
@@ -25,11 +26,11 @@ final class ConfigureViewModel: ObservableObject {
     }
 
     var advancedSummary: String {
-        "All processing runs on this Mac. ClearVoice starts at \(Self.recommendedConcurrency(for: processorCount)) files based on available CPU power. Slide left for fewer files or right for more."
+        "All processing runs on this Mac. ClearVoice starts at \(Self.defaultConcurrency) files at a time, and you can tune the batch anywhere from \(Self.minimumConcurrency) to \(Self.maximumConcurrency) files."
     }
 
     func reset() {
         enhancementMethod = .hybrid
-        maxConcurrency = Self.recommendedConcurrency(for: processorCount)
+        maxConcurrency = Self.defaultConcurrency
     }
 }

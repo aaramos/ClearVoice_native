@@ -5,10 +5,10 @@ import Testing
 struct ConfigureViewModelTests {
     @Test
     func defaultsMatchLocalFirstWorkflow() {
-        let viewModel = ConfigureViewModel(processorCount: 12)
+        let viewModel = ConfigureViewModel()
 
         #expect(viewModel.enhancementMethod == .hybrid)
-        #expect(viewModel.maxConcurrency == 5)
+        #expect(viewModel.maxConcurrency == ConfigureViewModel.defaultConcurrency)
         #expect(viewModel.canStart)
     }
 
@@ -21,9 +21,10 @@ struct ConfigureViewModelTests {
     }
 
     @Test
-    func slowerMachinesStartWithLowerRecommendation() {
-        let viewModel = ConfigureViewModel(processorCount: 4)
+    func advancedSummaryMentionsExpandedConcurrencyRange() {
+        let viewModel = ConfigureViewModel()
 
-        #expect(viewModel.maxConcurrency == 2)
+        #expect(viewModel.advancedSummary.contains("1 to 20"))
+        #expect(viewModel.advancedSummary.contains("5"))
     }
 }
