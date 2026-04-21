@@ -88,7 +88,7 @@ struct BatchProcessorTests {
 
         let preparedInputs = await transcriptionPrep.preparedInputs
         #expect(preparedInputs.count == 1)
-        #expect(preparedInputs.first?.source.lastPathComponent == "sample_1_HYBRID.m4a")
+        #expect(preparedInputs.first?.source.lastPathComponent == "sample_1.wav")
 
         let preparedOutput = try #require(preparedInputs.first?.prepared)
         #expect(preparedOutput.pathExtension == "wav")

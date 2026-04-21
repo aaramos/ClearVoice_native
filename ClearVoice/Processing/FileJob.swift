@@ -40,7 +40,6 @@ struct FileJob: Sendable {
             }
 
             let totalOutputs = services.comparisonEnhancements.count
-            var hybridOutputURL: URL?
 
             defer {
                 if normalized.requiresCleanup {
@@ -61,48 +60,42 @@ struct FileJob: Sendable {
                     input: normalizedURL,
                     output: outputURL
                 )
-
-                if comparisonEnhancement.outputSuffix == DeepFilterNetVariant.hybrid.outputSuffix {
-                    hybridOutputURL = outputURL
-                }
             }
 
             item.stage = .cleaning(progress: 1.0)
             await update(item)
 
-            if let hybridOutputURL {
-                let preparedTranscriptionInput = try await services.transcriptionPreparationService.prepare(hybridOutputURL)
-                defer {
-                    if preparedTranscriptionInput.requiresCleanup {
-                        try? FileManager.default.removeItem(at: preparedTranscriptionInput.url)
-                    }
+            let preparedTranscriptionInput = try await services.transcriptionPreparationService.prepare(normalizedURL)
+            defer {
+                if preparedTranscriptionInput.requiresCleanup {
+                    try? FileManager.default.removeItem(at: preparedTranscriptionInput.url)
                 }
-
-                item.stage = .transcribing(progress: 0.0)
-                await update(item)
-
-                let speechOutput = try await services.speechPipeline.process(
-                    audio: preparedTranscriptionInput.url,
-                    language: config.inputLanguage
-                )
-                item.detectedLanguage = speechOutput.transcript.detectedLanguage
-                item.originalTranscript = speechOutput.transcript.exportText
-                item.translatedTranscript = speechOutput.englishTranslation
-
-                item.stage = .transcribing(progress: 1.0)
-                await update(item)
-
-                item.stage = .exporting
-                await update(item)
-
-                try await services.export.exportTranscript(
-                    to: item.outputFolderURL ?? config.outputFolder,
-                    basename: item.basename,
-                    summary: nil,
-                    translated: speechOutput.englishTranslation,
-                    original: speechOutput.transcript
-                )
             }
+
+            item.stage = .transcribing(progress: 0.0)
+            await update(item)
+
+            let speechOutput = try await services.speechPipeline.process(
+                audio: preparedTranscriptionInput.url,
+                language: config.inputLanguage
+            )
+            item.detectedLanguage = speechOutput.transcript.detectedLanguage
+            item.originalTranscript = speechOutput.transcript.exportText
+            item.translatedTranscript = speechOutput.englishTranslation
+
+            item.stage = .transcribing(progress: 1.0)
+            await update(item)
+
+            item.stage = .exporting
+            await update(item)
+
+            try await services.export.exportTranscript(
+                to: item.outputFolderURL ?? config.outputFolder,
+                basename: item.basename,
+                summary: nil,
+                translated: speechOutput.englishTranslation,
+                original: speechOutput.transcript
+            )
 
             item.stage = .complete
             await update(item)
