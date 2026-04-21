@@ -59,8 +59,6 @@ struct ServiceBundle: Sendable {
     static func live(
         modelDirectory: URL? = nil
     ) -> ServiceBundle {
-        let translationService = LocalOllamaTranslationService()
-
         return ServiceBundle(
             audioEnhancement: FFmpegAudioEnhancementService(),
             comparisonEnhancements: DeepFilterNetAudioEnhancementService.availableVariants(),
