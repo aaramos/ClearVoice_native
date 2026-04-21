@@ -148,16 +148,22 @@ actor BatchProcessor {
             return (transcript, englishText)
         }
 
+        let translatedTexts = try await translationService.translateSegments(
+            transcript.segments.map(\.text),
+            from: transcript.detectedLanguage,
+            to: config.outputLanguage
+        )
+
+        guard translatedTexts.count == transcript.segments.count else {
+            throw ProcessingError.translationFailed(
+                "ClearVoice’s local translator returned an unexpected number of English segments."
+            )
+        }
+
         var translatedSegments: [TranscriptSegment] = []
         translatedSegments.reserveCapacity(transcript.segments.count)
 
-        for segment in transcript.segments {
-            let englishText = try await translationService.translate(
-                text: segment.text,
-                from: transcript.detectedLanguage,
-                to: config.outputLanguage
-            )
-
+        for (segment, englishText) in zip(transcript.segments, translatedTexts) {
             var translatedSegment = segment
             translatedSegment.translationEN = englishText.trimmingCharacters(in: .whitespacesAndNewlines)
             translatedSegments.append(translatedSegment)

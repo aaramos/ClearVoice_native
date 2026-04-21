@@ -27,6 +27,7 @@
 		26C570D0849CF6C62B4B2497 /* ProcessingModeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B673AE012DCC37DF7828412E /* ProcessingModeStore.swift */; };
 		280F6C517E89247653DB90EA /* TranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AF3F0F3698806630049279B /* TranscriptionService.swift */; };
 		2C7B030B6A00F1DF713F1FFD /* LaunchFailureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26652822EE948564B94803B1 /* LaunchFailureView.swift */; };
+		2EDFAA9CD52183982FC2C25E /* nllb_translate.py in Resources */ = {isa = PBXBuildFile; fileRef = 16632107696A43679ADAA3EC /* nllb_translate.py */; };
 		2F17F6769E9FB3B62946C372 /* ProcessingModeToggleRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90ED8D1273A08444E7D0140B /* ProcessingModeToggleRow.swift */; };
 		332E44446599FC8226BC0D22 /* LocalSpeechTranscriptionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C54CBA8E97577272AF29BE6E /* LocalSpeechTranscriptionServiceTests.swift */; };
 		375C987AF5BA15E36E87BC80 /* MultipartFormData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85CC307672CEE6D064AF50F7 /* MultipartFormData.swift */; };
@@ -43,7 +44,9 @@
 		4D926E4C557990899B4ABC3B /* AppLaunchViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA5985DF411F60FD9E6492A /* AppLaunchViewModelTests.swift */; };
 		516EF1A69216CCC943AE4A2C /* ProcessingStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 587B7C6CCF3EEC897DCDE2C6 /* ProcessingStage.swift */; };
 		55DDCBAA908540E1D8CA259C /* SummarizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 889BBB94D1CEC621448E417D /* SummarizationService.swift */; };
+		59B2AFD7ADE886F6F5DE04B3 /* LocalNLLBTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678CFF26EC183DB35FA3A3E0 /* LocalNLLBTranslationService.swift */; };
 		5B322C3099C687EEAA98BD0C /* AppViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D03412F66C01539EEC03FE7 /* AppViewModelTests.swift */; };
+		5FF23FD02640E65CDDC03AF7 /* LocalNLLBTranslationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC4D15265FBB081276E60A3 /* LocalNLLBTranslationServiceTests.swift */; };
 		64562F213E8F3A379EF2B4D5 /* AudioEnhancementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5326DB1620C0174732751D39 /* AudioEnhancementService.swift */; };
 		668AECC3C2C427005A2D47D7 /* AsyncSemaphore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CB4CD0FF165ECDAEB70963 /* AsyncSemaphore.swift */; };
 		684E70B1DDFE8B2F862A49D9 /* ConfigureViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95D5A93914FB82C1FB6C6376 /* ConfigureViewModel.swift */; };
@@ -121,6 +124,7 @@
 		11FEC578ED93B5F0868AD7A0 /* GeminiTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiTranscriptionService.swift; sourceTree = "<group>"; };
 		12ACB3CB20B537F3E00AC2D8 /* FileScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileScanner.swift; sourceTree = "<group>"; };
 		12B03C482C841A67900D536A /* Transcript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcript.swift; sourceTree = "<group>"; };
+		16632107696A43679ADAA3EC /* nllb_translate.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = nllb_translate.py; sourceTree = "<group>"; };
 		184EE511CA4CDD254B345DAC /* EnhancementMethod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancementMethod.swift; sourceTree = "<group>"; };
 		1A3E12D92C399BC28C348C79 /* LocalSpeechTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSpeechTranscriptionService.swift; sourceTree = "<group>"; };
 		1CD4905653A8BF9C2301A81B /* LocalOllamaTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalOllamaTranslationService.swift; sourceTree = "<group>"; };
@@ -160,6 +164,7 @@
 		619BBA53EFC08A8305138189 /* GeminiSummarizationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiSummarizationServiceTests.swift; sourceTree = "<group>"; };
 		6215F15EF2B465980A77DA90 /* WhisperKitSpeechPipelineService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitSpeechPipelineService.swift; sourceTree = "<group>"; };
 		65FA847239BB3C283C08CB04 /* OllamaSummarizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaSummarizationService.swift; sourceTree = "<group>"; };
+		678CFF26EC183DB35FA3A3E0 /* LocalNLLBTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNLLBTranslationService.swift; sourceTree = "<group>"; };
 		6A40F91D1DB9DDDB2EBACCBD /* FormatNormalizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatNormalizationService.swift; sourceTree = "<group>"; };
 		6E63BC6AA9746C9D41E4D736 /* ProcessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessView.swift; sourceTree = "<group>"; };
 		6FF57A3BC9624FF1E9D95137 /* OutputPathResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputPathResolverTests.swift; sourceTree = "<group>"; };
@@ -205,6 +210,7 @@
 		F0494ED6BAB9FF633DC51756 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		F4914971065BFD2A2065106C /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
 		F5E890D9278926E1A17723EF /* ProcessingModeConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingModeConfiguration.swift; sourceTree = "<group>"; };
+		FAC4D15265FBB081276E60A3 /* LocalNLLBTranslationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNLLBTranslationServiceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -313,6 +319,7 @@
 				05DA28966C272C168CECDDF7 /* GeminiSummarizationService.swift */,
 				11FEC578ED93B5F0868AD7A0 /* GeminiTranscriptionService.swift */,
 				31693940DE68799C042FCFEF /* GeminiTranslationService.swift */,
+				678CFF26EC183DB35FA3A3E0 /* LocalNLLBTranslationService.swift */,
 				1CD4905653A8BF9C2301A81B /* LocalOllamaTranslationService.swift */,
 				1A3E12D92C399BC28C348C79 /* LocalSpeechTranscriptionService.swift */,
 				4F51B90B5A86476DEC7FFF36 /* LocalTranslationService.swift */,
@@ -364,6 +371,7 @@
 				938DCEBF4E2D2F6487CBE2A6 /* GeminiTranscriptionServiceTests.swift */,
 				2A6EC8F7D8DFE366C4C88EAB /* GeminiTranslationServiceTests.swift */,
 				A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */,
+				FAC4D15265FBB081276E60A3 /* LocalNLLBTranslationServiceTests.swift */,
 				D0455D3C5D0276E876296BDD /* LocalOllamaTranslationServiceTests.swift */,
 				C54CBA8E97577272AF29BE6E /* LocalSpeechTranscriptionServiceTests.swift */,
 				954587F6F34F64D9BB314C33 /* OllamaSummarizationServiceTests.swift */,
@@ -407,6 +415,7 @@
 				7CF56AFAA8C2A27C605CCC59 /* CloudHTTPClient.swift */,
 				E5162558A53088EBB62A27A3 /* DurationFormatter.swift */,
 				85CC307672CEE6D064AF50F7 /* MultipartFormData.swift */,
+				16632107696A43679ADAA3EC /* nllb_translate.py */,
 				B673AE012DCC37DF7828412E /* ProcessingModeStore.swift */,
 			);
 			path = Support;
@@ -520,6 +529,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D8031901C274A4D98386C5D0 /* Assets.xcassets in Resources */,
+				2EDFAA9CD52183982FC2C25E /* nllb_translate.py in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -544,6 +554,7 @@
 				78AF15BDBBFCD3720FBDA387 /* GeminiTranscriptionServiceTests.swift in Sources */,
 				004D6185722608AF89615B15 /* GeminiTranslationServiceTests.swift in Sources */,
 				06DAB6EF3579DB0EE3864740 /* ImportViewModelTests.swift in Sources */,
+				5FF23FD02640E65CDDC03AF7 /* LocalNLLBTranslationServiceTests.swift in Sources */,
 				D9B801CA7C07F40E94D96CB2 /* LocalOllamaTranslationServiceTests.swift in Sources */,
 				332E44446599FC8226BC0D22 /* LocalSpeechTranscriptionServiceTests.swift in Sources */,
 				1FCD855EE586ED49F481D113 /* MockAPIKeyStore.swift in Sources */,
@@ -599,6 +610,7 @@
 				49BC8506D176FC9551B9710D /* Intensity.swift in Sources */,
 				B5233D117F6E492CFE6A01C0 /* Language.swift in Sources */,
 				2C7B030B6A00F1DF713F1FFD /* LaunchFailureView.swift in Sources */,
+				59B2AFD7ADE886F6F5DE04B3 /* LocalNLLBTranslationService.swift in Sources */,
 				0E5563B7ABE4B0E04B75F684 /* LocalOllamaTranslationService.swift in Sources */,
 				A3C7A98D98323B4E415099FF /* LocalSpeechTranscriptionService.swift in Sources */,
 				90380E4A5BCEAFA2329D928F /* LocalTranslationService.swift in Sources */,

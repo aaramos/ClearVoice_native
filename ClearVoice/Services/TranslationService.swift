@@ -11,6 +11,37 @@ protocol TranslationService: Sendable {
         from sourceLanguage: String,
         to targetLanguage: String
     ) async throws -> String
+
+    /// Translates transcript segments in order. The default implementation preserves order
+    /// and calls the single-text translator for each segment.
+    func translateSegments(
+        _ segments: [String],
+        from sourceLanguage: String,
+        to targetLanguage: String
+    ) async throws -> [String]
+}
+
+extension TranslationService {
+    func translateSegments(
+        _ segments: [String],
+        from sourceLanguage: String,
+        to targetLanguage: String
+    ) async throws -> [String] {
+        var outputs: [String] = []
+        outputs.reserveCapacity(segments.count)
+
+        for segment in segments {
+            outputs.append(
+                try await translate(
+                    text: segment,
+                    from: sourceLanguage,
+                    to: targetLanguage
+                )
+            )
+        }
+
+        return outputs
+    }
 }
 
 actor StubTranslationService: TranslationService {

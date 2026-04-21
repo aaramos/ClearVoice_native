@@ -48,6 +48,39 @@ struct Language: Identifiable, Equatable {
         return languageCode
     }
 
+    static func nllbCode(for languageCode: String) -> String? {
+        switch languageCode {
+        case "en":
+            return "eng_Latn"
+        case "mr":
+            return "mar_Deva"
+        case "hi":
+            return "hin_Deva"
+        case "bn":
+            return "ben_Beng"
+        case "te":
+            return "tel_Telu"
+        case "ta":
+            return "tam_Taml"
+        case "ur":
+            return "urd_Arab"
+        case "gu":
+            return "guj_Gujr"
+        case "kn":
+            return "kan_Knda"
+        case "ml":
+            return "mal_Mlym"
+        case "pa":
+            return "pan_Guru"
+        case "or":
+            return "ory_Orya"
+        case "as":
+            return "asm_Beng"
+        default:
+            return nil
+        }
+    }
+
     var bcp47Locale: Locale? {
         guard id != Self.autoDetect.id else {
             return nil
