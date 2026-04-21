@@ -44,11 +44,11 @@ curl -fsSL https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/de
 chmod +x /opt/homebrew/bin/deep-filter
 ```
 
-WhisperKit models are downloaded on demand into the current user's Application Support directory the first time local speech processing runs:
+The next transcription phase on this branch will use `whisper.cpp` with local models stored in the current user's Application Support directory:
 
 - `~/Library/Application Support/ClearVoice/Models`
 
-Because first-run setup UX is deferred on this branch, keep the Mac online for the first transcription run so the local speech model can download if needed.
+Because first-run setup UX is deferred on this branch, model provisioning is currently an engineering/setup task rather than an in-app user flow.
 
 ## Development
 
@@ -68,7 +68,8 @@ xcodebuild test -project ClearVoice.xcodeproj -scheme ClearVoice -destination 'p
 
 - This branch is intentionally English-only for translation
 - Summarization is a placeholder, not a real model-backed feature yet
-- The first local transcription run may need to download the WhisperKit model before processing can begin
-- First-run onboarding for model setup is still deferred
+- The next transcription phase is planned around `whisper.cpp`, not `WhisperKit`
+- The translation phase after transcription is planned around local `NLLB-200` inference through `CTranslate2`, not a native Swift/CoreML path in v1
+- First-run onboarding for local model setup is still deferred
 - The legacy Gemini, Apple Speech, and Apple Translation codepaths still exist in the repo for reference and rollback safety, but they are not part of the primary workflow on this branch
 - `.dmg` packaging is still planned for a later phase
