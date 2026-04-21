@@ -4,7 +4,7 @@ ClearVoice is a native macOS batch audio utility for cleaning speech recordings 
 
 ## Download
 
-- Direct download: [ClearVoice 0.1.0 DMG](https://github.com/aaramos/ClearVoice_native/releases/download/v0.1.0/ClearVoice-0.1.0.dmg)
+- Direct download: [ClearVoice 0.2.0 DMG](https://github.com/aaramos/ClearVoice_native/releases/download/v0.2.0/ClearVoice-0.2.0.dmg)
 - Releases page: [github.com/aaramos/ClearVoice_native/releases](https://github.com/aaramos/ClearVoice_native/releases)
 
 ## Current Product
