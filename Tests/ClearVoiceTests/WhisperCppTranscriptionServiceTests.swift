@@ -4,7 +4,50 @@ import Testing
 
 struct WhisperCppTranscriptionServiceTests {
     @Test
-    func transcribeParsesTimestampedMarathiSegments() async throws {
+    func transcribeParsesTimestampedMarathiSegmentsFromSimpleJSON() async throws {
+        let harness = try WhisperCppHarness()
+        let expectedJSON = """
+        {
+          "transcription": [
+            {
+              "text": "नमस्कार! तुमचं नाव काय आहे?",
+              "offsets": { "from": 0, "to": 2500 }
+            }
+          ]
+        }
+        """
+
+        let service = WhisperCppTranscriptionService(
+            executableURL: harness.executableURL,
+            modelDirectory: harness.modelDirectory,
+            runner: { _, arguments, _ in
+                #expect(arguments.contains("-oj"))
+                #expect(!arguments.contains("-ojf"))
+
+                let outputPrefixArgument = try argumentValue(after: "-of", in: arguments)
+                let outputPrefix = try #require(outputPrefixArgument)
+                let jsonURL = URL(fileURLWithPath: outputPrefix).appendingPathExtension("json")
+                let data = try #require(expectedJSON.data(using: .utf8))
+                try data.write(to: jsonURL)
+            }
+        )
+
+        let transcript = try await service.transcribe(
+            audio: harness.audioURL,
+            language: .specific("mr")
+        )
+
+        #expect(transcript.detectedLanguage == "mr")
+        #expect(transcript.text == "नमस्कार! तुमचं नाव काय आहे?")
+        #expect(transcript.segments.count == 1)
+        #expect(transcript.segments.first?.startMilliseconds == 0)
+        #expect(transcript.segments.first?.endMilliseconds == 2500)
+        #expect(transcript.segments.first?.tokens.isEmpty == true)
+        #expect(transcript.exportText == "[00:00:00.000 --> 00:00:02.500]   नमस्कार! तुमचं नाव काय आहे?")
+    }
+
+    @Test
+    func transcribeParsesTimestampedMarathiSegmentsFromFullJSON() async throws {
         let harness = try WhisperCppHarness()
         let expectedJSON = """
         {

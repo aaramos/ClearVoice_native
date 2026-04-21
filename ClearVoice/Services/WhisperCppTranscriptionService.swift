@@ -100,7 +100,7 @@ actor WhisperCppTranscriptionService: TranscriptionService {
                 "-f", audio.path,
                 "-l", languageCode,
                 "-t", String(threads),
-                "-ojf",
+                "-oj",
                 "-of", outputPrefix.path,
             ],
             runtimeEnvironment(for: executableURL)
@@ -113,13 +113,24 @@ actor WhisperCppTranscriptionService: TranscriptionService {
         }
 
         let data = try Data(contentsOf: jsonURL)
-        let payload = try JSONDecoder().decode(WhisperCppPayload.self, from: data)
+        let payload: WhisperCppPayload
+
+        do {
+            payload = try JSONDecoder().decode(WhisperCppPayload.self, from: data)
+        } catch {
+            logger.error("Failed to decode whisper.cpp JSON output for \(audio.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            throw ProcessingError.transcriptionFailed(
+                "ClearVoice received transcript data from whisper.cpp, but the JSON output wasn’t in the format the app expected."
+            )
+        }
+
         let segments = payload.transcription.map { segment in
             TranscriptSegment(
                 text: segment.text.trimmingCharacters(in: .whitespacesAndNewlines),
                 startMilliseconds: segment.offsets.from,
                 endMilliseconds: segment.offsets.to,
                 tokens: segment.tokens
+                    .unwrap(or: [])
                     .filter { !$0.text.hasPrefix("[_") }
                     .map {
                         TranscriptToken(
@@ -307,7 +318,7 @@ private struct WhisperCppPayload: Decodable {
 private struct WhisperCppSegment: Decodable {
     let text: String
     let offsets: WhisperCppOffsets
-    let tokens: [WhisperCppToken]
+    let tokens: [WhisperCppToken]?
 }
 
 private struct WhisperCppOffsets: Decodable {
@@ -319,4 +330,10 @@ private struct WhisperCppToken: Decodable {
     let text: String
     let p: Double
     let offsets: WhisperCppOffsets?
+}
+
+private extension Optional {
+    func unwrap(or defaultValue: Wrapped) -> Wrapped {
+        self ?? defaultValue
+    }
 }
