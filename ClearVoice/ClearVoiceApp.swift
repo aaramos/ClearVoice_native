@@ -29,6 +29,7 @@ struct ClearVoiceApp: App {
                 }
             }
             .frame(minWidth: 920, minHeight: 640)
+            .preferredColorScheme(.light)
         }
         .windowResizability(.contentMinSize)
     }

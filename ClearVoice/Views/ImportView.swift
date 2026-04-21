@@ -5,10 +5,12 @@ struct ImportView: View {
     let onNext: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 24) {
+            intro
+
             FolderPicker(
                 title: "Drop a folder of audio files",
-                subtitle: "to begin",
+                subtitle: "ClearVoice will scan the folder, list supported files, and prepare a timestamped output folder on your Desktop.",
                 selection: viewModel.sourceFolderURL,
                 buttonTitle: "Click to choose a folder"
             ) { url in
@@ -20,14 +22,14 @@ struct ImportView: View {
                     ProgressView()
                         .controlSize(.small)
                     Text("ClearVoice is scanning the selected folder and listing eligible files.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.black.opacity(0.62))
                 }
             } else if let scanErrorMessage = viewModel.scanErrorMessage {
                 inlineNotice(scanErrorMessage, tone: .error)
             } else if !viewModel.plannedOutputFolderDisplayPath.isEmpty {
                 Text("Batch output: \(viewModel.plannedOutputFolderDisplayPath)")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.black.opacity(0.55))
                     .textSelection(.enabled)
             }
 
@@ -43,8 +45,6 @@ struct ImportView: View {
                 fileTable
             }
 
-            Spacer(minLength: 0)
-
             HStack {
                 Spacer()
 
@@ -54,7 +54,20 @@ struct ImportView: View {
                     .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(.top, 8)
+        .padding(.top, 4)
+    }
+
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Choose Your Files")
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundStyle(Color.black.opacity(0.92))
+
+            Text("Drop a folder into ClearVoice to scan audio files, estimate duration, and stage the batch for processing.")
+                .font(.title3)
+                .foregroundStyle(Color.black.opacity(0.62))
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private var fileTable: some View {
@@ -109,7 +122,7 @@ struct ImportView: View {
                 .frame(width: 120, alignment: .trailing)
         }
         .font(.headline)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Color.black.opacity(0.58))
         .padding(.horizontal, 22)
         .padding(.vertical, 14)
     }
@@ -123,6 +136,7 @@ struct ImportView: View {
 
             Text(url.lastPathComponent)
                 .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.black.opacity(0.88))
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -131,7 +145,7 @@ struct ImportView: View {
 
             Text(duration)
                 .font(.title3.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.black.opacity(0.54))
                 .frame(width: 120, alignment: .trailing)
         }
         .padding(.horizontal, 22)
@@ -141,12 +155,12 @@ struct ImportView: View {
     private func statusPill(_ status: String) -> some View {
         Text(status)
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(status == "Ready" ? Color.blue : .secondary)
+            .foregroundStyle(status == "Ready" ? Color.blue : Color.black.opacity(0.55))
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(status == "Ready" ? Color.blue.opacity(0.10) : Color(nsColor: .controlColor))
+                    .fill(status == "Ready" ? Color.blue.opacity(0.10) : Color.black.opacity(0.05))
             )
     }
 
@@ -190,7 +204,7 @@ private enum InlineTone {
     var color: Color {
         switch self {
         case .neutral:
-            return .secondary
+            return Color.black.opacity(0.65)
         case .error:
             return .orange
         }
@@ -199,7 +213,7 @@ private enum InlineTone {
     var backgroundColor: Color {
         switch self {
         case .neutral:
-            return Color(nsColor: .controlBackgroundColor)
+            return Color.black.opacity(0.05)
         case .error:
             return Color.orange.opacity(0.10)
         }

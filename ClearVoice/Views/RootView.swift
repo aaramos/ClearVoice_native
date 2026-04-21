@@ -4,14 +4,19 @@ struct RootView: View {
     @ObservedObject var viewModel: AppViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.horizontal, 40)
-                .padding(.bottom, 36)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                header
+                content
+            }
+            .frame(maxWidth: 1040)
+            .frame(maxWidth: .infinity, alignment: .top)
+            .padding(.horizontal, 40)
+            .padding(.top, 32)
+            .padding(.bottom, 36)
         }
-        .background(Color.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color(red: 0.978, green: 0.982, blue: 0.992))
     }
 
     private var header: some View {
@@ -19,51 +24,45 @@ struct RootView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("ClearVoice")
                     .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(Color.black.opacity(0.9))
 
                 Text("Batch Audio Utility")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.black.opacity(0.72))
             }
 
             Spacer()
 
             stepBadge
         }
-        .padding(.horizontal, 56)
-        .padding(.top, 44)
-        .padding(.bottom, 28)
     }
 
     @ViewBuilder
     private var content: some View {
-        ScrollView {
-            Group {
-                switch viewModel.state {
-                case .importing:
-                    ImportView(viewModel: viewModel.importViewModel) {
-                        viewModel.goForward()
-                    }
-                case .configuring:
-                    ConfigureView(
-                        viewModel: viewModel.configureViewModel,
-                        onBack: viewModel.goBack,
-                        onStart: viewModel.goForward
-                    )
-                case .processing:
-                    ProcessView(
-                        viewModel: viewModel.batchViewModel,
-                        onBack: viewModel.goBack,
-                        onShowResults: viewModel.showResults
-                    )
-                case .review:
-                    ReviewView(
-                        viewModel: viewModel.batchViewModel,
-                        onStartNewBatch: viewModel.startNewBatch
-                    )
+        Group {
+            switch viewModel.state {
+            case .importing:
+                ImportView(viewModel: viewModel.importViewModel) {
+                    viewModel.goForward()
                 }
+            case .configuring:
+                ConfigureView(
+                    viewModel: viewModel.configureViewModel,
+                    onBack: viewModel.goBack,
+                    onStart: viewModel.goForward
+                )
+            case .processing:
+                ProcessView(
+                    viewModel: viewModel.batchViewModel,
+                    onBack: viewModel.goBack,
+                    onShowResults: viewModel.showResults
+                )
+            case .review:
+                ReviewView(
+                    viewModel: viewModel.batchViewModel,
+                    onStartNewBatch: viewModel.startNewBatch
+                )
             }
-            .frame(maxWidth: 1040)
-            .frame(maxWidth: .infinity)
         }
     }
 

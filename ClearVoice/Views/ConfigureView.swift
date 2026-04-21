@@ -83,8 +83,6 @@ struct ConfigureView: View {
                     .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
             )
 
-            Spacer(minLength: 0)
-
             HStack {
                 Button("Back", action: onBack)
                     .buttonStyle(SecondaryActionButtonStyle())
