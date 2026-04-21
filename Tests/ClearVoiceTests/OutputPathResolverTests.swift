@@ -80,6 +80,20 @@ struct OutputPathResolverTests {
         #expect(second == .skip(reason: .outputFolderExists(harness.outputRoot.appendingPathComponent("audio_2", isDirectory: true))))
         #expect(third == .use(folder: harness.outputRoot.appendingPathComponent("audio_3", isDirectory: true)))
     }
+
+    @Test
+    func missingOutputRootIsCreatedAutomatically() async throws {
+        let fileManager = FileManager.default
+        let missingRoot = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+
+        let resolver = try OutputPathResolver(outputRoot: missingRoot)
+        let first = await resolver.resolve(basename: "audio")
+
+        var isDirectory: ObjCBool = false
+        #expect(fileManager.fileExists(atPath: missingRoot.path, isDirectory: &isDirectory))
+        #expect(isDirectory.boolValue)
+        #expect(first == .use(folder: missingRoot.appendingPathComponent("audio", isDirectory: true)))
+    }
 }
 
 private struct ResolverHarness {

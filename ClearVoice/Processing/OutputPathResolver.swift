@@ -14,6 +14,11 @@ actor OutputPathResolver {
     init(outputRoot: URL, fileManager: FileManager = .default) throws {
         self.outputRoot = outputRoot.resolvingSymlinksInPath().standardizedFileURL
 
+        try fileManager.createDirectory(
+            at: self.outputRoot,
+            withIntermediateDirectories: true
+        )
+
         let resourceKeys: Set<URLResourceKey> = [.isDirectoryKey]
         let contents = try fileManager.contentsOfDirectory(
             at: self.outputRoot,
