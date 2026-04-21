@@ -27,6 +27,7 @@ ACCEPTED_SOURCE_EXTENSIONS = {
 SHORT_SUFFIX = "_short"
 DFN_SUFFIX = "_DFN"
 HYBRID_SUFFIX = "_HYBRID"
+TRANSCRIPTION_INPUTS_FOLDER = "_transcription_inputs"
 
 DFN_PREPROCESS_FILTER = ",".join(
     [
@@ -47,18 +48,15 @@ HYBRID_PREPROCESS_FILTER = ",".join(
     [
         "adeclick=window=20:overlap=75:arorder=2:threshold=3:burst=4:method=save",
         "adeclip=window=55:overlap=75:arorder=8:threshold=8:hsize=1200:method=save",
-        "highpass=f=110",
-        "lowpass=f=6800",
-        "afftdn=nr=22:nf=-58:tn=1:gs=10",
-        "agate=threshold=0.035:ratio=3.0:range=0.3:attack=30:release=420:detection=rms",
-        "speechnorm=e=10.0:r=5e-05:l=1",
+        "highpass=f=70",
     ]
 )
 
 HYBRID_POSTPROCESS_FILTER = ",".join(
     [
         "highpass=f=80",
-        "lowpass=f=7600",
+        "lowpass=f=7800",
+        "afftdn=nr=6:nf=-72:tn=1",
         "speechnorm=e=4.0:r=0.0001:l=1",
     ]
 )
@@ -85,7 +83,13 @@ class TranscriptSegment:
     text: str
     start_ms: int
     end_ms: int
-    translation_en: str | None = None
+
+
+@dataclass
+class TranslationChunk:
+    text: str
+    start_ms: int
+    end_ms: int
 
 
 @dataclass
@@ -94,6 +98,7 @@ class VariantResult:
     audio_path: Path
     transcript_source_path: Path
     transcript_segments: list[TranscriptSegment] | None = None
+    translation_chunks: list[TranslationChunk] | None = None
     transcript_language: str | None = None
     error: str | None = None
 
@@ -223,6 +228,9 @@ def scan_audio_files(
     skipped: list[Path] = []
 
     for path in sorted(iterator, key=audio_sort_key):
+        if path.name.startswith("._"):
+            skipped.append(path)
+            continue
         extension = path.suffix.lower().lstrip(".")
         if extension not in ACCEPTED_SOURCE_EXTENSIONS:
             skipped.append(path)
@@ -376,11 +384,7 @@ def resolve_executable(
 
 def default_whisper_threads() -> int:
     cpu_count = os.cpu_count() or 4
-    if cpu_count >= 8:
-        return 8
-    if cpu_count >= 6:
-        return 6
-    return max(4, cpu_count)
+    return max(4, cpu_count - 2)
 
 
 def process_source_file(
@@ -397,7 +401,10 @@ def process_source_file(
     errors: list[str] = []
 
     try:
-        short_output = folder_path / f"{source_path.stem}{SHORT_SUFFIX}{source_path.suffix}"
+        transcription_folder = folder_path / TRANSCRIPTION_INPUTS_FOLDER
+        transcription_folder.mkdir(parents=True, exist_ok=True)
+
+        short_output = folder_path / f"{source_path.stem}{SHORT_SUFFIX}.wav"
         extract_short_clip(
             ffmpeg=toolchain.ffmpeg,
             source_path=source_path,
@@ -405,17 +412,25 @@ def process_source_file(
             seconds=seconds,
         )
 
+        short_transcription_input = transcription_folder / f"{source_path.stem}{SHORT_SUFFIX}_transcribe.wav"
+        create_transcription_master(
+            ffmpeg=toolchain.ffmpeg,
+            source_path=short_output,
+            output_path=short_transcription_input,
+        )
+
         variant_results: list[VariantResult] = [
             build_variant_result(
                 label="SHORT",
                 audio_path=short_output,
-                transcript_source_path=short_output,
+                transcript_source_path=short_transcription_input,
                 toolchain=toolchain,
             ),
             build_enhanced_variant_result(
                 label="DFN",
                 source_short_path=short_output,
                 output_path=folder_path / f"{source_path.stem}{DFN_SUFFIX}.m4a",
+                transcription_output_path=transcription_folder / f"{source_path.stem}{DFN_SUFFIX}_transcribe.wav",
                 toolchain=toolchain,
                 preprocess_filter=DFN_PREPROCESS_FILTER,
                 postprocess_filter=DFN_POSTPROCESS_FILTER,
@@ -424,6 +439,7 @@ def process_source_file(
                 label="HYBRID",
                 source_short_path=short_output,
                 output_path=folder_path / f"{source_path.stem}{HYBRID_SUFFIX}.m4a",
+                transcription_output_path=transcription_folder / f"{source_path.stem}{HYBRID_SUFFIX}_transcribe.wav",
                 toolchain=toolchain,
                 preprocess_filter=HYBRID_PREPROCESS_FILTER,
                 postprocess_filter=HYBRID_POSTPROCESS_FILTER,
@@ -475,11 +491,42 @@ def extract_short_clip(
             "-t",
             str(seconds),
             "-vn",
-            "-c",
-            "copy",
+            "-ac",
+            "1",
+            "-ar",
+            "48000",
+            "-c:a",
+            "pcm_s16le",
             str(output_path),
         ],
         error_prefix=f"Failed to extract short clip from {source_path.name}",
+    )
+
+
+def create_transcription_master(
+    ffmpeg: Path,
+    source_path: Path,
+    output_path: Path,
+) -> None:
+    run_command(
+        [
+            str(ffmpeg),
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-i",
+            str(source_path),
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-c:a",
+            "pcm_s16le",
+            str(output_path),
+        ],
+        error_prefix=f"Failed to create transcription master for {source_path.name}",
     )
 
 
@@ -487,6 +534,7 @@ def build_enhanced_variant_result(
     label: str,
     source_short_path: Path,
     output_path: Path,
+    transcription_output_path: Path,
     toolchain: Toolchain,
     preprocess_filter: str,
     postprocess_filter: str,
@@ -495,6 +543,7 @@ def build_enhanced_variant_result(
         enhance_with_deepfilternet(
             input_path=source_short_path,
             output_path=output_path,
+            transcription_output_path=transcription_output_path,
             toolchain=toolchain,
             preprocess_filter=preprocess_filter,
             postprocess_filter=postprocess_filter,
@@ -502,14 +551,14 @@ def build_enhanced_variant_result(
         return build_variant_result(
             label=label,
             audio_path=output_path,
-            transcript_source_path=output_path,
+            transcript_source_path=transcription_output_path,
             toolchain=toolchain,
         )
     except Exception as error:  # noqa: BLE001
         return VariantResult(
             label=label,
             audio_path=output_path,
-            transcript_source_path=output_path,
+            transcript_source_path=transcription_output_path,
             error=str(error),
         )
 
@@ -525,7 +574,7 @@ def build_variant_result(
             source_audio=transcript_source_path,
             toolchain=toolchain,
         )
-        translated_segments = translate_segments(
+        translation_chunks = translate_segments(
             transcript["segments"],
             toolchain=toolchain,
         )
@@ -535,9 +584,8 @@ def build_variant_result(
                 text=segment["text"],
                 start_ms=segment["start_ms"],
                 end_ms=segment["end_ms"],
-                translation_en=translation,
             )
-            for segment, translation in zip(transcript["segments"], translated_segments)
+            for segment in transcript["segments"]
         ]
 
         return VariantResult(
@@ -545,6 +593,7 @@ def build_variant_result(
             audio_path=audio_path,
             transcript_source_path=transcript_source_path,
             transcript_segments=segments,
+            translation_chunks=translation_chunks,
             transcript_language=transcript["detected_language"],
         )
     except Exception as error:  # noqa: BLE001
@@ -559,11 +608,13 @@ def build_variant_result(
 def enhance_with_deepfilternet(
     input_path: Path,
     output_path: Path,
+    transcription_output_path: Path,
     toolchain: Toolchain,
     preprocess_filter: str,
     postprocess_filter: str,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    transcription_output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory(prefix="cv_eval_dfn_") as temp_dir:
         temp_root = Path(temp_dir)
@@ -635,11 +686,26 @@ def enhance_with_deepfilternet(
             error_prefix=f"Failed to export {output_path.name}",
         )
 
+        create_transcription_master(
+            ffmpeg=toolchain.ffmpeg,
+            source_path=enhanced_wav,
+            output_path=transcription_output_path,
+        )
+
 
 def locate_deepfilter_output(expected_filename: str, output_directory: Path) -> Path:
     expected = output_directory / expected_filename
     if expected.exists():
         return expected
+
+    expected_stem = Path(expected_filename).stem
+    wavs = sorted(
+        path
+        for path in output_directory.glob("*.wav")
+        if path.stem == expected_stem
+    )
+    if wavs:
+        return wavs[0]
 
     wavs = sorted(path for path in output_directory.glob("*.wav"))
     if wavs:
@@ -653,30 +719,8 @@ def locate_deepfilter_output(expected_filename: str, output_directory: Path) -> 
 def transcribe_audio(source_audio: Path, toolchain: Toolchain) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="cv_eval_whisper_") as temp_dir:
         temp_root = Path(temp_dir)
-        whisper_input = temp_root / "transcription_input.wav"
         output_prefix = temp_root / "transcript"
         json_output = output_prefix.with_suffix(".json")
-
-        run_command(
-            [
-                str(toolchain.ffmpeg),
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-y",
-                "-i",
-                str(source_audio),
-                "-vn",
-                "-ac",
-                "1",
-                "-ar",
-                "16000",
-                "-c:a",
-                "pcm_s16le",
-                str(whisper_input),
-            ],
-            error_prefix=f"Failed to prepare whisper input for {source_audio.name}",
-        )
 
         transcript_payload = None
         errors: list[str] = []
@@ -692,7 +736,7 @@ def transcribe_audio(source_audio: Path, toolchain: Toolchain) -> dict[str, obje
                         whisper_arguments(
                             executable=toolchain.whisper_cli,
                             model_path=model_path,
-                            audio_path=whisper_input,
+                            audio_path=source_audio,
                             output_prefix=output_prefix,
                             threads=toolchain.whisper_threads,
                             no_gpu=no_gpu,
@@ -817,15 +861,19 @@ def whisper_environment(whisper_cli: Path) -> dict[str, str]:
 def translate_segments(
     segments: list[dict[str, object]],
     toolchain: Toolchain,
-) -> list[str]:
-    texts = [str(segment["text"]).strip() for segment in segments]
-    if not texts:
+) -> list[TranslationChunk]:
+    grouped_segments = build_translation_groups(segments)
+    if not grouped_segments:
         return []
 
-    translated: list[str] = [""] * len(texts)
-    for batch in segment_batches(texts, max_batch_segments=16, max_batch_characters=4000):
+    translated_texts: list[str] = [""] * len(grouped_segments)
+    pending_translation_indexes = [
+        index for index, group in enumerate(grouped_segments) if should_translate_group(group["text"])
+    ]
+
+    for batch in segment_batches(pending_translation_indexes, grouped_segments, max_batch_segments=16, max_batch_characters=4000):
         payload = json.dumps(
-            {"segments": [texts[index] for index in batch]},
+            {"segments": [grouped_segments[index]["text"] for index in batch]},
             ensure_ascii=False,
         ).encode("utf-8")
         stdout = run_command(
@@ -848,13 +896,27 @@ def translate_segments(
         if not isinstance(translations, list) or len(translations) != len(batch):
             raise HarnessError("NLLB returned an unexpected number of translated segments.")
         for index, translation in zip(batch, translations):
-            translated[index] = str(translation).strip()
+            translated_texts[index] = str(translation).strip()
 
-    return translated
+    translation_chunks: list[TranslationChunk] = []
+    for index, group in enumerate(grouped_segments):
+        translated_text = translated_texts[index]
+        if not translated_text:
+            translated_text = group["text"]
+        translation_chunks.append(
+            TranslationChunk(
+                text=translated_text,
+                start_ms=int(group["start_ms"]),
+                end_ms=int(group["end_ms"]),
+            )
+        )
+
+    return translation_chunks
 
 
 def segment_batches(
-    texts: list[str],
+    indexes: list[int],
+    groups: list[dict[str, object]],
     max_batch_segments: int,
     max_batch_characters: int,
 ) -> list[list[int]]:
@@ -862,7 +924,8 @@ def segment_batches(
     current_batch: list[int] = []
     current_characters = 0
 
-    for index, text in enumerate(texts):
+    for index in indexes:
+        text = str(groups[index]["text"])
         proposed_characters = current_characters + len(text)
         would_overflow_count = len(current_batch) >= max_batch_segments
         would_overflow_characters = bool(current_batch) and proposed_characters > max_batch_characters
@@ -879,6 +942,55 @@ def segment_batches(
         batches.append(current_batch)
 
     return batches
+
+
+def build_translation_groups(segments: list[dict[str, object]]) -> list[dict[str, object]]:
+    groups: list[dict[str, object]] = []
+    current_segments: list[dict[str, object]] = []
+
+    for segment in segments:
+        text = str(segment["text"]).strip()
+        if not text:
+            continue
+
+        current_segments.append(segment)
+        current_text = " ".join(str(item["text"]).strip() for item in current_segments).strip()
+        should_flush = (
+            text.endswith(("।", ".", "?", "!"))
+            or len(current_text) >= 240
+        )
+
+        if should_flush:
+            groups.append(
+                {
+                    "text": current_text,
+                    "start_ms": int(current_segments[0]["start_ms"]),
+                    "end_ms": int(current_segments[-1]["end_ms"]),
+                }
+            )
+            current_segments = []
+
+    if current_segments:
+        groups.append(
+            {
+                "text": " ".join(str(item["text"]).strip() for item in current_segments).strip(),
+                "start_ms": int(current_segments[0]["start_ms"]),
+                "end_ms": int(current_segments[-1]["end_ms"]),
+            }
+        )
+
+    return groups
+
+
+def should_translate_group(text: str) -> bool:
+    total_letters = sum(1 for character in text if character.isalpha())
+    if total_letters == 0:
+        return False
+
+    devanagari_letters = sum(
+        1 for character in text if "\u0900" <= character <= "\u097F"
+    )
+    return (devanagari_letters / total_letters) > 0.3
 
 
 def write_combined_report(
@@ -902,7 +1014,8 @@ def write_combined_report(
                 f"VARIANT: {result.label}",
                 f"AUDIO FILE: {result.audio_path.name}",
                 f"AUDIO PATH: {result.audio_path}",
-                f"TRANSCRIPTION SOURCE: {result.transcript_source_path}",
+                f"TRANSCRIPTION SOURCE FILE: {result.transcript_source_path.name}",
+                f"TRANSCRIPTION SOURCE PATH: {result.transcript_source_path}",
             ]
         )
 
@@ -922,10 +1035,10 @@ def write_combined_report(
                 f"LANGUAGE: {result.transcript_language or 'mr'}",
                 "",
                 "ORIGINAL TRANSCRIPT",
-                format_segments(result.transcript_segments or [], translated=False),
+                format_transcript_segments(result.transcript_segments or []),
                 "",
                 "ENGLISH TRANSLATION",
-                format_segments(result.transcript_segments or [], translated=True),
+                format_translation_chunks(result.translation_chunks or []),
                 "",
             ]
         )
@@ -933,19 +1046,26 @@ def write_combined_report(
     report_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
-def format_segments(segments: list[TranscriptSegment], translated: bool) -> str:
+def format_transcript_segments(segments: list[TranscriptSegment]) -> str:
     if not segments:
         return "[no transcript available]"
 
     lines: list[str] = []
     for segment in segments:
-        text = segment.translation_en if translated else segment.text
-        if translated and not text:
-            text = "[translation unavailable]"
         lines.append(
-            f"[{timestamp_string(segment.start_ms)} --> {timestamp_string(segment.end_ms)}]   {text}"
+            f"[{timestamp_string(segment.start_ms)} --> {timestamp_string(segment.end_ms)}]   {segment.text}"
         )
     return "\n".join(lines)
+
+
+def format_translation_chunks(chunks: list[TranslationChunk]) -> str:
+    if not chunks:
+        return "[no translation available]"
+
+    return "\n".join(
+        f"[{timestamp_string(chunk.start_ms)} --> {timestamp_string(chunk.end_ms)}]   {chunk.text}"
+        for chunk in chunks
+    )
 
 
 def timestamp_string(milliseconds: int) -> str:

@@ -18,6 +18,11 @@
 - Validate `whisper.cpp` throughput, peak memory, and thread defaults on the actual target machine class before locking the production transcription configuration.
 - Sequence transcription and translation so `whisper.cpp` and `NLLB-200` do not co-reside in memory during normal operation.
 - Decide whether legacy cloud services should stay in the repo for fallback/rollback safety or be removed once the local-first branch is proven stable.
+- For the standalone evaluation harness, probe `whisper.cpp` GPU availability once per run and reuse that decision instead of retrying GPU and CPU mode on every file.
+- Tune the harness transcription decode profile for short Marathi clips, including beam search, deterministic fallback behavior, and Indic-specific threshold A/B tests.
+- Parallelize harness enhancement and transcription work where it does not increase model contention, especially CPU-side DFN work while whisper.cpp is on Metal.
+- Add resume/caching support to the harness so partially completed evaluation bundles do not rerun every stage from scratch.
+- Benchmark larger or Marathi-stronger local translation models for the harness, including `NLLB` variants beyond `distilled-600M` and `IndicTrans2`.
 
 ## Documentation
 
