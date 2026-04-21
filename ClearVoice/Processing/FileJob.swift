@@ -40,6 +40,7 @@ struct FileJob: Sendable {
             }
 
             let totalOutputs = services.comparisonEnhancements.count
+            var hybridOutputURL: URL?
 
             defer {
                 if normalized.requiresCleanup {
@@ -60,10 +61,21 @@ struct FileJob: Sendable {
                     input: normalizedURL,
                     output: outputURL
                 )
+
+                if comparisonEnhancement.outputSuffix == DeepFilterNetVariant.hybrid.outputSuffix {
+                    hybridOutputURL = outputURL
+                }
             }
 
             item.stage = .cleaning(progress: 1.0)
             await update(item)
+
+            if let hybridOutputURL {
+                let preparedTranscriptionInput = try await services.transcriptionPreparationService.prepare(hybridOutputURL)
+                if preparedTranscriptionInput.requiresCleanup {
+                    try? FileManager.default.removeItem(at: preparedTranscriptionInput.url)
+                }
+            }
 
             item.stage = .complete
             await update(item)

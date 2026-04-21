@@ -4,6 +4,7 @@ struct ServiceBundle: Sendable {
     let audioEnhancement: any AudioEnhancementService
     let comparisonEnhancements: [any ComparisonEnhancementService]
     let formatNormalizationService: any FormatNormalizationService
+    let transcriptionPreparationService: any TranscriptionPreparationService
     let speechPipeline: any SpeechPipelineService
     let summaryPlaceholder: String
     let export: any ExportService
@@ -12,6 +13,7 @@ struct ServiceBundle: Sendable {
         audioEnhancement: any AudioEnhancementService,
         comparisonEnhancements: [any ComparisonEnhancementService] = [],
         formatNormalizationService: any FormatNormalizationService = StubFormatNormalizationService(),
+        transcriptionPreparationService: any TranscriptionPreparationService = StubTranscriptionPreparationService(),
         speechPipeline: any SpeechPipelineService,
         summaryPlaceholder: String = SummaryPlaceholders.pendingImplementation,
         export: any ExportService
@@ -19,6 +21,7 @@ struct ServiceBundle: Sendable {
         self.audioEnhancement = audioEnhancement
         self.comparisonEnhancements = comparisonEnhancements
         self.formatNormalizationService = formatNormalizationService
+        self.transcriptionPreparationService = transcriptionPreparationService
         self.speechPipeline = speechPipeline
         self.summaryPlaceholder = summaryPlaceholder
         self.export = export
@@ -31,11 +34,13 @@ struct ServiceBundle: Sendable {
         summarization: any SummarizationService,
         export: any ExportService,
         formatNormalizationService: any FormatNormalizationService = StubFormatNormalizationService(),
+        transcriptionPreparationService: any TranscriptionPreparationService = StubTranscriptionPreparationService(),
         summaryPlaceholder: String = SummaryPlaceholders.pendingImplementation
     ) {
         self.init(
             audioEnhancement: audioEnhancement,
             formatNormalizationService: formatNormalizationService,
+            transcriptionPreparationService: transcriptionPreparationService,
             speechPipeline: ComposedSpeechPipelineService(
                 transcription: transcription,
                 translation: translation
@@ -60,6 +65,7 @@ struct ServiceBundle: Sendable {
             audioEnhancement: FFmpegAudioEnhancementService(),
             comparisonEnhancements: DeepFilterNetAudioEnhancementService.availableVariants(),
             formatNormalizationService: FFmpegSpeechFormatNormalizationService(),
+            transcriptionPreparationService: FFmpegTranscriptionPreparationService(),
             speechPipeline: WhisperKitSpeechPipelineService(
                 modelDirectory: modelDirectory,
                 translationService: translationService

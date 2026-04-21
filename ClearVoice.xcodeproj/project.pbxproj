@@ -29,6 +29,7 @@
 		332E44446599FC8226BC0D22 /* LocalSpeechTranscriptionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C54CBA8E97577272AF29BE6E /* LocalSpeechTranscriptionServiceTests.swift */; };
 		375C987AF5BA15E36E87BC80 /* MultipartFormData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85CC307672CEE6D064AF50F7 /* MultipartFormData.swift */; };
 		390D3EF9D59547F85F19359C /* WhisperKitSpeechPipelineService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6215F15EF2B465980A77DA90 /* WhisperKitSpeechPipelineService.swift */; };
+		40C658B62958D90B690282B0 /* TranscriptionPreparationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1DD772F95F8578DECF42B59 /* TranscriptionPreparationServiceTests.swift */; };
 		458BACDC6D0713A3B05D503B /* GeminiSummarizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05DA28966C272C168CECDDF7 /* GeminiSummarizationService.swift */; };
 		4947D97A1D5E432CC6382EF8 /* ConfigureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D7B230E0827D1E2D0501223 /* ConfigureView.swift */; };
 		4968128705DC916BE6725794 /* CloudAudioPreparationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F77D009697AE0EA38BD9E2C /* CloudAudioPreparationService.swift */; };
@@ -81,6 +82,7 @@
 		D092E9DE4AF0C9DE25817FA6 /* OllamaTranslationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 032C700F9E4D341DD7A42297 /* OllamaTranslationServiceTests.swift */; };
 		D2B288C380ECED72B6B9F239 /* TranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE60BB0CABCB686CDAEA8B77 /* TranslationService.swift */; };
 		D428DB3A412B6F5CCF0AC485 /* FormatNormalizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A40F91D1DB9DDDB2EBACCBD /* FormatNormalizationService.swift */; };
+		D4583E56167D3F1F53653B5C /* TranscriptionPreparationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60CE2E0843CCB62F64905868 /* TranscriptionPreparationService.swift */; };
 		D8031901C274A4D98386C5D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5AE43363D4BCDF9066B0ECC8 /* Assets.xcassets */; };
 		D962EC8BB18543A4DFF8D817 /* expected_transcript.txt in Resources */ = {isa = PBXBuildFile; fileRef = BE5058BF2F804FA25969F68A /* expected_transcript.txt */; };
 		D9B801CA7C07F40E94D96CB2 /* LocalOllamaTranslationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0455D3C5D0276E876296BDD /* LocalOllamaTranslationServiceTests.swift */; };
@@ -144,6 +146,7 @@
 		587B7C6CCF3EEC897DCDE2C6 /* ProcessingStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingStage.swift; sourceTree = "<group>"; };
 		5AE43363D4BCDF9066B0ECC8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		60972E7BE4D5CD8C99228DEF /* BatchConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchConfiguration.swift; sourceTree = "<group>"; };
+		60CE2E0843CCB62F64905868 /* TranscriptionPreparationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionPreparationService.swift; sourceTree = "<group>"; };
 		619BBA53EFC08A8305138189 /* GeminiSummarizationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiSummarizationServiceTests.swift; sourceTree = "<group>"; };
 		6215F15EF2B465980A77DA90 /* WhisperKitSpeechPipelineService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitSpeechPipelineService.swift; sourceTree = "<group>"; };
 		65FA847239BB3C283C08CB04 /* OllamaSummarizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaSummarizationService.swift; sourceTree = "<group>"; };
@@ -167,6 +170,7 @@
 		99AD87617DF52A527033A909 /* ImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModel.swift; sourceTree = "<group>"; };
 		9F77D009697AE0EA38BD9E2C /* CloudAudioPreparationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAudioPreparationService.swift; sourceTree = "<group>"; };
 		A3FF91D957597FC9D7E1A8D1 /* ImportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModelTests.swift; sourceTree = "<group>"; };
+		B1DD772F95F8578DECF42B59 /* TranscriptionPreparationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionPreparationServiceTests.swift; sourceTree = "<group>"; };
 		B30A1BBCCE880E29B1400AEF /* ConfigureViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureViewModelTests.swift; sourceTree = "<group>"; };
 		B673AE012DCC37DF7828412E /* ProcessingModeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingModeStore.swift; sourceTree = "<group>"; };
 		BE5058BF2F804FA25969F68A /* expected_transcript.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = expected_transcript.txt; sourceTree = "<group>"; };
@@ -305,6 +309,7 @@
 				ED9FF655AB524CE8ABBA4523 /* ServiceBundle.swift */,
 				E0437F09721BB01F3BA36C56 /* SpeechPipelineService.swift */,
 				889BBB94D1CEC621448E417D /* SummarizationService.swift */,
+				60CE2E0843CCB62F64905868 /* TranscriptionPreparationService.swift */,
 				2AF3F0F3698806630049279B /* TranscriptionService.swift */,
 				DE60BB0CABCB686CDAEA8B77 /* TranslationService.swift */,
 				6215F15EF2B465980A77DA90 /* WhisperKitSpeechPipelineService.swift */,
@@ -350,6 +355,7 @@
 				77DB12F4BEDBC998314BE481 /* OpenAIWhisperTranscriptionServiceTests.swift */,
 				6FF57A3BC9624FF1E9D95137 /* OutputPathResolverTests.swift */,
 				5384A0B1E598FA4740CB944E /* ProcessingModeConfigurationTests.swift */,
+				B1DD772F95F8578DECF42B59 /* TranscriptionPreparationServiceTests.swift */,
 				010032A2C4061BEF0A3A388F /* WhisperKitSpeechPipelineServiceTests.swift */,
 				3F9DED54E0BE8C2904846CC0 /* Fixtures */,
 				682A8A4588633BD77B2CCC64 /* Support */,
@@ -529,6 +535,7 @@
 				C178D1F30A38D5FFD4C59873 /* OpenAIWhisperTranscriptionServiceTests.swift in Sources */,
 				B920F21E58178A83332722D3 /* OutputPathResolverTests.swift in Sources */,
 				CBA28ACF204F51547F744C6B /* ProcessingModeConfigurationTests.swift in Sources */,
+				40C658B62958D90B690282B0 /* TranscriptionPreparationServiceTests.swift in Sources */,
 				88E621738E3F99C049F01215 /* WhisperKitSpeechPipelineServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -591,6 +598,7 @@
 				205175B412A0BB0F759123C8 /* StepCard.swift in Sources */,
 				55DDCBAA908540E1D8CA259C /* SummarizationService.swift in Sources */,
 				0F8B9E2330F9720D33DB8EC4 /* Transcript.swift in Sources */,
+				D4583E56167D3F1F53653B5C /* TranscriptionPreparationService.swift in Sources */,
 				280F6C517E89247653DB90EA /* TranscriptionService.swift in Sources */,
 				D2B288C380ECED72B6B9F239 /* TranslationService.swift in Sources */,
 				390D3EF9D59547F85F19359C /* WhisperKitSpeechPipelineService.swift in Sources */,

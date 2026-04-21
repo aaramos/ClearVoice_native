@@ -55,12 +55,14 @@ struct BatchProcessorTests {
     @Test
     func enhancementOnlyWritesConfiguredVariantsAndSkipsTranscriptExport() async throws {
         let harness = try BatchProcessorHarness(fileCount: 1)
+        let transcriptionPrep = TrackingTranscriptionPreparationService()
         let services = ServiceBundle(
             audioEnhancement: StubAudioEnhancementService(),
             comparisonEnhancements: [
                 StubComparisonEnhancementService(outputSuffix: "DFN"),
                 StubComparisonEnhancementService(outputSuffix: "HYBRID"),
             ],
+            transcriptionPreparationService: transcriptionPrep,
             speechPipeline: FailingIfCalledSpeechPipelineService(),
             summaryPlaceholder: "Placeholder summary.",
             export: DefaultExportService()
@@ -82,6 +84,14 @@ struct BatchProcessorTests {
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MIN.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MAX.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
+
+        let preparedInputs = await transcriptionPrep.preparedInputs
+        #expect(preparedInputs.count == 1)
+        #expect(preparedInputs.first?.source.lastPathComponent == "sample_1_HYBRID.m4a")
+
+        let preparedOutput = try #require(preparedInputs.first?.prepared)
+        #expect(preparedOutput.pathExtension == "wav")
+        #expect(!FileManager.default.fileExists(atPath: preparedOutput.path))
     }
 
     @Test
@@ -265,5 +275,18 @@ private actor StubComparisonEnhancementService: ComparisonEnhancementService {
         try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? FileManager.default.removeItem(at: output)
         try Data("deepfilter".utf8).write(to: output)
+    }
+}
+
+private actor TrackingTranscriptionPreparationService: TranscriptionPreparationService {
+    private(set) var preparedInputs: [(source: URL, prepared: URL)] = []
+
+    func prepare(_ sourceURL: URL) async throws -> (url: URL, requiresCleanup: Bool) {
+        let preparedURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("wav")
+        try Data("prepared".utf8).write(to: preparedURL)
+        preparedInputs.append((sourceURL, preparedURL))
+        return (preparedURL, true)
     }
 }
