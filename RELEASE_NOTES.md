@@ -23,3 +23,9 @@
 ### Review Page Note
 
 - The browser review page links back to the original source files on disk. If the source folder is moved or deleted later, the source-side toggle will no longer work.
+
+### Sharing Note
+
+- The simplest current sharing path is to upload the generated `.dmg` to a GitHub Release and share it with trusted testers.
+- Because the build is still unsigned and not notarized, testers should expect the first launch to require `System Settings > Privacy & Security > Open Anyway`.
+- This release packaging is suitable for direct testing, not a polished public Mac distribution flow yet.

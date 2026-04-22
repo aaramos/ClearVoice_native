@@ -55,6 +55,7 @@ struct ToolDependencyDescriptor: Sendable, Equatable, Identifiable {
     let displayName: String
     let purpose: String
     let downloadURL: URL
+    let downloadSHA256: String
     let packaging: ToolDependencyPackaging
     let installDirectoryName: String
 
@@ -68,31 +69,50 @@ struct ToolDependencyDescriptor: Sendable, Equatable, Identifiable {
     }
 
     private static func ffmpeg(for architecture: HostArchitecture) -> ToolDependencyDescriptor {
-        let architectureSegment = architecture == .arm64 ? "arm64" : "amd64"
+        let download: (url: URL, sha256: String) = switch architecture {
+        case .arm64:
+            (
+                URL(string: "https://ffmpeg.martin-riedl.de/download/macos/arm64/1774549676_8.1/ffmpeg.zip")!,
+                "cc3a7e0cce36c5eca6c17eeb93830984c657637a8e710dc98f19c8051201fa3a"
+            )
+        case .x86_64:
+            (
+                URL(string: "https://ffmpeg.martin-riedl.de/download/macos/amd64/1774556648_8.1/ffmpeg.zip")!,
+                "eaa8aa619f8eccc7f548a730097f5d299cbf2d418888421c137557344d821130"
+            )
+        }
 
         return ToolDependencyDescriptor(
             id: .ffmpeg,
             displayName: "FFmpeg",
             purpose: "Converts source audio into the formats ClearVoice needs for enhancement and export.",
-            downloadURL: URL(string: "https://ffmpeg.martin-riedl.de/redirect/latest/macos/\(architectureSegment)/release/ffmpeg.zip")!,
+            downloadURL: download.url,
+            downloadSHA256: download.sha256,
             packaging: .zipArchive,
             installDirectoryName: "ffmpeg"
         )
     }
 
     private static func deepFilter(for architecture: HostArchitecture) -> ToolDependencyDescriptor {
-        let assetName = switch architecture {
+        let download: (url: URL, sha256: String) = switch architecture {
         case .arm64:
-            "deep-filter-0.5.6-aarch64-apple-darwin"
+            (
+                URL(string: "https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-aarch64-apple-darwin")!,
+                "4601e7f4e4c03e59a4c5b5000216ef3add3e808799cfccd95e14e83ea4611081"
+            )
         case .x86_64:
-            "deep-filter-0.5.6-x86_64-apple-darwin"
+            (
+                URL(string: "https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-x86_64-apple-darwin")!,
+                "d3be84003acb7c23e738ad7f70a158ec779a8d233a82e7fa3e717d112eb5b50f"
+            )
         }
 
         return ToolDependencyDescriptor(
             id: .deepFilter,
             displayName: "DeepFilterNet",
             purpose: "Runs the speech-cleanup model that powers ClearVoice enhancement.",
-            downloadURL: URL(string: "https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/\(assetName)")!,
+            downloadURL: download.url,
+            downloadSHA256: download.sha256,
             packaging: .directBinary,
             installDirectoryName: "deep-filter"
         )
@@ -107,4 +127,3 @@ struct ToolDependencyRecord: Sendable, Equatable, Identifiable {
         descriptor.id
     }
 }
-

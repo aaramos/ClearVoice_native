@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 actor DependencySetupManager {
@@ -58,9 +59,10 @@ actor DependencySetupManager {
 
         let temporaryDownloadURL = downloadDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: false)
+        var preparedInstallDirectory = false
 
         do {
-            try await progressHandler(.downloading(
+            await progressHandler(.downloading(
                 ToolDownloadProgress(
                     receivedBytes: 0,
                     expectedBytes: nil,
@@ -73,8 +75,14 @@ actor DependencySetupManager {
                 await progressHandler(.downloading(progress))
             }
 
+            try verifyDownloadIntegrity(
+                at: temporaryDownloadURL,
+                for: dependency
+            )
+
             try? fileManager.removeItem(at: installDirectory)
             try fileManager.createDirectory(at: installDirectory, withIntermediateDirectories: true)
+            preparedInstallDirectory = true
 
             switch dependency.packaging {
             case .directBinary:
@@ -112,7 +120,9 @@ actor DependencySetupManager {
             )
         } catch {
             try? fileManager.removeItem(at: temporaryDownloadURL)
-            try? fileManager.removeItem(at: installDirectory)
+            if preparedInstallDirectory {
+                try? fileManager.removeItem(at: installDirectory)
+            }
             throw error
         }
     }
@@ -182,6 +192,26 @@ actor DependencySetupManager {
         )
     }
 
+    private func verifyDownloadIntegrity(
+        at downloadedFileURL: URL,
+        for dependency: ToolDependencyDescriptor
+    ) throws {
+        let expectedDigest = dependency.downloadSHA256.lowercased()
+        let actualDigest = try sha256(for: downloadedFileURL)
+
+        guard actualDigest == expectedDigest else {
+            throw LaunchRequirementsError.dependencyInstallFailed(
+                "\(dependency.displayName) failed download verification and wasn’t installed."
+            )
+        }
+    }
+
+    private func sha256(for fileURL: URL) throws -> String {
+        let data = try Data(contentsOf: fileURL)
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
     private func parseFFmpegVersion(from output: String) -> String {
         guard let firstLine = output
             .split(whereSeparator: \.isNewline)
@@ -216,6 +246,16 @@ actor DependencySetupManager {
     private static let defaultDownloader: Downloader = { downloadURL, destinationURL, progressHandler in
         let request = URLRequest(url: downloadURL, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
         let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LaunchRequirementsError.dependencyInstallFailed(
+                "ClearVoice received an unexpected download response."
+            )
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw LaunchRequirementsError.dependencyInstallFailed(
+                "The download server returned HTTP \(httpResponse.statusCode)."
+            )
+        }
 
         let expectedBytes = response.expectedContentLength > 0 ? response.expectedContentLength : nil
 

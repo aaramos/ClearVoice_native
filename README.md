@@ -48,7 +48,8 @@ At launch, ClearVoice:
 1. explains which tools are required and why
 2. checks whether they already exist on the Mac
 3. downloads only the missing tools
-4. shows progress, status, and verification before entering the app
+4. verifies the downloaded file fingerprint before it is unpacked or run
+5. shows progress, status, and verification before entering the app
 
 ## Output Structure
 
@@ -93,6 +94,23 @@ Build a distributable DMG:
 
 - The current `.dmg` is packaged from the local app bundle and is intended for direct sharing.
 - Code signing and notarization are still separate follow-up work; this repo currently builds unsigned distribution artifacts.
+
+## Simplest Sharing Right Now
+
+If you are not set up for Apple code signing yet, the simplest way to share ClearVoice is:
+
+1. build the `.dmg` with `./script/build_dmg.sh`
+2. upload that `.dmg` to a GitHub Release
+3. share it only with trusted testers for now
+
+Because the app is currently unsigned and not notarized, testers should expect macOS to block the first launch. The usual path is:
+
+1. drag `ClearVoice.app` into `Applications`
+2. try opening it once
+3. go to `System Settings > Privacy & Security`
+4. click `Open Anyway`
+
+This is acceptable for small trusted testing, but it is not the polished public-release path.
 
 ## Known Scope
 
