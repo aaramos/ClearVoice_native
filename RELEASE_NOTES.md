@@ -1,5 +1,18 @@
 # Release Notes
 
+## 0.3.1 — 2026-04-21
+
+### Security and Setup
+
+- First-run setup now pins exact FFmpeg and DeepFilterNet downloads and verifies the downloaded file fingerprint before anything is unpacked or run.
+- If a download fails verification, ClearVoice now stops setup without wiping a previously installed managed tool.
+- Dependency downloads now fail earlier with a clearer message when the server response is invalid.
+
+### Distribution Note
+
+- The docs and release notes now explain the simplest current sharing path for an unsigned `.dmg`.
+- Trusted testers should expect the first launch to require `System Settings > Privacy & Security > Open Anyway` until signing and notarization are added.
+
 ## 0.3.0 — 2026-04-21
 
 ### Added
