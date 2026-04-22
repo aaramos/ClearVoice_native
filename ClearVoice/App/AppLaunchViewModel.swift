@@ -43,6 +43,10 @@ final class AppLaunchViewModel: ObservableObject {
         startDependencySetup()
     }
 
+    func prepareForTermination() async {
+        await appViewModel?.prepareForTermination()
+    }
+
     private func bootstrap() {
         appViewModel = nil
         launchError = nil

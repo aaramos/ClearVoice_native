@@ -265,31 +265,12 @@ actor DeepFilterNetAudioEnhancementService: ComparisonEnhancementService {
     }
 
     private static let defaultRunner: CommandRunner = { executableURL, arguments in
-        let process = Process()
-        process.executableURL = executableURL
-        process.arguments = arguments
-
-        let errorPipe = Pipe()
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            throw ProcessingError.enhancementFailed("ClearVoice couldn’t start \(executableURL.lastPathComponent): \(error.localizedDescription)")
-        }
-
-        guard process.terminationStatus == 0 else {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let detail = String(data: errorData, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if let detail, !detail.isEmpty {
-                throw ProcessingError.enhancementFailed("ClearVoice couldn’t run \(executableURL.lastPathComponent): \(detail)")
-            }
-
-            throw ProcessingError.enhancementFailed("ClearVoice couldn’t run \(executableURL.lastPathComponent).")
-        }
+        try await ExternalProcessRunner.run(
+            executableURL: executableURL,
+            arguments: arguments,
+            launchFailurePrefix: "ClearVoice couldn’t start \(executableURL.lastPathComponent)",
+            nonZeroExitPrefix: "ClearVoice couldn’t run \(executableURL.lastPathComponent)"
+        )
     }
 }
 
@@ -423,9 +404,9 @@ actor FFmpegAudioEnhancementService: AudioEnhancementService {
     }
 
     private static let defaultRunner: Runner = { ffmpegURL, inputURL, outputURL, filterGraph in
-        let process = Process()
-        process.executableURL = ffmpegURL
-        process.arguments = [
+        try await ExternalProcessRunner.run(
+            executableURL: ffmpegURL,
+            arguments: [
             "-hide_banner",
             "-loglevel", "error",
             "-y",
@@ -437,29 +418,10 @@ actor FFmpegAudioEnhancementService: AudioEnhancementService {
             "-c:a", "aac",
             "-b:a", "96k",
             outputURL.path,
-        ]
-
-        let errorPipe = Pipe()
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            throw ProcessingError.enhancementFailed("ClearVoice couldn’t start FFmpeg: \(error.localizedDescription)")
-        }
-
-        guard process.terminationStatus == 0 else {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let detail = String(data: errorData, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if let detail, !detail.isEmpty {
-                throw ProcessingError.enhancementFailed("ClearVoice couldn’t enhance this audio file: \(detail)")
-            }
-
-            throw ProcessingError.enhancementFailed("ClearVoice couldn’t enhance this audio file.")
-        }
+            ],
+            launchFailurePrefix: "ClearVoice couldn’t start FFmpeg",
+            nonZeroExitPrefix: "ClearVoice couldn’t enhance this audio file."
+        )
     }
 }
 

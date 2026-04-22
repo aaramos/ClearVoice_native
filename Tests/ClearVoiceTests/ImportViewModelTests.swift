@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct ImportViewModelTests {
     @Test
-    func sourceSelectionGeneratesDesktopOutputPreview() async throws {
+    func sourceSelectionGeneratesSiblingEnhancedOutputPreview() async throws {
         let folders = try NestedTemporaryFolders()
         let viewModel = ImportViewModel(fileScanner: MockScanner(result: .empty))
 
@@ -13,7 +13,7 @@ struct ImportViewModelTests {
         await viewModel.waitForScheduledScan()
 
         #expect(viewModel.outputFolderURL != nil)
-        #expect(viewModel.plannedOutputFolderDisplayPath.contains("output_"))
+        #expect(viewModel.plannedOutputFolderDisplayPath.contains("source_enhanced"))
         #expect(!viewModel.canProceed)
     }
 

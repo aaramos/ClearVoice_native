@@ -36,6 +36,7 @@ final class BatchResultsCoordinator {
     }
 
     func preparePresentation(
+        sourceFolderURL: URL,
         outputFolderURL: URL,
         files: [AudioFileItem],
         enhancementMethod: EnhancementMethod
@@ -47,6 +48,7 @@ final class BatchResultsCoordinator {
 
         let pageFileURL = try pageWriter.writePage(
             into: outputFolderURL,
+            sourceFolderURL: sourceFolderURL,
             files: files,
             enhancementMethod: enhancementMethod
         )
@@ -68,6 +70,7 @@ struct BatchResultsPageWriter {
 
     func writePage(
         into outputFolderURL: URL,
+        sourceFolderURL: URL,
         files: [AudioFileItem],
         enhancementMethod: EnhancementMethod
     ) throws -> URL {
@@ -75,7 +78,10 @@ struct BatchResultsPageWriter {
 
         let pageURL = outputFolderURL.appendingPathComponent("index.html")
         let html = pageHTML(
-            files: files.sorted { $0.sourceURL.lastPathComponent.localizedCaseInsensitiveCompare($1.sourceURL.lastPathComponent) == .orderedAscending },
+            files: files.sorted {
+                $0.sourceURL.path.localizedCaseInsensitiveCompare($1.sourceURL.path) == .orderedAscending
+            },
+            sourceFolderURL: sourceFolderURL,
             outputFolderURL: outputFolderURL,
             enhancementMethod: enhancementMethod
         )
@@ -90,10 +96,12 @@ struct BatchResultsPageWriter {
 
     private func pageHTML(
         files: [AudioFileItem],
+        sourceFolderURL: URL,
         outputFolderURL: URL,
         enhancementMethod: EnhancementMethod
     ) -> String {
         let completedCount = files.filter { $0.stage == .complete }.count
+        let cancelledCount = files.filter { $0.stage == .cancelled }.count
         let failedCount = files.filter {
             if case .failed = $0.stage { return true }
             return false
@@ -104,7 +112,12 @@ struct BatchResultsPageWriter {
         }.count
 
         let cards = files.map { file in
-            resultCardHTML(for: file, outputFolderURL: outputFolderURL, enhancementMethod: enhancementMethod)
+            resultCardHTML(
+                for: file,
+                sourceFolderURL: sourceFolderURL,
+                outputFolderURL: outputFolderURL,
+                enhancementMethod: enhancementMethod
+            )
         }.joined(separator: "\n")
 
         let generatedAt = escaped(DateFormatter.localizedString(from: .now, dateStyle: .medium, timeStyle: .short))
@@ -305,6 +318,10 @@ struct BatchResultsPageWriter {
                 <div class="value">\(completedCount)</div>
               </div>
               <div class="summary-card">
+                <div class="label">Cancelled</div>
+                <div class="value">\(cancelledCount)</div>
+              </div>
+              <div class="summary-card">
                 <div class="label">Failed</div>
                 <div class="value">\(failedCount)</div>
               </div>
@@ -319,7 +336,7 @@ struct BatchResultsPageWriter {
             </section>
 
             <footer>
-              Generated \(generatedAt). This page lives inside the batch output folder so the results stay portable with the processed audio.
+              Generated \(generatedAt). Enhanced files live in this output folder. Source playback links back to the original source folder on this Mac.
             </footer>
           </main>
           <script>
@@ -388,22 +405,28 @@ struct BatchResultsPageWriter {
 
     private func resultCardHTML(
         for file: AudioFileItem,
+        sourceFolderURL: URL,
         outputFolderURL: URL,
         enhancementMethod: EnhancementMethod
     ) -> String {
         let duration = escaped(file.durationSeconds.map { DurationFormatter.formattedDuration(seconds: $0) } ?? "—")
         let fileName = escaped(file.sourceURL.lastPathComponent)
+        let sourcePathLabel = escaped(relativeSourceLabel(from: sourceFolderURL, to: file.sourceURL))
         let statusLabel = escaped(stageLabel(for: file.stage))
         let statusClass = statusClass(for: file.stage)
-        let sourceAudioURL = sourceAudioURL(for: file)
-        let processedAudioURL = processedAudioURL(for: file, enhancementMethod: enhancementMethod)
+        let sourceAudioURL = sourceAudioURL(for: file, sourceFolderURL: sourceFolderURL)
+        let processedAudioURL = processedAudioURL(for: file)
 
         let audioSection: String
         let actionsSection: String
 
         if let defaultAudioURL = processedAudioURL ?? sourceAudioURL {
             let audioPath = relativePath(from: outputFolderURL, to: defaultAudioURL)
-            let folderPath = file.outputFolderURL.map { relativePath(from: outputFolderURL, to: $0).appending("/") } ?? ""
+            let folderPath = file.outputFolderURL.map {
+                let relativeFolderPath = relativePath(from: outputFolderURL, to: $0)
+                let linkTarget = relativeFolderPath.isEmpty ? "." : relativeFolderPath
+                return linkTarget.appending("/")
+            } ?? ""
             let sourcePath = sourceAudioURL.map { relativePath(from: outputFolderURL, to: $0) }
             let enhancedPath = processedAudioURL.map { relativePath(from: outputFolderURL, to: $0) }
             let currentKind = processedAudioURL != nil ? "enhanced" : "source"
@@ -444,7 +467,7 @@ struct BatchResultsPageWriter {
           <div class="result-header">
             <div>
               <p class="file-name">\(fileName)</p>
-              <div class="meta">Duration \(duration)</div>
+              <div class="meta">Duration \(duration) • \(sourcePathLabel)</div>
             </div>
             <span class="status \(statusClass)">\(statusLabel)</span>
           </div>
@@ -455,28 +478,31 @@ struct BatchResultsPageWriter {
         """
     }
 
-    private func processedAudioURL(for file: AudioFileItem, enhancementMethod: EnhancementMethod) -> URL? {
-        guard let folderURL = file.outputFolderURL else {
+    private func processedAudioURL(for file: AudioFileItem) -> URL? {
+        guard let url = file.processedAudioURL else {
             return nil
         }
 
-        let url = folderURL.appendingPathComponent("\(file.basename)_\(enhancementMethod.outputSuffix).m4a")
         return fileManager.fileExists(atPath: url.path) ? url : nil
     }
 
-    private func sourceAudioURL(for file: AudioFileItem) -> URL? {
-        guard let folderURL = file.outputFolderURL else {
+    private func sourceAudioURL(for file: AudioFileItem, sourceFolderURL: URL) -> URL? {
+        let standardizedSourceFolder = sourceFolderURL.resolvingSymlinksInPath().standardizedFileURL.path
+        let standardizedSourceFile = file.sourceURL.resolvingSymlinksInPath().standardizedFileURL.path
+
+        guard standardizedSourceFile.hasPrefix(standardizedSourceFolder) else {
             return nil
         }
 
-        let url = folderURL.appendingPathComponent(file.sourceURL.lastPathComponent)
-        return fileManager.fileExists(atPath: url.path) ? url : nil
+        return fileManager.fileExists(atPath: file.sourceURL.path) ? file.sourceURL : nil
     }
 
     private func stageLabel(for stage: ProcessingStage) -> String {
         switch stage {
         case .complete:
             return "Finished"
+        case .cancelled:
+            return "Cancelled"
         case .failed:
             return "Error"
         case .skipped:
@@ -490,6 +516,8 @@ struct BatchResultsPageWriter {
         switch stage {
         case .complete:
             return "complete"
+        case .cancelled:
+            return "skipped"
         case .failed:
             return "failed"
         case .skipped:
@@ -501,6 +529,8 @@ struct BatchResultsPageWriter {
 
     private func stageDetail(for stage: ProcessingStage) -> String? {
         switch stage {
+        case .cancelled:
+            return "This file was cancelled before processing finished."
         case .failed(let error):
             return error.displayMessage
         case .skipped(let reason):
@@ -518,11 +548,21 @@ struct BatchResultsPageWriter {
     private func relativePath(from baseURL: URL, to targetURL: URL) -> String {
         let baseComponents = baseURL.standardizedFileURL.pathComponents
         let targetComponents = targetURL.standardizedFileURL.pathComponents
-        let relativeComponents = targetComponents.dropFirst(baseComponents.count)
+        let commonCount = zip(baseComponents, targetComponents)
+            .prefix { $0 == $1 }
+            .count
+        let upwardComponents = Array(repeating: "..", count: max(baseComponents.count - commonCount, 0))
+        let downwardComponents = Array(targetComponents.dropFirst(commonCount))
+        let relativeComponents = upwardComponents + downwardComponents
 
         return relativeComponents
             .map { $0.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? $0 }
             .joined(separator: "/")
+    }
+
+    private func relativeSourceLabel(from sourceFolderURL: URL, to sourceURL: URL) -> String {
+        let label = relativePath(from: sourceFolderURL, to: sourceURL)
+        return label.isEmpty ? sourceURL.lastPathComponent : label
     }
 
     private func escaped(_ text: String) -> String {

@@ -12,29 +12,25 @@ struct FileJob: Sendable {
         var item = item
         let fileManager = FileManager.default
 
-        switch await resolver.resolve(basename: item.basename) {
-        case .skip(let reason):
-            item.stage = .skipped(reason: reason)
-            await update(item)
-            return item
-        case .use(let folder):
-            item.outputFolderURL = folder
-        }
+        let resolvedOutput = await resolver.resolve(
+            sourceURL: item.sourceURL,
+            enhancementSuffix: config.enhancementMethod.outputSuffix
+        )
+        item.outputFolderURL = resolvedOutput.folderURL
+        item.processedAudioURL = resolvedOutput.enhancedFileURL
 
         do {
-            if let outputFolderURL = item.outputFolderURL {
-                try copySourceFileIfNeeded(
-                    from: item.sourceURL,
-                    into: outputFolderURL,
-                    fileManager: fileManager
-                )
-            }
+            try throwIfCancelled()
 
             item.stage = .analyzing
             await update(item)
 
+            try throwIfCancelled()
+
             item.stage = .analyzingFormat
             await update(item)
+
+            try throwIfCancelled()
 
             item.stage = .normalizingFormat
             await update(item)
@@ -61,9 +57,13 @@ struct FileJob: Sendable {
             }
 
             for (offset, comparisonEnhancement) in selectedEnhancements.enumerated() {
-                let outputURL = item.outputFolderURL!.appendingPathComponent(
-                    "\(item.basename)_\(comparisonEnhancement.outputSuffix).\(AudioFormatSupport.cleanExportExtension)"
-                )
+                try throwIfCancelled()
+
+                let outputURL = offset == 0
+                    ? resolvedOutput.enhancedFileURL
+                    : resolvedOutput.folderURL.appendingPathComponent(
+                        "\(item.basename)_\(comparisonEnhancement.outputSuffix).\(AudioFormatSupport.cleanExportExtension)"
+                    )
 
                 let progress = Double(offset) / Double(totalOutputs)
                 item.stage = .cleaning(progress: progress)
@@ -75,13 +75,26 @@ struct FileJob: Sendable {
                 )
             }
 
+            try throwIfCancelled()
+
             item.stage = .cleaning(progress: 1.0)
             await update(item)
 
             item.stage = .complete
             await update(item)
             return item
+        } catch ProcessingError.cancelled {
+            removeProcessedAudioIfNeeded(for: item, fileManager: fileManager)
+            item.stage = .cancelled
+            await update(item)
+            return item
+        } catch is CancellationError {
+            removeProcessedAudioIfNeeded(for: item, fileManager: fileManager)
+            item.stage = .cancelled
+            await update(item)
+            return item
         } catch let error as ProcessingError {
+            removeProcessedAudioIfNeeded(for: item, fileManager: fileManager)
             try? await services.export.writeErrorLog(
                 to: item.outputFolderURL ?? config.outputFolder,
                 error: error,
@@ -92,6 +105,7 @@ struct FileJob: Sendable {
             return item
         } catch {
             let wrappedError = wrappedProcessingError(for: error)
+            removeProcessedAudioIfNeeded(for: item, fileManager: fileManager)
             try? await services.export.writeErrorLog(
                 to: item.outputFolderURL ?? config.outputFolder,
                 error: wrappedError,
@@ -104,21 +118,27 @@ struct FileJob: Sendable {
     }
 
     private func wrappedProcessingError(for error: Error) -> ProcessingError {
+        if error is CancellationError {
+            return .cancelled
+        }
         return .exportFailed(error.localizedDescription)
     }
 
-    private func copySourceFileIfNeeded(
-        from sourceURL: URL,
-        into outputFolderURL: URL,
-        fileManager: FileManager
-    ) throws {
-        try fileManager.createDirectory(at: outputFolderURL, withIntermediateDirectories: true)
+    private func throwIfCancelled() throws {
+        if Task.isCancelled {
+            throw ProcessingError.cancelled
+        }
+    }
 
-        let destinationURL = outputFolderURL.appendingPathComponent(sourceURL.lastPathComponent)
-        guard !fileManager.fileExists(atPath: destinationURL.path) else {
+    private func removeProcessedAudioIfNeeded(
+        for item: AudioFileItem,
+        fileManager: FileManager
+    ) {
+        guard let processedAudioURL = item.processedAudioURL,
+              fileManager.fileExists(atPath: processedAudioURL.path) else {
             return
         }
 
-        try fileManager.copyItem(at: sourceURL, to: destinationURL)
+        try? fileManager.removeItem(at: processedAudioURL)
     }
 }

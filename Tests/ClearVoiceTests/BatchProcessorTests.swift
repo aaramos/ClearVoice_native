@@ -71,13 +71,16 @@ struct BatchProcessorTests {
         let latestItems = await recorder.itemsByBasename()
         let item = try #require(latestItems["sample_1"])
         let outputFolder = try #require(item.outputFolderURL)
+        let processedAudioURL = try #require(item.processedAudioURL)
 
         #expect(item.stage == .complete)
-        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1.wav").path))
+        #expect(outputFolder == harness.outputFolder)
+        #expect(FileManager.default.fileExists(atPath: processedAudioURL.path))
         #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_HYBRID.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MIN.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_MAX.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1.wav").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_transcript.txt").path))
     }
 
@@ -102,11 +105,76 @@ struct BatchProcessorTests {
         let latestItems = await recorder.itemsByBasename()
         let item = try #require(latestItems["sample_1"])
         let outputFolder = try #require(item.outputFolderURL)
+        let processedAudioURL = try #require(item.processedAudioURL)
 
         #expect(item.stage == .complete)
-        #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1.wav").path))
+        #expect(outputFolder == harness.outputFolder)
+        #expect(FileManager.default.fileExists(atPath: processedAudioURL.path))
         #expect(FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
         #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1_HYBRID.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: outputFolder.appendingPathComponent("sample_1.wav").path))
+    }
+
+    @Test
+    func cancellingOneFileStopsThatFileAndCleansItsPartialOutput() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 2, enhancementMethod: .dfn)
+        let enhancement = CancellableComparisonEnhancementService(outputSuffix: "DFN")
+        let services = ServiceBundle(
+            audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancements: [enhancement],
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        let runTask = Task {
+            await processor.run(files: harness.items) { item in
+                await recorder.record(item)
+            }
+        }
+
+        try await waitUntil { await enhancement.activeCount == 1 }
+        await processor.cancelFile(id: harness.items[0].id)
+        await runTask.value
+
+        let latestItems = await recorder.itemsByBasename()
+
+        #expect(latestItems["sample_1"]?.stage == .cancelled)
+        #expect(latestItems["sample_2"]?.stage == .complete)
+        #expect(!FileManager.default.fileExists(atPath: harness.outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
+        #expect(FileManager.default.fileExists(atPath: harness.outputFolder.appendingPathComponent("sample_2_DFN.m4a").path))
+    }
+
+    @Test
+    func cancellingBatchStopsRunningAndPendingFiles() async throws {
+        let harness = try BatchProcessorHarness(fileCount: 3, enhancementMethod: .dfn)
+        let enhancement = CancellableComparisonEnhancementService(outputSuffix: "DFN")
+        let services = ServiceBundle(
+            audioEnhancement: StubAudioEnhancementService(),
+            comparisonEnhancements: [enhancement],
+            export: DefaultExportService()
+        )
+        let processor = try harness.makeProcessor(services: services, maxConcurrency: 1)
+        let recorder = ItemRecorder()
+
+        let runTask = Task {
+            await processor.run(files: harness.items) { item in
+                await recorder.record(item)
+            }
+        }
+
+        try await waitUntil { await enhancement.activeCount == 1 }
+        await processor.cancelAll()
+        await runTask.value
+
+        let latestItems = await recorder.itemsByBasename()
+
+        #expect(latestItems["sample_1"]?.stage == .cancelled)
+        #expect(latestItems["sample_2"]?.stage == .cancelled)
+        #expect(latestItems["sample_3"]?.stage == .cancelled)
+        #expect(!FileManager.default.fileExists(atPath: harness.outputFolder.appendingPathComponent("sample_1_DFN.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: harness.outputFolder.appendingPathComponent("sample_2_DFN.m4a").path))
+        #expect(!FileManager.default.fileExists(atPath: harness.outputFolder.appendingPathComponent("sample_3_DFN.m4a").path))
     }
 
 }
@@ -159,7 +227,7 @@ private struct BatchProcessorHarness {
             recursiveScan: true,
             preserveChannels: false
         )
-        let resolver = try OutputPathResolver(outputRoot: outputFolder)
+        let resolver = try OutputPathResolver(sourceRoot: sourceFolder, outputRoot: outputFolder)
         return BatchProcessor(config: configuration, resolver: resolver, services: services)
     }
 }
@@ -203,6 +271,25 @@ private actor TrackingComparisonEnhancementService: ComparisonEnhancementService
     }
 }
 
+private actor CancellableComparisonEnhancementService: ComparisonEnhancementService {
+    let outputSuffix: String
+    private(set) var activeCount = 0
+
+    init(outputSuffix: String) {
+        self.outputSuffix = outputSuffix
+    }
+
+    func enhance(input: URL, output: URL) async throws {
+        activeCount += 1
+        defer { activeCount -= 1 }
+
+        try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(at: output)
+        try Data("partial".utf8).write(to: output)
+        try await Task.sleep(for: .seconds(5))
+    }
+}
+
 private actor SelectiveFailureComparisonEnhancementService: ComparisonEnhancementService {
     let outputSuffix: String
     let failingBasename: String
@@ -235,4 +322,23 @@ private actor StubComparisonEnhancementService: ComparisonEnhancementService {
         try? FileManager.default.removeItem(at: output)
         try Data("deepfilter".utf8).write(to: output)
     }
+}
+
+private struct WaitTimeoutError: Error {}
+
+private func waitUntil(
+    timeoutMilliseconds: UInt64 = 1_000,
+    condition: @escaping @Sendable () async -> Bool
+) async throws {
+    let deadline = ContinuousClock.now + .milliseconds(timeoutMilliseconds)
+
+    while ContinuousClock.now < deadline {
+        if await condition() {
+            return
+        }
+
+        try await Task.sleep(for: .milliseconds(20))
+    }
+
+    throw WaitTimeoutError()
 }

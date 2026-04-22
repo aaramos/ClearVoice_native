@@ -81,6 +81,10 @@ final class AppViewModel: ObservableObject {
         state = .importing
     }
 
+    func prepareForTermination() async {
+        await batchViewModel.prepareForTermination()
+    }
+
     private func makeBatchConfiguration() -> BatchConfiguration? {
         guard
             let sourceFolder = importViewModel.sourceFolderURL,

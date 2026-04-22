@@ -4,7 +4,7 @@ import Foundation
 final class ConfigureViewModel: ObservableObject {
     static let minimumConcurrency = 1
     static let maximumConcurrency = 20
-    static let defaultConcurrency = 5
+    static let defaultConcurrency = 2
 
     @Published var enhancementMethod: EnhancementMethod = .hybrid
     @Published var maxConcurrency: Int

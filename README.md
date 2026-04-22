@@ -1,21 +1,25 @@
 # ClearVoice
 
-ClearVoice is a native macOS batch audio utility for cleaning speech recordings and exporting a shareable results package with the original source audio, the enhanced output, and a browser-friendly review page.
+ClearVoice is a native macOS batch audio utility for cleaning speech recordings and exporting a mirrored `_enhanced` output folder with the processed audio plus a browser-friendly review page that can switch between the enhanced audio and the original source files in place.
 
 ## Download
 
-- Direct download: [ClearVoice 0.2.0 DMG](https://github.com/aaramos/ClearVoice_native/releases/download/v0.2.0/ClearVoice-0.2.0.dmg)
+- Direct download: [Latest ClearVoice DMG](https://github.com/aaramos/ClearVoice_native/releases/latest)
 - Releases page: [github.com/aaramos/ClearVoice_native/releases](https://github.com/aaramos/ClearVoice_native/releases)
 
 ## Current Product
 
 - Batch-processes local audio folders on macOS
+- Scans supported source audio recursively, including deeply nested subfolders
 - Repairs and enhances speech with local FFmpeg and DeepFilterNet tooling
 - Supports `.wav`, `.mp3`, `.m4a`, `.aac`, `.flac`, and `.wma`
 - Lets the user choose the enhancement method in-app
-- Writes one output folder per source file
+- Builds a sibling output folder named `<source>_enhanced`
+- Preserves the source directory structure inside the output folder
 - Generates a local `index.html` results page that opens in the browser
-- Lets reviewers switch between the source audio and enhanced audio at the same playback position
+- Lets reviewers switch between the source audio and enhanced audio at the same playback position without copying the source file into output
+- Lets the user cancel a single file or the full batch from the processing screen
+- Prompts the user to rename or delete an existing `_enhanced` output folder before starting
 - Includes a first-run setup flow that checks, downloads, and verifies required dependencies without Terminal
 
 ## Tech Stack
@@ -48,11 +52,20 @@ At launch, ClearVoice:
 
 ## Output Structure
 
-For each processed file, ClearVoice creates a folder inside the batch output directory containing:
+For a selected source folder such as:
 
-- the original source file
-- the enhanced output file
-- a browser-readable results index for the batch
+- `MyBatch/`
+
+ClearVoice creates a sibling folder:
+
+- `MyBatch_enhanced/`
+
+Inside that folder, ClearVoice:
+
+- preserves the original nested folder structure
+- writes the enhanced file using an enhancement suffix such as `_DFN` or `_HYBRID`
+- generates one top-level `index.html` for review
+- keeps the original source files in their original location and links back to them from the review page
 
 The browser results page is generated locally and opened directly from disk rather than through a local web server.
 

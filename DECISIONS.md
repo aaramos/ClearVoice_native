@@ -67,3 +67,10 @@ The notes below are cumulative. Older sections capture earlier experiments and b
 - Runtime dependency setup: first-run onboarding now checks, downloads, verifies, and manages `FFmpeg` and `DeepFilterNet` inside `~/Library/Application Support/ClearVoice/Tools`.
 - Results review surface: step 4 now opens a generated local `index.html` page directly from disk instead of rendering an embedded review surface or running a local web server.
 - Distribution artifact: the repo now includes a reproducible `script/build_dmg.sh` flow for packaging a shareable `.dmg` from the current macOS app bundle.
+- Source scan depth: the enhancement workflow should always scan nested subfolders recursively rather than only the first folder level.
+- Enhancement output location: the shipped enhancement-only app now writes to a sibling folder named `<source>_enhanced` instead of a Desktop `output_<timestamp>` folder.
+- Enhancement output layout: the shipped enhancement-only app mirrors the source directory structure inside `<source>_enhanced` and keeps enhancement suffixes on the generated files.
+- Existing output-folder collision handling: if `<source>_enhanced` already exists, the app should block starting the batch until the user either chooses a new folder name or deletes the old output folder.
+- Source/enhanced review toggle: the browser results page should switch between enhanced audio and the original source file in place, without copying source audio into the output directory.
+- Cancellation posture: the processing screen should support both per-file cancel and full-batch cancel, and both should stop active subprocess work as soon as possible rather than waiting for the current file to finish naturally.
+- Temp-file cleanup posture: temporary normalized audio, DeepFilterNet working folders, and partial enhancement outputs should be cleaned up immediately after use and also during cancel/quit paths where possible.

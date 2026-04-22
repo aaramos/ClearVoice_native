@@ -10,11 +10,15 @@ struct ImportView: View {
 
             FolderPicker(
                 title: "Drop a folder of audio files",
-                subtitle: "ClearVoice will scan the folder, list supported files, and prepare a timestamped output folder on your Desktop.",
+                subtitle: "ClearVoice will scan the folder, list supported files, and mirror the folder structure into a sibling enhanced folder.",
                 selection: viewModel.sourceFolderURL,
                 buttonTitle: "Click to choose a folder"
             ) { url in
                 viewModel.selectSourceFolder(url)
+            }
+
+            if viewModel.sourceFolderURL != nil {
+                outputFolderSettings
             }
 
             if viewModel.isScanning {
@@ -26,11 +30,6 @@ struct ImportView: View {
                 }
             } else if let scanErrorMessage = viewModel.scanErrorMessage {
                 inlineNotice(scanErrorMessage, tone: .error)
-            } else if !viewModel.plannedOutputFolderDisplayPath.isEmpty {
-                Text("Batch output: \(viewModel.plannedOutputFolderDisplayPath)")
-                    .font(.footnote)
-                    .foregroundStyle(Color.black.opacity(0.55))
-                    .textSelection(.enabled)
             }
 
             if !viewModel.validationMessages.isEmpty {
@@ -57,13 +56,59 @@ struct ImportView: View {
         .padding(.top, 4)
     }
 
+    private var outputFolderSettings: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Enhanced Output Folder")
+                .font(.headline)
+                .foregroundStyle(Color.black.opacity(0.78))
+
+            Text("ClearVoice will create a sibling folder next to the source folder and mirror the same nested structure inside it.")
+                .font(.footnote)
+                .foregroundStyle(Color.black.opacity(0.58))
+
+            TextField("Enhanced folder name", text: $viewModel.outputFolderName)
+                .textFieldStyle(.roundedBorder)
+
+            if !viewModel.plannedOutputFolderDisplayPath.isEmpty {
+                Text(viewModel.plannedOutputFolderDisplayPath)
+                    .font(.footnote)
+                    .foregroundStyle(Color.black.opacity(0.55))
+                    .textSelection(.enabled)
+            }
+
+            if viewModel.outputFolderExists {
+                HStack(spacing: 12) {
+                    Button("Use New Name") {
+                        viewModel.chooseSuggestedOutputFolderName()
+                    }
+                    .buttonStyle(SecondaryActionButtonStyle())
+
+                    Button("Delete Existing") {
+                        viewModel.deleteExistingOutputFolder()
+                    }
+                    .buttonStyle(SecondaryActionButtonStyle())
+                }
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+        )
+    }
+
     private var intro: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Choose Your Files")
                 .font(.system(size: 34, weight: .semibold))
                 .foregroundStyle(Color.black.opacity(0.92))
 
-            Text("Drop a folder into ClearVoice to scan audio files, estimate duration, and stage the batch for processing.")
+            Text("Drop a folder into ClearVoice to scan audio files, estimate duration, and prepare a mirrored enhanced folder for processing.")
                 .font(.title3)
                 .foregroundStyle(Color.black.opacity(0.62))
                 .fixedSize(horizontal: false, vertical: true)

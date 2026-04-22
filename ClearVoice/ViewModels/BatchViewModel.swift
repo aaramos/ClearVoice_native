@@ -12,6 +12,8 @@ final class BatchViewModel: ObservableObject {
     @Published private(set) var resultsPageFileURL: URL?
     @Published private(set) var resultsBrowserError: String?
     @Published private(set) var isPreparingResultsBrowser = false
+    @Published private(set) var cancellingFileIDs: Set<UUID> = []
+    @Published private(set) var batchCancellationRequested = false
 
     private let services: ServiceBundle
     private let resultsCoordinator: BatchResultsCoordinator
@@ -64,6 +66,10 @@ final class BatchViewModel: ObservableObject {
         }.count
     }
 
+    var cancelledCount: Int {
+        files.filter { $0.stage == .cancelled }.count
+    }
+
     var overallProgressFraction: Double {
         guard !files.isEmpty else {
             return 0
@@ -101,6 +107,8 @@ final class BatchViewModel: ObservableObject {
         resultsPageFileURL = nil
         resultsBrowserError = nil
         isPreparingResultsBrowser = false
+        cancellingFileIDs = []
+        batchCancellationRequested = false
     }
 
     func startIfNeeded() {
@@ -109,7 +117,10 @@ final class BatchViewModel: ObservableObject {
         isRunning = true
         runStartedAt = Date()
         runTask = Task { [files, services] in
-            let resolver = try? OutputPathResolver(outputRoot: configuration.outputFolder)
+            let resolver = try? OutputPathResolver(
+                sourceRoot: configuration.sourceFolder,
+                outputRoot: configuration.outputFolder
+            )
 
             guard let resolver else {
                 await MainActor.run {
@@ -129,6 +140,16 @@ final class BatchViewModel: ObservableObject {
                 self.processor = processor
             }
 
+            let pendingCancellationIDs = await MainActor.run { Array(self.cancellingFileIDs) }
+            for id in pendingCancellationIDs {
+                await processor.cancelFile(id: id)
+            }
+
+            let shouldCancelBatch = await MainActor.run { self.batchCancellationRequested }
+            if shouldCancelBatch {
+                await processor.cancelAll()
+            }
+
             await processor.run(files: files) { updatedItem in
                 await MainActor.run {
                     self.apply(updatedItem)
@@ -142,13 +163,67 @@ final class BatchViewModel: ObservableObject {
                 self.runFinishedAt = Date()
                 let failureCount = self.failedCount
                 let skippedCount = self.skippedCount
+                let cancelledCount = self.cancelledCount
 
-                if failureCount > 0 || skippedCount > 0 {
+                if self.batchCancellationRequested || cancelledCount > 0 {
+                    self.statusText = "Batch stopped with \(self.completedCount) complete, \(cancelledCount) cancelled, \(failureCount) failed, and \(skippedCount) skipped."
+                } else if failureCount > 0 || skippedCount > 0 {
                     self.statusText = "Processing finished with \(failureCount) failed and \(skippedCount) skipped. See the file rows below for details."
                 } else {
                     self.statusText = "Processing complete. Each file folder now contains the \(configuration.enhancementMethod.title) audio output."
                 }
             }
+        }
+    }
+
+    func canCancel(_ file: AudioFileItem) -> Bool {
+        guard isRunning else { return false }
+
+        switch file.stage {
+        case .pending, .analyzing, .analyzingFormat, .normalizingFormat, .cleaning, .exporting:
+            return !cancellingFileIDs.contains(file.id)
+        case .complete, .cancelled, .failed, .skipped:
+            return false
+        }
+    }
+
+    func isCancellationRequested(for fileID: UUID) -> Bool {
+        cancellingFileIDs.contains(fileID)
+    }
+
+    func cancelFile(_ fileID: UUID) {
+        guard let index = files.firstIndex(where: { $0.id == fileID }) else { return }
+        guard canCancel(files[index]) else { return }
+
+        cancellingFileIDs.insert(fileID)
+
+        if files[index].stage == .pending {
+            files[index].stage = .cancelled
+        }
+
+        statusText = "Stopping selected file…"
+
+        Task {
+            await processor?.cancelFile(id: fileID)
+        }
+    }
+
+    func cancelBatch() {
+        guard isRunning, !batchCancellationRequested else { return }
+
+        batchCancellationRequested = true
+        statusText = "Stopping batch…"
+
+        for index in files.indices where files[index].stage == .pending {
+            files[index].stage = .cancelled
+        }
+
+        for file in files where canCancel(file) {
+            cancellingFileIDs.insert(file.id)
+        }
+
+        Task {
+            await processor?.cancelAll()
         }
     }
 
@@ -167,6 +242,27 @@ final class BatchViewModel: ObservableObject {
         resultsPageFileURL = nil
         resultsBrowserError = nil
         isPreparingResultsBrowser = false
+        cancellingFileIDs = []
+        batchCancellationRequested = false
+    }
+
+    func prepareForTermination() async {
+        guard isRunning || runTask != nil else { return }
+
+        if !batchCancellationRequested {
+            batchCancellationRequested = true
+            statusText = "Stopping batch before the app closes…"
+        }
+
+        let currentProcessor = processor
+        let currentRunTask = runTask
+
+        await currentProcessor?.cancelAll()
+        currentRunTask?.cancel()
+        _ = await currentRunTask?.value
+
+        processor = nil
+        runTask = nil
     }
 
     func prepareResultsBrowserIfNeeded() async {
@@ -183,6 +279,7 @@ final class BatchViewModel: ObservableObject {
 
         do {
             let presentation = try await resultsCoordinator.preparePresentation(
+                sourceFolderURL: configuration.sourceFolder,
                 outputFolderURL: outputFolderURL,
                 files: files,
                 enhancementMethod: configuration.enhancementMethod
@@ -208,10 +305,32 @@ final class BatchViewModel: ObservableObject {
         guard let index = files.firstIndex(where: { $0.id == updatedItem.id }) else { return }
         files[index] = updatedItem
 
+        switch updatedItem.stage {
+        case .complete, .cancelled, .failed, .skipped:
+            cancellingFileIDs.remove(updatedItem.id)
+        default:
+            break
+        }
+
         if isRunning {
-            statusText = "\(completedCount) complete • \(processingCount) processing • \(pendingCount) pending"
+            statusText = currentStatusSummary()
         }
     }
+
+    private func currentStatusSummary() -> String {
+        var segments = [
+            "\(completedCount) complete",
+            "\(processingCount) processing",
+            "\(pendingCount) pending",
+        ]
+
+        if cancelledCount > 0 {
+            segments.append("\(cancelledCount) cancelled")
+        }
+
+        return segments.joined(separator: " • ")
+    }
+
     private func progressFraction(for stage: ProcessingStage) -> Double {
         switch stage {
         case .pending:
@@ -226,7 +345,7 @@ final class BatchViewModel: ObservableObject {
             return 0.24 + (0.68 * progress)
         case .exporting:
             return 0.96
-        case .complete, .failed, .skipped:
+        case .complete, .cancelled, .failed, .skipped:
             return 1
         }
     }

@@ -2,7 +2,14 @@
 
 This document captures the intended future UX direction for ClearVoice after transcription and translation return.
 
-The live app currently ships as an enhancement-and-review product with browser-based results, bundled dependency setup, user-selectable `DFN` / `HYBRID` enhancement, and no active transcription or translation flow. The roadmap below is retained as a future-facing reference for a later local text-processing release, and the experimental implementation work for that future path now lives on `transcription-translation-rnd`.
+The live app currently ships as an enhancement-and-review product with browser-based results, bundled dependency setup, user-selectable `DFN` / `HYBRID` enhancement, recursive nested-folder scanning, file/batch cancellation, and no active transcription or translation flow.
+
+Important current-product note:
+
+- The shipped enhancement-only workflow now writes to a sibling folder named `<source>_enhanced`, not a Desktop `output_<timestamp>` folder.
+- The shipped enhancement-only review page switches between enhanced audio and the original source files without copying the source audio into output.
+
+The roadmap below is retained as a future-facing reference for a later local text-processing release, and the experimental implementation work for that future path now lives on `transcription-translation-rnd`.
 
 ## Product Decisions Locked For This Future UX
 

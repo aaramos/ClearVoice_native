@@ -4,6 +4,11 @@ import Foundation
 final class ImportViewModel: ObservableObject {
     @Published private(set) var sourceFolderURL: URL?
     @Published private(set) var outputFolderURL: URL?
+    @Published var outputFolderName = "" {
+        didSet {
+            refreshPlannedOutputFolder()
+        }
+    }
     @Published private(set) var scanResult: ScanResult = .empty
     @Published private(set) var validationMessages: [String] = [
         "Choose a source folder to begin.",
@@ -47,11 +52,20 @@ final class ImportViewModel: ObservableObject {
         outputFolderURL?.path(percentEncoded: false) ?? ""
     }
 
+    var outputFolderExists: Bool {
+        guard let outputFolderURL else { return false }
+
+        var isDirectory: ObjCBool = false
+        return fileManager.fileExists(atPath: outputFolderURL.path(percentEncoded: false), isDirectory: &isDirectory)
+            && isDirectory.boolValue
+    }
+
     func reset() {
         scanTask?.cancel()
         scanTask = nil
         sourceFolderURL = nil
         outputFolderURL = nil
+        outputFolderName = ""
         scanResult = .empty
         validationMessages = ["Choose a source folder to begin."]
         isScanning = false
@@ -60,8 +74,24 @@ final class ImportViewModel: ObservableObject {
 
     func selectSourceFolder(_ url: URL) {
         sourceFolderURL = standardizedDirectoryURL(url)
-        outputFolderURL = makeDesktopOutputFolderURL()
+        outputFolderName = defaultOutputFolderName(for: sourceFolderURL)
         scheduleScan()
+    }
+
+    func chooseSuggestedOutputFolderName() {
+        outputFolderName = suggestedUniqueOutputFolderName()
+    }
+
+    func deleteExistingOutputFolder() {
+        guard let outputFolderURL, outputFolderExists else { return }
+
+        do {
+            try fileManager.removeItem(at: outputFolderURL)
+        } catch {
+            scanErrorMessage = "ClearVoice couldn’t delete the existing enhanced folder. Check permissions and try again."
+        }
+
+        evaluateValidation()
     }
 
     func waitForScheduledScan() async {
@@ -144,16 +174,25 @@ final class ImportViewModel: ObservableObject {
     }
 
     private func validationMessages(forPlannedOutputFolder url: URL) -> [String] {
+        let trimmedName = outputFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            return ["Choose a name for the enhanced output folder."]
+        }
+
         let parentURL = url.deletingLastPathComponent()
         let parentPath = parentURL.path(percentEncoded: false)
         var isDirectory: ObjCBool = false
 
         guard fileManager.fileExists(atPath: parentPath, isDirectory: &isDirectory), isDirectory.boolValue else {
-            return ["ClearVoice couldn’t access the Desktop output location."]
+            return ["ClearVoice couldn’t access the parent folder for the enhanced output."]
         }
 
         guard fileManager.isWritableFile(atPath: parentPath) else {
-            return ["ClearVoice needs write access to the Desktop output location."]
+            return ["ClearVoice needs write access to create the enhanced output folder."]
+        }
+
+        if outputFolderExists {
+            return ["An enhanced folder with this name already exists. Choose a new name or delete the existing folder."]
         }
 
         return []
@@ -189,17 +228,53 @@ final class ImportViewModel: ObservableObject {
         url.resolvingSymlinksInPath().standardizedFileURL
     }
 
-    private func makeDesktopOutputFolderURL(now: Date = Date()) -> URL {
-        let desktopURL = fileManager.urls(for: .desktopDirectory, in: .userDomainMask).first
-            ?? fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)
-        let timestamp = Self.outputTimestampFormatter.string(from: now)
-        return desktopURL.appendingPathComponent("output_\(timestamp)", isDirectory: true)
+    private func refreshPlannedOutputFolder() {
+        guard let sourceFolderURL else {
+            outputFolderURL = nil
+            return
+        }
+
+        outputFolderURL = makeSiblingOutputFolderURL(for: sourceFolderURL, folderName: outputFolderName)
+        evaluateValidation()
     }
 
-    private static let outputTimestampFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyyMMdd_HHmmss"
-        return formatter
-    }()
+    private func makeSiblingOutputFolderURL(for sourceFolderURL: URL, folderName: String) -> URL {
+        let parentURL = sourceFolderURL.deletingLastPathComponent()
+        return parentURL.appendingPathComponent(folderName, isDirectory: true)
+    }
+
+    private func defaultOutputFolderName(for sourceFolderURL: URL?) -> String {
+        guard let sourceFolderURL else {
+            return ""
+        }
+
+        return "\(sourceFolderURL.lastPathComponent)_enhanced"
+    }
+
+    private func suggestedUniqueOutputFolderName() -> String {
+        let baseName = defaultOutputFolderName(for: sourceFolderURL)
+        guard !baseName.isEmpty else {
+            return ""
+        }
+
+        if !outputFolderExists {
+            return baseName
+        }
+
+        let parentURL = sourceFolderURL?.deletingLastPathComponent()
+        var counter = 2
+
+        while let parentURL {
+            let candidate = "\(baseName)_\(counter)"
+            let candidateURL = parentURL.appendingPathComponent(candidate, isDirectory: true)
+
+            if !fileManager.fileExists(atPath: candidateURL.path(percentEncoded: false)) {
+                return candidate
+            }
+
+            counter += 1
+        }
+
+        return baseName
+    }
 }

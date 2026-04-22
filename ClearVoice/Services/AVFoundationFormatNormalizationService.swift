@@ -80,9 +80,9 @@ actor FFmpegSpeechFormatNormalizationService: FormatNormalizationService {
     }
 
     private static let defaultRunner: Runner = { ffmpegURL, sourceURL, destinationURL in
-        let process = Process()
-        process.executableURL = ffmpegURL
-        process.arguments = [
+        try await ExternalProcessRunner.run(
+            executableURL: ffmpegURL,
+            arguments: [
             "-hide_banner",
             "-loglevel", "error",
             "-y",
@@ -92,28 +92,9 @@ actor FFmpegSpeechFormatNormalizationService: FormatNormalizationService {
             "-ar", "16000",
             "-c:a", "pcm_s16le",
             destinationURL.path,
-        ]
-
-        let errorPipe = Pipe()
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            throw ProcessingError.enhancementFailed("ClearVoice couldn’t start FFmpeg: \(error.localizedDescription)")
-        }
-
-        guard process.terminationStatus == 0 else {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let detail = String(data: errorData, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if let detail, !detail.isEmpty {
-                throw ProcessingError.enhancementFailed("ClearVoice couldn’t convert this audio file: \(detail)")
-            }
-
-            throw ProcessingError.enhancementFailed("ClearVoice couldn’t convert this audio file.")
-        }
+            ],
+            launchFailurePrefix: "ClearVoice couldn’t start FFmpeg",
+            nonZeroExitPrefix: "ClearVoice couldn’t convert this audio file."
+        )
     }
 }

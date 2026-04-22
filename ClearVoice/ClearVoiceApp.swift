@@ -1,7 +1,9 @@
+import AppKit
 import SwiftUI
 
 @main
 struct ClearVoiceApp: App {
+    @NSApplicationDelegateAdaptor(ClearVoiceAppDelegate.self) private var appDelegate
     @StateObject private var launchViewModel = AppLaunchViewModel()
 
     var body: some Scene {
@@ -51,7 +53,33 @@ struct ClearVoiceApp: App {
             }
             .frame(minWidth: 920, minHeight: 640)
             .preferredColorScheme(.light)
+            .task {
+                appDelegate.launchViewModelProvider = { launchViewModel }
+            }
         }
         .windowResizability(.contentMinSize)
+    }
+}
+
+final class ClearVoiceAppDelegate: NSObject, NSApplicationDelegate {
+    var launchViewModelProvider: (() -> AppLaunchViewModel?)?
+    private var terminationTask: Task<Void, Never>?
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard terminationTask == nil else {
+            return .terminateLater
+        }
+
+        guard let launchViewModel = launchViewModelProvider?() else {
+            return .terminateNow
+        }
+
+        terminationTask = Task { @MainActor [weak self] in
+            await launchViewModel.prepareForTermination()
+            self?.terminationTask = nil
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+
+        return .terminateLater
     }
 }

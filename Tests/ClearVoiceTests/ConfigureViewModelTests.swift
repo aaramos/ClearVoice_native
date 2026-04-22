@@ -25,6 +25,6 @@ struct ConfigureViewModelTests {
         let viewModel = ConfigureViewModel()
 
         #expect(viewModel.advancedSummary.contains("1 to 20"))
-        #expect(viewModel.advancedSummary.contains("5"))
+        #expect(viewModel.advancedSummary.contains("2"))
     }
 }

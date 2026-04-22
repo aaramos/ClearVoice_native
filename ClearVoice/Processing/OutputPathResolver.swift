@@ -1,69 +1,98 @@
 import Foundation
 
-enum ResolvedOutput: Equatable, Sendable {
-    case use(folder: URL)
-    case skip(reason: SkipReason)
+struct ResolvedOutput: Equatable, Sendable {
+    let folderURL: URL
+    let enhancedFileURL: URL
 }
 
 actor OutputPathResolver {
+    private let sourceRoot: URL
     private let outputRoot: URL
-    private let preexistingFolders: Set<URL>
-    private var reservedThisBatch: Set<URL> = []
-    private var occurrenceCounts: [String: Int] = [:]
+    private let fileManager: FileManager
+    private var reservedEnhancedFiles: Set<URL> = []
 
-    init(outputRoot: URL, fileManager: FileManager = .default) throws {
+    init(
+        sourceRoot: URL,
+        outputRoot: URL,
+        fileManager: FileManager = .default
+    ) throws {
+        self.sourceRoot = sourceRoot.resolvingSymlinksInPath().standardizedFileURL
         self.outputRoot = outputRoot.resolvingSymlinksInPath().standardizedFileURL
+        self.fileManager = fileManager
 
         try fileManager.createDirectory(
             at: self.outputRoot,
             withIntermediateDirectories: true
         )
+    }
 
-        let resourceKeys: Set<URLResourceKey> = [.isDirectoryKey]
-        let contents = try fileManager.contentsOfDirectory(
-            at: self.outputRoot,
-            includingPropertiesForKeys: Array(resourceKeys),
-            options: [.skipsHiddenFiles]
+    func resolve(sourceURL: URL, enhancementSuffix: String) -> ResolvedOutput {
+        let standardizedSourceURL = sourceURL.resolvingSymlinksInPath().standardizedFileURL
+        let relativeDirectoryComponents = relativeDirectoryComponents(for: standardizedSourceURL)
+        let outputFolderURL = relativeDirectoryComponents.reduce(outputRoot) { partialURL, component in
+            partialURL.appendingPathComponent(component, isDirectory: true)
+        }
+
+        var candidate = preferredEnhancedFileURL(
+            for: standardizedSourceURL,
+            in: outputFolderURL,
+            enhancementSuffix: enhancementSuffix
         )
 
-        self.preexistingFolders = Set(
-            contents.compactMap { url in
-                guard (try? url.resourceValues(forKeys: resourceKeys).isDirectory) == true else {
-                    return nil
-                }
+        if reservedEnhancedFiles.contains(candidate) || fileManager.fileExists(atPath: candidate.path) {
+            candidate = disambiguatedEnhancedFileURL(
+                for: standardizedSourceURL,
+                in: outputFolderURL,
+                enhancementSuffix: enhancementSuffix
+            )
+        }
 
-                return url.resolvingSymlinksInPath().standardizedFileURL
+        reservedEnhancedFiles.insert(candidate)
+        return ResolvedOutput(folderURL: outputFolderURL, enhancedFileURL: candidate)
+    }
+
+    private func relativeDirectoryComponents(for sourceURL: URL) -> [String] {
+        let sourceDirectoryComponents = sourceURL.deletingLastPathComponent().pathComponents
+        let sourceRootComponents = sourceRoot.pathComponents
+
+        guard sourceDirectoryComponents.starts(with: sourceRootComponents) else {
+            return []
+        }
+
+        return Array(sourceDirectoryComponents.dropFirst(sourceRootComponents.count))
+    }
+
+    private func preferredEnhancedFileURL(
+        for sourceURL: URL,
+        in outputFolderURL: URL,
+        enhancementSuffix: String
+    ) -> URL {
+        outputFolderURL.appendingPathComponent(
+            "\(sourceURL.deletingPathExtension().lastPathComponent)_\(enhancementSuffix).\(AudioFormatSupport.cleanExportExtension)"
+        )
+    }
+
+    private func disambiguatedEnhancedFileURL(
+        for sourceURL: URL,
+        in outputFolderURL: URL,
+        enhancementSuffix: String
+    ) -> URL {
+        let basename = sourceURL.deletingPathExtension().lastPathComponent
+        let sourceExtension = sourceURL.pathExtension.lowercased()
+        let extensionSegment = sourceExtension.isEmpty ? "audio" : sourceExtension
+        var counter = 1
+
+        while true {
+            let suffixSegment = counter == 1 ? extensionSegment : "\(extensionSegment)_\(counter)"
+            let candidate = outputFolderURL.appendingPathComponent(
+                "\(basename)_\(suffixSegment)_\(enhancementSuffix).\(AudioFormatSupport.cleanExportExtension)"
+            )
+
+            if !reservedEnhancedFiles.contains(candidate) && !fileManager.fileExists(atPath: candidate.path) {
+                return candidate
             }
-        )
-    }
 
-    func resolve(basename: String) -> ResolvedOutput {
-        let nextOccurrence = (occurrenceCounts[basename] ?? 0) + 1
-        occurrenceCounts[basename] = nextOccurrence
-
-        // Queue-order collision numbering comes first. We then apply the
-        // skip-on-preexisting rule to that assigned candidate so the behavior
-        // matches the handoff's precedence rules and test matrix.
-        let assignedCandidate = folderURL(for: basename, suffix: nextOccurrence)
-
-        if preexistingFolders.contains(assignedCandidate) {
-            return .skip(reason: .outputFolderExists(assignedCandidate))
+            counter += 1
         }
-
-        var candidate = assignedCandidate
-        var spilloverSuffix = nextOccurrence
-
-        while reservedThisBatch.contains(candidate) || preexistingFolders.contains(candidate) {
-            spilloverSuffix += 1
-            candidate = folderURL(for: basename, suffix: spilloverSuffix)
-        }
-
-        reservedThisBatch.insert(candidate)
-        return .use(folder: candidate)
-    }
-
-    private func folderURL(for basename: String, suffix: Int) -> URL {
-        let folderName = suffix == 1 ? basename : "\(basename)_\(suffix)"
-        return outputRoot.appendingPathComponent(folderName, isDirectory: true)
     }
 }

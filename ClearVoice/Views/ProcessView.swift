@@ -14,6 +14,11 @@ struct ProcessView: View {
                 Text("Enhancing files and exporting cleaned audio. This may take a while. Please keep this window open.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+
+                Text(viewModel.statusText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 16)
@@ -24,6 +29,14 @@ struct ProcessView: View {
                 Button("Back", action: onBack)
                     .buttonStyle(SecondaryActionButtonStyle())
                     .disabled(viewModel.isRunning)
+
+                if viewModel.isRunning {
+                    Button("Stop Batch") {
+                        viewModel.cancelBatch()
+                    }
+                    .buttonStyle(SecondaryActionButtonStyle())
+                    .disabled(viewModel.batchCancellationRequested)
+                }
 
                 Spacer()
 
@@ -99,6 +112,17 @@ struct ProcessView: View {
                 Text(file.durationSeconds.map { DurationFormatter.formattedDuration(seconds: $0) } ?? "—")
                     .font(.title3.monospacedDigit())
                     .foregroundStyle(.secondary)
+
+                if viewModel.canCancel(file) {
+                    Button("Cancel File") {
+                        viewModel.cancelFile(file.id)
+                    }
+                    .buttonStyle(SecondaryActionButtonStyle())
+                } else if viewModel.isCancellationRequested(for: file.id) && file.stage != .cancelled {
+                    Text("Stopping…")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.horizontal, 22)
@@ -179,7 +203,7 @@ struct ProcessView: View {
             return 0.24 + (0.70 * progress)
         case .exporting:
             return 0.98
-        case .complete, .failed, .skipped:
+        case .complete, .cancelled, .failed, .skipped:
             return 1
         }
     }
@@ -198,6 +222,8 @@ struct ProcessView: View {
             return "Exporting"
         case .complete:
             return "Finished"
+        case .cancelled:
+            return "Cancelled"
         case .failed:
             return "Error"
         case .skipped:
@@ -209,6 +235,8 @@ struct ProcessView: View {
         switch stage {
         case .complete:
             return .green
+        case .cancelled:
+            return .secondary
         case .failed:
             return .red
         case .skipped:
@@ -220,6 +248,8 @@ struct ProcessView: View {
 
     private func stageDetail(for stage: ProcessingStage) -> String? {
         switch stage {
+        case .cancelled:
+            return "Stopped before this file finished processing."
         case .failed(let error):
             return error.displayMessage
         case .skipped(let reason):

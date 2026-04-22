@@ -5,6 +5,7 @@ struct AudioFileItem: Identifiable, Equatable, Sendable {
     let sourceURL: URL
     let durationSeconds: TimeInterval?
     var outputFolderURL: URL? = nil
+    var processedAudioURL: URL? = nil
     var stage: ProcessingStage
     var errorLogURL: URL? = nil
 

@@ -4,111 +4,92 @@ import Testing
 
 struct OutputPathResolverTests {
     @Test
-    func uniqueBasenamesUseUnsuffixedFolders() async throws {
+    func resolveMirrorsNestedSourceDirectories() async throws {
         let harness = try ResolverHarness()
-        let resolver = try OutputPathResolver(outputRoot: harness.outputRoot)
+        let sourceURL = try harness.createSourceFile(at: ["Archive", "1980"], named: "alpha.wav")
+        let resolver = try OutputPathResolver(sourceRoot: harness.sourceRoot, outputRoot: harness.outputRoot)
 
-        let alpha = await resolver.resolve(basename: "alpha")
-        let beta = await resolver.resolve(basename: "beta")
+        let resolved = await resolver.resolve(sourceURL: sourceURL, enhancementSuffix: "HYBRID")
 
-        #expect(alpha == .use(folder: harness.outputRoot.appendingPathComponent("alpha", isDirectory: true)))
-        #expect(beta == .use(folder: harness.outputRoot.appendingPathComponent("beta", isDirectory: true)))
+        #expect(resolved.folderURL == harness.outputRoot.appendingPathComponent("Archive/1980", isDirectory: true))
+        #expect(resolved.enhancedFileURL == harness.outputRoot.appendingPathComponent("Archive/1980/alpha_HYBRID.m4a"))
     }
 
     @Test
-    func twoFilesWithTheSameBasenameAssignTheSecondSuffix() async throws {
+    func filesInDifferentSourceFoldersKeepSeparateOutputFolders() async throws {
         let harness = try ResolverHarness()
-        let resolver = try OutputPathResolver(outputRoot: harness.outputRoot)
+        let firstSourceURL = try harness.createSourceFile(at: ["Disc 1"], named: "audio.wav")
+        let secondSourceURL = try harness.createSourceFile(at: ["Disc 2"], named: "audio.wav")
+        let resolver = try OutputPathResolver(sourceRoot: harness.sourceRoot, outputRoot: harness.outputRoot)
 
-        let first = await resolver.resolve(basename: "audio")
-        let second = await resolver.resolve(basename: "audio")
+        let first = await resolver.resolve(sourceURL: firstSourceURL, enhancementSuffix: "DFN")
+        let second = await resolver.resolve(sourceURL: secondSourceURL, enhancementSuffix: "DFN")
 
-        #expect(first == .use(folder: harness.outputRoot.appendingPathComponent("audio", isDirectory: true)))
-        #expect(second == .use(folder: harness.outputRoot.appendingPathComponent("audio_2", isDirectory: true)))
+        #expect(first.folderURL == harness.outputRoot.appendingPathComponent("Disc 1", isDirectory: true))
+        #expect(first.enhancedFileURL == harness.outputRoot.appendingPathComponent("Disc 1/audio_DFN.m4a"))
+        #expect(second.folderURL == harness.outputRoot.appendingPathComponent("Disc 2", isDirectory: true))
+        #expect(second.enhancedFileURL == harness.outputRoot.appendingPathComponent("Disc 2/audio_DFN.m4a"))
     }
 
     @Test
-    func threeFilesWithTheSameBasenameAssignSequentialSuffixes() async throws {
+    func sameFolderBasenameCollisionUsesExtensionDisambiguation() async throws {
         let harness = try ResolverHarness()
-        let resolver = try OutputPathResolver(outputRoot: harness.outputRoot)
+        let wavSourceURL = try harness.createSourceFile(at: ["Transfers"], named: "audio.wav")
+        let mp3SourceURL = try harness.createSourceFile(at: ["Transfers"], named: "audio.mp3")
+        let resolver = try OutputPathResolver(sourceRoot: harness.sourceRoot, outputRoot: harness.outputRoot)
 
-        let first = await resolver.resolve(basename: "audio")
-        let second = await resolver.resolve(basename: "audio")
-        let third = await resolver.resolve(basename: "audio")
+        let first = await resolver.resolve(sourceURL: wavSourceURL, enhancementSuffix: "DFN")
+        let second = await resolver.resolve(sourceURL: mp3SourceURL, enhancementSuffix: "DFN")
 
-        #expect(first == .use(folder: harness.outputRoot.appendingPathComponent("audio", isDirectory: true)))
-        #expect(second == .use(folder: harness.outputRoot.appendingPathComponent("audio_2", isDirectory: true)))
-        #expect(third == .use(folder: harness.outputRoot.appendingPathComponent("audio_3", isDirectory: true)))
-    }
-
-    @Test
-    func preexistingNaturalFolderSkipsIndependentFilesWithoutRerouting() async throws {
-        let firstHarness = try ResolverHarness(preexistingFolders: ["audio"])
-        let firstResolver = try OutputPathResolver(outputRoot: firstHarness.outputRoot)
-        let first = await firstResolver.resolve(basename: "audio")
-
-        let secondHarness = try ResolverHarness(preexistingFolders: ["audio"])
-        let secondResolver = try OutputPathResolver(outputRoot: secondHarness.outputRoot)
-        let second = await secondResolver.resolve(basename: "audio")
-
-        #expect(first == .skip(reason: .outputFolderExists(firstHarness.outputRoot.appendingPathComponent("audio", isDirectory: true))))
-        #expect(second == .skip(reason: .outputFolderExists(secondHarness.outputRoot.appendingPathComponent("audio", isDirectory: true))))
-    }
-
-    @Test
-    func preexistingNaturalFolderWithCollisionPairSkipsFirstAndUsesAudio2ForSecond() async throws {
-        let harness = try ResolverHarness(preexistingFolders: ["audio"])
-        let resolver = try OutputPathResolver(outputRoot: harness.outputRoot)
-
-        let first = await resolver.resolve(basename: "audio")
-        let second = await resolver.resolve(basename: "audio")
-
-        #expect(first == .skip(reason: .outputFolderExists(harness.outputRoot.appendingPathComponent("audio", isDirectory: true))))
-        #expect(second == .use(folder: harness.outputRoot.appendingPathComponent("audio_2", isDirectory: true)))
-    }
-
-    @Test
-    func preexistingAudioAndAudio2SkipFirstTwoAndUseAudio3ForThird() async throws {
-        let harness = try ResolverHarness(preexistingFolders: ["audio", "audio_2"])
-        let resolver = try OutputPathResolver(outputRoot: harness.outputRoot)
-
-        let first = await resolver.resolve(basename: "audio")
-        let second = await resolver.resolve(basename: "audio")
-        let third = await resolver.resolve(basename: "audio")
-
-        #expect(first == .skip(reason: .outputFolderExists(harness.outputRoot.appendingPathComponent("audio", isDirectory: true))))
-        #expect(second == .skip(reason: .outputFolderExists(harness.outputRoot.appendingPathComponent("audio_2", isDirectory: true))))
-        #expect(third == .use(folder: harness.outputRoot.appendingPathComponent("audio_3", isDirectory: true)))
+        #expect(first.enhancedFileURL == harness.outputRoot.appendingPathComponent("Transfers/audio_DFN.m4a"))
+        #expect(second.enhancedFileURL == harness.outputRoot.appendingPathComponent("Transfers/audio_mp3_DFN.m4a"))
     }
 
     @Test
     func missingOutputRootIsCreatedAutomatically() async throws {
         let fileManager = FileManager.default
-        let missingRoot = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let sourceRoot = root.appendingPathComponent("source", isDirectory: true)
+        let outputRoot = root.appendingPathComponent("source_enhanced", isDirectory: true)
 
-        let resolver = try OutputPathResolver(outputRoot: missingRoot)
-        let first = await resolver.resolve(basename: "audio")
+        try fileManager.createDirectory(at: sourceRoot, withIntermediateDirectories: true)
+        let sourceURL = sourceRoot.appendingPathComponent("audio.wav")
+        try Data("stub".utf8).write(to: sourceURL)
+
+        let resolver = try OutputPathResolver(sourceRoot: sourceRoot, outputRoot: outputRoot)
+        let resolved = await resolver.resolve(sourceURL: sourceURL, enhancementSuffix: "DFN")
 
         var isDirectory: ObjCBool = false
-        #expect(fileManager.fileExists(atPath: missingRoot.path, isDirectory: &isDirectory))
+        #expect(fileManager.fileExists(atPath: outputRoot.path, isDirectory: &isDirectory))
         #expect(isDirectory.boolValue)
-        #expect(first == .use(folder: missingRoot.appendingPathComponent("audio", isDirectory: true)))
+        #expect(resolved.folderURL.standardizedFileURL.path == outputRoot.standardizedFileURL.path)
+        #expect(resolved.enhancedFileURL == outputRoot.appendingPathComponent("audio_DFN.m4a"))
     }
 }
 
 private struct ResolverHarness {
+    let root: URL
+    let sourceRoot: URL
     let outputRoot: URL
 
-    init(preexistingFolders: [String] = []) throws {
+    init() throws {
         let fileManager = FileManager.default
-        outputRoot = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try fileManager.createDirectory(at: outputRoot, withIntermediateDirectories: true)
+        root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        sourceRoot = root.appendingPathComponent("source", isDirectory: true)
+        outputRoot = root.appendingPathComponent("source_enhanced", isDirectory: true)
+        try fileManager.createDirectory(at: sourceRoot, withIntermediateDirectories: true)
+    }
 
-        for folder in preexistingFolders {
-            try fileManager.createDirectory(
-                at: outputRoot.appendingPathComponent(folder, isDirectory: true),
-                withIntermediateDirectories: true
-            )
+    func createSourceFile(at pathComponents: [String], named fileName: String) throws -> URL {
+        let fileManager = FileManager.default
+        let folderURL = pathComponents.reduce(sourceRoot) { partialURL, component in
+            partialURL.appendingPathComponent(component, isDirectory: true)
         }
+
+        try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
+
+        let fileURL = folderURL.appendingPathComponent(fileName)
+        try Data("stub".utf8).write(to: fileURL)
+        return fileURL
     }
 }
