@@ -42,7 +42,7 @@ struct ProcessView: View {
 
                 Button("Open Results", action: onShowResults)
                     .buttonStyle(PrimaryActionButtonStyle())
-                    .disabled(!viewModel.didFinish)
+                    .disabled(!viewModel.canOpenResults)
             }
             .padding(.top, 4)
         }

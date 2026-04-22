@@ -38,12 +38,15 @@ struct BatchViewModelTests {
             files: [ScannedAudioFile(url: sourceURL, durationSeconds: 0)],
             configuration: configuration
         )
+        #expect(!viewModel.canOpenResults)
+
         viewModel.startIfNeeded()
 
         while !viewModel.didFinish {
             await Task.yield()
         }
 
+        #expect(viewModel.canOpenResults)
         #expect(viewModel.statusText.contains("Hybrid"))
         #expect(viewModel.statusText.contains("audio output"))
         #expect(viewModel.runFinishedAt != nil)

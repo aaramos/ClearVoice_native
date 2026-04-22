@@ -2,11 +2,13 @@ import Foundation
 
 enum AppServicesFactory {
     @MainActor
-    static func makeAppViewModel() -> AppViewModel {
+    static func makeAppViewModel(
+        configureViewModel: ConfigureViewModel = ConfigureViewModel()
+    ) -> AppViewModel {
         let serviceBundle = makeServiceBundle()
 
         return AppViewModel(
-            configureViewModel: ConfigureViewModel(),
+            configureViewModel: configureViewModel,
             batchViewModel: BatchViewModel(services: serviceBundle)
         )
     }

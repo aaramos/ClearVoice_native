@@ -71,6 +71,7 @@ final class AppViewModel: ObservableObject {
     }
 
     func showResults() {
+        guard batchViewModel.canOpenResults else { return }
         state = .review
     }
 

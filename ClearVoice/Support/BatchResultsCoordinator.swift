@@ -252,6 +252,7 @@ struct BatchResultsPageWriter {
             .actions {
               display: flex;
               flex-wrap: wrap;
+              justify-content: flex-end;
               gap: 10px;
               margin-top: 14px;
             }
@@ -410,7 +411,7 @@ struct BatchResultsPageWriter {
         enhancementMethod: EnhancementMethod
     ) -> String {
         let duration = escaped(file.durationSeconds.map { DurationFormatter.formattedDuration(seconds: $0) } ?? "—")
-        let fileName = escaped(file.sourceURL.lastPathComponent)
+        let fileName = escaped(displayPathComponent(for: file.sourceURL))
         let sourcePathLabel = escaped(relativeSourceLabel(from: sourceFolderURL, to: file.sourceURL))
         let statusLabel = escaped(stageLabel(for: file.stage))
         let statusClass = statusClass(for: file.stage)
@@ -448,11 +449,9 @@ struct BatchResultsPageWriter {
             }
 
             audioSection = toggleSection
-            actionsSection = """
+            actionsSection = folderPath.isEmpty ? "" : """
             <div class="actions">
-              \(processedAudioURL.map { "<a href=\"\(relativePath(from: outputFolderURL, to: $0))\">Open enhanced file</a>" } ?? "")
-              \(sourceAudioURL.map { "<a href=\"\(relativePath(from: outputFolderURL, to: $0))\">Open source file</a>" } ?? "")
-              \(folderPath.isEmpty ? "" : "<a href=\"\(folderPath)\">Browse folder</a>")
+              <a href="\(folderPath)">Browse folder</a>
             </div>
             """
         } else {
@@ -536,7 +535,7 @@ struct BatchResultsPageWriter {
         case .skipped(let reason):
             switch reason {
             case .outputFolderExists(let folderURL):
-                return "Skipped because \(folderURL.lastPathComponent) already existed in the batch output folder."
+                return "Skipped because \(displayPathComponent(for: folderURL)) already existed in the batch output folder."
             }
         case .complete:
             return nil
@@ -561,8 +560,31 @@ struct BatchResultsPageWriter {
     }
 
     private func relativeSourceLabel(from sourceFolderURL: URL, to sourceURL: URL) -> String {
-        let label = relativePath(from: sourceFolderURL, to: sourceURL)
-        return label.isEmpty ? sourceURL.lastPathComponent : label
+        let label = relativeDisplayPath(from: sourceFolderURL, to: sourceURL)
+        return label.isEmpty ? displayPathComponent(for: sourceURL) : label
+    }
+
+    private func relativeDisplayPath(from baseURL: URL, to targetURL: URL) -> String {
+        let baseComponents = NSString(string: baseURL.standardizedFileURL.path(percentEncoded: false)).pathComponents
+        let targetComponents = NSString(string: targetURL.standardizedFileURL.path(percentEncoded: false)).pathComponents
+        let commonCount = zip(baseComponents, targetComponents)
+            .prefix { $0 == $1 }
+            .count
+        let upwardComponents = Array(repeating: "..", count: max(baseComponents.count - commonCount, 0))
+        let downwardComponents = Array(targetComponents.dropFirst(commonCount))
+        let relativeComponents = upwardComponents + downwardComponents
+
+        return relativeComponents
+            .map(displayLabel(for:))
+            .joined(separator: "/")
+    }
+
+    private func displayPathComponent(for url: URL) -> String {
+        displayLabel(for: NSString(string: url.path(percentEncoded: false)).lastPathComponent)
+    }
+
+    private func displayLabel(for value: String) -> String {
+        value.removingPercentEncoding ?? value
     }
 
     private func escaped(_ text: String) -> String {

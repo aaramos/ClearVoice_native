@@ -1,5 +1,28 @@
 # Release Notes
 
+## 0.3.2 — 2026-04-21
+
+### Workflow and Defaults
+
+- ClearVoice now remembers the last processing speed and enhancement mode you used, so the next batch starts with your most recent settings instead of resetting each time.
+- The default processing speed now starts at `5` files at a time on first use.
+- The `Open Results` button now stays disabled until processing is actually complete, and it now looks visibly greyed out while unavailable.
+
+### Results Review Page
+
+- Percent-encoded file names such as `010.%2011%20may%201980%20ch23%20v53.mp3` now display in a readable form on the review page.
+- The results cards now show only `Browse folder` as the file action, aligned to the right for a cleaner layout.
+
+### Project Docs and Release Tooling
+
+- Added `DEPENDENCIES.md` so the repo has a plain-English inventory of app, tool, and release dependencies.
+- GitHub release publishing now pulls notes directly from `RELEASE_NOTES.md` and always includes the standard unsigned-DMG distribution note.
+
+### Distribution Note
+
+- The docs and release notes now explain the simplest current sharing path for an unsigned `.dmg`.
+- Trusted testers should expect the first launch to require `System Settings > Privacy & Security > Open Anyway` until signing and notarization are added.
+
 ## 0.3.1 — 2026-04-21
 
 ### Security and Setup
@@ -37,8 +60,35 @@
 
 - The browser review page links back to the original source files on disk. If the source folder is moved or deleted later, the source-side toggle will no longer work.
 
-### Sharing Note
+### Distribution Note
 
-- The simplest current sharing path is to upload the generated `.dmg` to a GitHub Release and share it with trusted testers.
-- Because the build is still unsigned and not notarized, testers should expect the first launch to require `System Settings > Privacy & Security > Open Anyway`.
-- This release packaging is suitable for direct testing, not a polished public Mac distribution flow yet.
+- The docs and release notes now explain the simplest current sharing path for an unsigned `.dmg`.
+- Trusted testers should expect the first launch to require `System Settings > Privacy & Security > Open Anyway` until signing and notarization are added.
+
+## 0.2.0 — 2026-04-21
+
+### App and Workflow
+
+- ClearVoice shipped the cleaned enhancement-only app with the new app icon, expanded throughput controls, browser-based review output, and first-run dependency setup for FFmpeg and DeepFilterNet.
+- Supports 1 to 20 files concurrently, defaulting to 5.
+- Generates a local `index.html` review page with source and enhanced switching.
+- Installs required local dependencies without Terminal.
+
+### Distribution Note
+
+- The docs and release notes now explain the simplest current sharing path for an unsigned `.dmg`.
+- Trusted testers should expect the first launch to require `System Settings > Privacy & Security > Open Anyway` until signing and notarization are added.
+
+## 0.1.0 — 2026-04-21
+
+### Initial Release
+
+- ClearVoice shipped the enhancement-only macOS workflow with first-run dependency setup, direct browser-based results review, and packaged DMG distribution.
+- Includes local FFmpeg and DeepFilterNet setup with guided installation.
+- Includes batch enhancement with browser review for source and enhanced audio.
+- Ships as a shareable DMG built from the current macOS app bundle.
+
+### Distribution Note
+
+- The docs and release notes now explain the simplest current sharing path for an unsigned `.dmg`.
+- Trusted testers should expect the first launch to require `System Settings > Privacy & Security > Open Anyway` until signing and notarization are added.

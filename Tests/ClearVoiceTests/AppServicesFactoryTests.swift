@@ -6,10 +6,17 @@ struct AppServicesFactoryTests {
     @Test
     @MainActor
     func makeAppViewModelBuildsLocalFirstWorkflow() {
-        let viewModel = AppServicesFactory.makeAppViewModel()
+        let defaults = UserDefaults(suiteName: "clearvoice.factory.\(UUID().uuidString)")!
+        let configureViewModel = ConfigureViewModel(
+            preferences: ConfigurePreferencesStore(defaults: defaults)
+        )
+        configureViewModel.enhancementMethod = .dfn
+        configureViewModel.maxConcurrency = 6
 
-        #expect(viewModel.configureViewModel.maxConcurrency == ConfigureViewModel.recommendedConcurrency(for: ProcessInfo.processInfo.activeProcessorCount))
-        #expect(viewModel.configureViewModel.enhancementMethod == .hybrid)
+        let viewModel = AppServicesFactory.makeAppViewModel(configureViewModel: configureViewModel)
+
+        #expect(viewModel.configureViewModel.maxConcurrency == 6)
+        #expect(viewModel.configureViewModel.enhancementMethod == .dfn)
     }
 
     @Test

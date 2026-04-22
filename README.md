@@ -27,6 +27,7 @@ ClearVoice is a native macOS batch audio utility for cleaning speech recordings 
 - App layer: native macOS app built in `Swift` with `SwiftUI`
 - Project tooling: `XcodeGen` generates the Xcode project from `project.yml`
 - Audio processing: local `FFmpeg` for normalization and repair plus `DeepFilterNet` for enhancement
+- Dependency inventory: see [DEPENDENCIES.md](/Users/macmini/Apps/ClearVoice_native/DEPENDENCIES.md)
 - Apple frameworks: `AVFoundation` for media inspection and playback, plus standard macOS file and window APIs for import, export, and setup flows
 - Results surface: generated local `HTML`, `CSS`, and `JavaScript` review page opened directly from disk in the user's browser
 - Packaging: `xcodebuild` for app builds and `hdiutil` via `./script/build_dmg.sh` for DMG creation
@@ -90,6 +91,18 @@ Build a distributable DMG:
 ./script/build_dmg.sh
 ```
 
+Publish a GitHub release with the matching notes:
+
+```sh
+./script/publish_release.sh 0.3.2
+```
+
+Refresh notes on an existing release without uploading a new DMG:
+
+```sh
+./script/publish_release.sh 0.3.2 --notes-only
+```
+
 ## Distribution Notes
 
 - The current `.dmg` is packaged from the local app bundle and is intended for direct sharing.
@@ -111,6 +124,12 @@ Because the app is currently unsigned and not notarized, testers should expect m
 4. click `Open Anyway`
 
 This is acceptable for small trusted testing, but it is not the polished public-release path.
+
+## Release Notes Discipline
+
+- Every shipped version should get its own section in [RELEASE_NOTES.md](/Users/macmini/Apps/ClearVoice_native/RELEASE_NOTES.md).
+- `./script/publish_release.sh` publishes GitHub releases from that file, so releases cannot be published without notes.
+- The publish script always includes the standard `Distribution Note` about the unsigned `.dmg` and the `Open Anyway` step.
 
 ## Known Scope
 

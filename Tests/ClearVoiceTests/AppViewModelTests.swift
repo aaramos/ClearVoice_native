@@ -39,14 +39,68 @@ struct AppViewModelTests {
     }
 
     @Test
-    func resultsScreenCanReturnToNewBatch() {
-        let viewModel = AppViewModel()
+    func showResultsWaitsForFinishedBatch() async throws {
+        let folders = try TemporaryFolders()
+        let importViewModel = ImportViewModel(fileScanner: MockFileScanner())
+        importViewModel.selectSourceFolder(folders.source)
+        await importViewModel.waitForScheduledScan()
 
+        let batchViewModel = BatchViewModel()
+        let viewModel = AppViewModel(
+            importViewModel: importViewModel,
+            batchViewModel: batchViewModel
+        )
+
+        viewModel.goForward()
+        viewModel.goForward()
+        #expect(viewModel.state == .processing)
+
+        viewModel.showResults()
+        #expect(viewModel.state == .processing)
+
+        batchViewModel.startIfNeeded()
+        while !batchViewModel.didFinish {
+            await Task.yield()
+        }
+
+        viewModel.showResults()
+        #expect(viewModel.state == .review)
+    }
+
+    @Test
+    func resultsScreenCanReturnToNewBatch() async throws {
+        let defaults = UserDefaults(suiteName: "clearvoice.app-view.\(UUID().uuidString)")!
+        let configureViewModel = ConfigureViewModel(
+            preferences: ConfigurePreferencesStore(defaults: defaults)
+        )
+        configureViewModel.enhancementMethod = .dfn
+        configureViewModel.maxConcurrency = 8
+
+        let folders = try TemporaryFolders()
+        let importViewModel = ImportViewModel(fileScanner: MockFileScanner())
+        importViewModel.selectSourceFolder(folders.source)
+        await importViewModel.waitForScheduledScan()
+
+        let batchViewModel = BatchViewModel()
+        let viewModel = AppViewModel(
+            importViewModel: importViewModel,
+            configureViewModel: configureViewModel,
+            batchViewModel: batchViewModel
+        )
+
+        viewModel.goForward()
+        viewModel.goForward()
+        batchViewModel.startIfNeeded()
+        while !batchViewModel.didFinish {
+            await Task.yield()
+        }
         viewModel.showResults()
         #expect(viewModel.state == .review)
 
         viewModel.startNewBatch()
         #expect(viewModel.state == .importing)
+        #expect(viewModel.configureViewModel.enhancementMethod == .dfn)
+        #expect(viewModel.configureViewModel.maxConcurrency == 8)
     }
 }
 

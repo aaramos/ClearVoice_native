@@ -45,7 +45,7 @@ The notes below are cumulative. Older sections capture earlier experiments and b
 - Translation scope: fixing translation output to English for this branch instead of keeping the broader arbitrary-target-language product surface.
 - Summarization release scope: deferring real summarization for this release while keeping the code shape and exporting a placeholder summary block for transcript compatibility.
 - Auto-detect fallback UX: when local language detection confidence is too low, the file fails with a direct instruction to rerun after choosing the input language manually.
-- Concurrency posture: local processing remains configurable from `1` to `5` files in parallel, with a default of `2` to balance throughput against RAM and CPU pressure on Apple Silicon laptops and desktops.
+- Concurrency posture: local processing remains configurable from `1` to `20` files in parallel, with a default of `5` to maximize throughput on current target Macs while still allowing the user to dial it down manually.
 - Local transcription engine direction: the next transcription implementation on this branch will use in-process `whisper.cpp` with Metal support, Marathi pinned as the input language for v1, and `ggml-large-v3-turbo` as the primary model with `ggml-large-v3` as a fallback.
 - Transcription input contract: local transcription should consume the `HYBRID` enhancement output, then create a temporary `16 kHz` mono PCM WAV specifically for inference rather than transcribing directly from the exported `.m4a`.
 - Local translation sequencing: translation work should begin only after `whisper.cpp` transcription support is landed and validated on real Marathi-enhanced files.

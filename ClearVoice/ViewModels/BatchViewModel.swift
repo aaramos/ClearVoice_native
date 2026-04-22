@@ -85,6 +85,10 @@ final class BatchViewModel: ObservableObject {
         configuration?.outputFolder
     }
 
+    var canOpenResults: Bool {
+        didFinish && !isRunning && configuration != nil && outputFolderURL != nil && !files.isEmpty
+    }
+
     var selectedEnhancementMethod: EnhancementMethod? {
         configuration?.enhancementMethod
     }
